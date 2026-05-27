@@ -48,6 +48,7 @@ import { ElMessage } from 'element-plus';
 
 const router = useRouter();
 const loading = ref(false);
+const rememberMe = ref(false);
 const needCaptcha = ref(false);
 const captchaSvg = ref('');
 const formRef = ref(null);
