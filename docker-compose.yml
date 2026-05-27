@@ -1,0 +1,61 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: storycine-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS:-admin123}
+      MONGO_INITDB_DATABASE: storycine
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: storycine-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: storycine-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: storycine-app
+    env_file:
+      - ./backend/.env
+    environment:
+      - SERVER_PORT=3012
+      - MONGO_URI=mongodb://storycine_user:storycine_pass@mongodb:27017/storycine?authSource=storycine
+      - REDIS_HOST=redis
+      - MINIO_ENDPOINT=minio:9000
+    ports:
+      - "3012:3012"
+    depends_on:
+      - mongodb
+      - redis
+      - minio
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  redis_data:
+  minio_data:

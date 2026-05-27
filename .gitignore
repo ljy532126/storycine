@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+mongo_data/
+redis_data/
+minio_data/
+.claude/
+uploads/
+backend/uploads/
+backend/.env
+.claude/

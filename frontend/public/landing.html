@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoDramaStudio — 全自动AI短剧生成平台</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary-100: #8B7355; --primary-200: #D4C5C0; --primary-300: #E8D5C4;
+  --accent-100: #C9A84C; --accent-200: #F5E6C8;
+  --text-100: #2C1810; --text-200: #8B7355;
+  --bg-100: #FBF7F0; --bg-200: #FFFDF9; --bg-300: #E8D5C4;
+  --gold: #C9A84C; --gold-light: #F5E6C8; --gold-dark: #8B6914;
+  --navy: #1A1A2E;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--bg-100); color: var(--text-200); line-height: 1.6; }
+
+/* ===== Nav ===== */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--navy); border-bottom: 2px solid var(--gold);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 64px; transition: all 0.3s;
+}
+.nav-logo { display: flex; align-items: center; gap: 12px; }
+.nav-logo h1 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 20px; letter-spacing: 1px; }
+.nav-logo span { color: var(--primary-300); font-size: 11px; letter-spacing: 2px; }
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a { color: var(--gold-light); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; letter-spacing: 0.5px; }
+.nav-links a:hover { color: var(--gold); }
+.nav-cta { padding: 10px 24px; border: 2px solid var(--gold); border-radius: 6px; color: var(--gold) !important; font-weight: 700 !important; transition: all 0.2s; }
+.nav-cta:hover { background: var(--gold); color: var(--navy) !important; }
+.nav-toggle { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+.nav-toggle span { width: 24px; height: 2px; background: var(--gold); }
+
+/* ===== Hero ===== */
+.hero { padding: 160px 40px 100px; text-align: center;
+  background: linear-gradient(180deg, var(--navy) 0%, #1A1A2E 60%, var(--bg-100) 100%);
+}
+.hero-badge { display: inline-block; padding: 6px 16px; border-radius: 20px;
+  background: rgba(201,168,76,0.15); border: 1px solid var(--gold);
+  color: var(--gold); font-size: 13px; letter-spacing: 2px; margin-bottom: 24px; }
+.hero h2 { font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900;
+  color: #fff; line-height: 1.1; margin-bottom: 20px; letter-spacing: -1px; }
+.hero h2 em { font-style: italic; color: var(--gold); }
+.hero p { font-size: 18px; color: var(--primary-300); max-width: 600px; margin: 0 auto 36px; line-height: 1.7; }
+.hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.btn-primary { padding: 16px 36px; border: none; border-radius: 8px;
+  background: var(--gold); color: var(--navy); font-size: 15px; font-weight: 700;
+  cursor: pointer; text-decoration: none; transition: all 0.2s; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 8px; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.3); }
+.btn-outline { padding: 16px 36px; border: 2px solid var(--gold); border-radius: 8px;
+  background: transparent; color: var(--gold); font-size: 15px; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: all 0.2s; letter-spacing: 1px; }
+.btn-outline:hover { background: var(--gold); color: var(--navy); }
+
+/* ===== Section ===== */
+.section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
+.section-label { text-align: center; font-size: 12px; letter-spacing: 4px; color: var(--gold-dark); font-weight: 600; margin-bottom: 12px; text-transform: uppercase; }
+.section-title { text-align: center; font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--text-100); margin-bottom: 16px; }
+.section-sub { text-align: center; font-size: 15px; color: var(--text-200); max-width: 600px; margin: 0 auto 48px; }
+
+/* ===== Feature Cards ===== */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.feat-card { background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
+  padding: 32px 24px; transition: all 0.25s; position: relative; overflow: hidden; }
+.feat-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 8px 32px rgba(139,105,20,0.08); }
+.feat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); transform: scaleX(0); transition: transform 0.3s; }
+.feat-card:hover::before { transform: scaleX(1); }
+.feat-icon { font-size: 32px; margin-bottom: 16px; display: block; }
+.feat-card h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text-100); margin-bottom: 8px; }
+.feat-card p { font-size: 13px; color: var(--text-200); line-height: 1.7; }
+
+/* ===== Highlights ===== */
+.highlights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.hl-item { text-align: center; padding: 24px; }
+.hl-num { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 900; color: var(--gold); }
+.hl-label { font-size: 13px; color: var(--text-200); margin-top: 4px; font-weight: 600; }
+
+/* ===== CTA ===== */
+.cta-section { padding: 80px 40px; text-align: center; background: var(--navy); border-top: 2px solid var(--gold); border-bottom: 2px solid var(--gold); }
+.cta-section h2 { font-family: 'Playfair Display', serif; font-size: 32px; color: #fff; margin-bottom: 12px; }
+.cta-section p { color: var(--primary-300); font-size: 15px; margin-bottom: 28px; }
+
+/* ===== GitHub ===== */
+.gh-section { text-align: center; padding: 60px 40px; }
+.gh-box { display: inline-flex; align-items: center; gap: 16px; padding: 20px 36px;
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
+  text-decoration: none; transition: all 0.25s; }
+.gh-box:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(139,105,20,0.1); }
+.gh-box svg { width: 40px; height: 40px; fill: var(--text-100); }
+.gh-box:hover svg { fill: var(--gold-dark); }
+.gh-text strong { display: block; font-size: 16px; color: var(--text-100); }
+.gh-text span { font-size: 12px; color: var(--text-200); }
+
+/* ===== Footer ===== */
+.footer { background: var(--navy); border-top: 2px solid var(--gold); padding: 40px; }
+.footer-grid { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; max-width: 1100px; margin: 0 auto; }
+.footer-brand { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 16px; letter-spacing: 1px; }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { color: var(--primary-300); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+.footer-links a:hover { color: var(--gold); }
+.footer-bottom { text-align: center; padding-top: 24px; margin-top: 24px; border-top: 1px solid rgba(201,168,76,0.2); color: var(--primary-300); font-size: 12px; max-width: 1100px; margin-left: auto; margin-right: auto; }
+.footer-bottom p { margin: 4px 0; }
+.footer-bottom a { color: var(--gold); text-decoration: none; }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+  .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 64px; left: 0; right: 0; background: var(--navy); padding: 20px 40px; gap: 16px; border-bottom: 2px solid var(--gold); }
+  .nav-toggle { display: flex; }
+  .hero h2 { font-size: 36px; }
+  .features { grid-template-columns: 1fr; }
+  .highlights { grid-template-columns: repeat(2, 1fr); }
+  .section { padding: 60px 20px; }
+  .hero { padding: 120px 20px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-logo">
+    <h1>AutoDramaStudio</h1>
+    <span>AI SHORT DRAMA</span>
+  </div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#">首页</a></li>
+    <li><a href="#features">功能介绍</a></li>
+    <li><a href="#highlights">产品优势</a></li>
+    <li><a href="#github">开源地址</a></li>
+    <li><a href="/" class="nav-cta">进入后台 →</a></li>
+  </ul>
+  <div class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-badge">AI-POWERED SHORT DRAMA STUDIO</div>
+  <h2>从创意到成片<br><em>全自动</em> AI 短剧生成</h2>
+  <p>端到端的AI短剧创作平台 — 剧本生成、分镜设计、角色塑造、智能生图、视频合成，一站式完成短剧制作全流程。</p>
+  <div class="hero-btns">
+    <a href="/" class="btn-primary">✨ 开始创作</a>
+    <a href="#features" class="btn-outline">了解更多</a>
+  </div>
+</header>
+
+<!-- Features -->
+<section class="section" id="features">
+  <div class="section-label">Core Features</div>
+  <h2 class="section-title">核心功能</h2>
+  <p class="section-sub">覆盖短剧创作全流程，从灵感到成片一气呵成</p>
+  <div class="features">
+    <div class="feat-card">
+      <span class="feat-icon">📝</span>
+      <h3>AI 剧本生成</h3>
+      <p>7 个 AI Agent 串联工作流，从标签解析到完整剧本自动生成。支持续写、校验、多风格适配，让创作变得简单。</p>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🎬</span>
+      <h3>智能分镜管理</h3>
+      <p>AI 自动拆解剧本为分镜台本，推荐景别、运镜、时长。可视化编辑，一键同步至镜头板。</p>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🎨</span>
+      <h3>AI 生图 & 生视频</h3>
+      <p>接入豆包 Seedream 4.0 和 Seedance 2.0，支持批量生图、视频生成。角色一致性约束确保画面统一。</p>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">👥</span>
+      <h3>角色 & 场景资产库</h3>
+      <p>管理角色三视图、场景参考图、道具素材。跨项目复用，确保短剧系列视觉一致性。</p>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">☁️</span>
+      <h3>对象存储支持</h3>
+      <p>支持阿里云 OSS / 腾讯云 COS / MinIO 多种存储方案。一键切换，生成的素材自动上传云端。</p>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🎥</span>
+      <h3>成片合成</h3>
+      <p>镜头板素材自动合成为完整短片，支持转场、背景音乐、字幕控制。从剧本到成片全链路打通。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Highlights -->
+<section class="cta-section" id="highlights">
+  <div class="section-label" style="color:var(--gold)">Why AutoDramaStudio</div>
+  <h2 class="section-title" style="color:#fff">为什么选择我们</h2>
+  <div class="highlights" style="max-width:900px;margin:0 auto">
+    <div class="hl-item"><div class="hl-num">7</div><div class="hl-label">AI Agent 协作</div></div>
+    <div class="hl-item"><div class="hl-num">4</div><div class="hl-label">大模型接入</div></div>
+    <div class="hl-item"><div class="hl-num">3</div><div class="hl-label">对象存储方案</div></div>
+    <div class="hl-item"><div class="hl-num">28</div><div class="hl-label">导演风格预设</div></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section" style="text-align:center">
+  <h2 class="section-title">准备好开始创作了吗？</h2>
+  <p class="section-sub">无需专业技能，选标签、点生成，你的第一部 AI 短剧从这里诞生</p>
+  <a href="/" class="btn-primary" style="font-size:16px">🚀 进入 AutoDramaStudio</a>
+</section>
+
+<!-- GitHub -->
+<section class="gh-section" id="github">
+  <a class="gh-box" href="https://github.com" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    <div class="gh-text">
+      <strong>AutoDramaStudio</strong>
+      <span>全自动AI短剧生成平台 · 开源项目</span>
+    </div>
+  </a>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">AutoDramaStudio</div>
+    <div class="footer-links">
+      <a href="/">进入后台</a>
+      <a href="#features">功能介绍</a>
+      <a href="https://github.com" target="_blank">GitHub</a>
+      <a href="#">使用教程</a>
+      <a href="#">关于我们</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>Copyright &copy; 2026 AutoDramaStudio All Rights Reserved.</p>
+    <p>Powered by <a href="#">Vue 3</a> · <a href="#">Element Plus</a> · <a href="#">LangGraph.js</a> · 豆包 Seedream / Seedance 2.0</p>
+  </div>
+</footer>
+
+</body>
+</html>
