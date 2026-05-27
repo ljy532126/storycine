@@ -147,18 +147,16 @@ cd frontend && npm run dev
 
 ### 方式二：Docker 一键部署
 
+> 前提：服务器需安装 **git**、**docker**、**docker-compose**
+
 ```bash
-# 1. 配置环境变量
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，填入 LLM API Key
+# 一行命令部署（首次）
+git clone https://github.com/ljy532126/storycine.git /www/wwwroot/storycine && cd /www/wwwroot/storycine && sh deploy.sh
 
-# 2. 一键部署
-sh deploy.sh
-
-# 3. 打开浏览器 http://localhost:3012
+# 打开浏览器 http://你的服务器IP:3012
 ```
 
-> `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。关终端不停。  
+> `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。  
 > Dockerfile 已配置国内 npm 镜像 (`npmmirror.com`)，国内构建速度更快。
 
 ### 默认管理员
