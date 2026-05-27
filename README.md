@@ -44,11 +44,10 @@ StoryCine 是一款端到端的 AI 短剧创作工具。从灵感到成片，覆
 <summary>点击展开截图（提交截图后自动显示）</summary>
 <br>
 
-| 官网首页 | 故事板 | 角色管理 |
-|:---:|:---:|:---:|
-| ![首页](docs/images/landing.png) | ![故事板](docs/images/storyboard.png) | ![角色](docs/images/assets.png) |
+| 官网首页 | 故事板 | 角色管理 | 导演台
+|:---:|:---:|:---:|:---:|
+| ![首页](docs/images/landing.png) | ![故事板](docs/images/storyboard.png) | ![角色](docs/images/assets.png) | ![导演台](docs/images/dashboard.png) |
 
-> 将实际截图放入 `docs/images/` 文件夹即可自动显示。
 
 </details>
 
@@ -153,13 +152,13 @@ cd frontend && npm run dev
 cp backend/.env.example backend/.env
 # 编辑 backend/.env，填入 LLM API Key
 
-# 2. 构建并启动（单端口 3012）
-docker-compose up -d --build
+# 2. 一键部署
+sh deploy.sh
 
-# 3. 打开浏览器
-# http://localhost:3012
+# 3. 打开浏览器 http://localhost:3012
 ```
 
+> `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。关终端不停。  
 > Dockerfile 已配置国内 npm 镜像 (`npmmirror.com`)，国内构建速度更快。
 
 ### 默认管理员
