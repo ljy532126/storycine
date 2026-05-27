@@ -38,6 +38,20 @@ StoryCine 是一款端到端的 AI 短剧创作工具。从灵感到成片，覆
 - **用户系统** — JWT 认证、角色权限、登录风控、密码锁定
 - **实时数据看板** — 生成量统计、服务器监控、AI 调用追踪
 
+## 📸 截图预览
+
+<details>
+<summary>点击展开截图（提交截图后自动显示）</summary>
+<br>
+
+| 官网首页 | 故事板 | 角色管理 |
+|:---:|:---:|:---:|
+| ![首页](docs/images/landing.png) | ![故事板](docs/images/storyboard.png) | ![角色](docs/images/assets.png) |
+
+> 将实际截图放入 `docs/images/` 文件夹即可自动显示。
+
+</details>
+
 ## 🎯 功能概览
 
 ### 剧本工坊
