@@ -118,9 +118,10 @@
             <el-table-column prop="createdAt" label="时间" width="150">
               <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="140" fixed="right">
+            <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
                 <el-button size="small" type="primary" link @click.stop="openScript(row)">进片场</el-button>
+                <el-button size="small" type="success" link @click.stop="exportScriptText(row)">导出</el-button>
                 <el-button size="small" type="danger" link @click.stop="handleDeleteScript(row)">移除</el-button>
               </template>
             </el-table-column>
@@ -141,6 +142,7 @@
             </div>
             <div class="sc-actions">
               <el-button size="small" type="primary" @click.stop="openScript(row)">进片场</el-button>
+              <el-button size="small" type="success" @click.stop="exportScriptText(row)">导出</el-button>
               <el-button size="small" type="danger" @click.stop="handleDeleteScript(row)">移除</el-button>
             </div>
           </div>
@@ -654,6 +656,36 @@ async function handleImport() {
 }
 
 function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
+function exportScriptText(row) {
+  const lines = [];
+  lines.push(`第${row.episodeNumber}集：${row.episodeTitle || '未命名'}`);
+  lines.push('');
+  if (row.summary) { lines.push(`【剧情摘要】${row.summary}`); lines.push(''); }
+  const scenes = row.scenes || [];
+  scenes.forEach((s, i) => {
+    lines.push(`--- 第${s.sceneNumber || i+1}场 ---`);
+    if (s.location) lines.push(`场景：${s.location}`);
+    if (s.timeOfDay) lines.push(`时间：${s.timeOfDay}`);
+    if (s.atmosphere) lines.push(`氛围：${s.atmosphere}`);
+    if (s.sceneDescription) lines.push(`描述：${s.sceneDescription}`);
+    if (s.dialogues?.length) {
+      lines.push('');
+      s.dialogues.forEach(d => {
+        const action = d.actionHint ? `（${d.actionHint}）` : '';
+        lines.push(`${d.characterName}${action}：${d.text}`);
+      });
+    }
+    lines.push('');
+  });
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `第${row.episodeNumber}集_${row.episodeTitle||'剧本'}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  ElMessage.success('剧本已导出');
+}
 
 const tags = reactive({ genre: '', plots: [], type: '', style: '' });
 
