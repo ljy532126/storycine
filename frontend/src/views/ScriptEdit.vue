@@ -94,8 +94,12 @@
       </div>
       <div class="center-panel center-empty" v-if="!currentScript && scripts.length===0 && (screenWidth >= 768 || mobileTab === 'scenes')"><el-empty description="点击上方剧集「新建」创建第一集 ✨" /></div>
       <div class="center-panel center-empty" v-if="!currentScript && scripts.length>0 && (screenWidth >= 768 || mobileTab === 'scenes')"><el-empty description="点击上方剧集，开始编辑 ✍️" /></div>
-      <div class="right-panel" v-show="screenWidth >= 768 || mobileTab === 'settings'">
-        <div class="panel-title">导演设定 🎥</div>
+      <div class="right-panel" :class="{ collapsed: rightCollapsed }" v-show="screenWidth >= 768 || mobileTab === 'settings'">
+        <div class="panel-title" @click="rightCollapsed = !rightCollapsed" style="cursor:pointer;user-select:none">
+          <span>导演设定 🎥</span>
+          <span class="collapse-toggle">{{ rightCollapsed ? '◀ 展开' : '▶ 收起' }}</span>
+        </div>
+        <div class="right-panel-body" v-show="!rightCollapsed">
         <div class="setting-group"><label>画面比例 📐</label><el-radio-group v-model="videoConfig.aspectRatio" size="small" @change="onVideoConfigChange"><el-radio-button value="16:9">16:9</el-radio-button><el-radio-button value="9:16">9:16</el-radio-button><el-radio-button value="4:3">4:3</el-radio-button><el-radio-button value="3:4">3:4</el-radio-button></el-radio-group></div>
         <div class="setting-group"><label>创作模式 🎞️</label><el-radio-group v-model="videoConfig.creationMode" size="small" @change="onVideoConfigChange"><el-radio-button value="image_to_video">生图转视频</el-radio-button><el-radio-button value="reference_video">参考生视频</el-radio-button></el-radio-group></div>
         <div class="setting-group"><label>风格参考 🎨 <span style="font-size:10px;color:var(--text-200);font-weight:400">（选后自动配置导演设定）</span></label><el-radio-group v-model="videoConfig.visualStyle" size="small" @change="onStyleChange"><el-radio-button value="写实">写实</el-radio-button><el-radio-button value="动漫">动漫</el-radio-button></el-radio-group></div>
@@ -110,6 +114,7 @@
             <el-button type="warning" style="width:100%" @click="openDirectorDialog" :disabled="!currentProjectId">导演全局设定 🎬</el-button>
           </el-tooltip>
         </div>
+        </div><!-- end right-panel-body -->
       </div>
     </div>
     <el-empty v-if="!currentProjectId" description="请先在上方选择一个片场 🎬" style="margin-top:80px" />
@@ -175,6 +180,7 @@ import { useRoute,useRouter } from 'vue-router';
 
 const screenWidth = ref(window.innerWidth);
 const mobileTab = ref('scenes');
+const rightCollapsed = ref(false);
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 import { ElMessage,ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
@@ -430,7 +436,11 @@ async function handleExport() {
 .dialogues-block{padding-left:8px}
 .dialogue-row{display:flex;gap:4px;align-items:center;margin-bottom:4px}
 .colon{color:var(--text-100);font-size:14px}
-.right-panel{width:250px;flex-shrink:0;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:12px;overflow-y:auto}
+.right-panel{width:250px;flex-shrink:0;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:12px;overflow-y:auto;transition:width 0.25s}
+.right-panel.collapsed{width:40px;padding:12px 8px;overflow:hidden}
+.right-panel.collapsed .right-panel-body{display:none}
+.collapse-toggle{font-size:11px;color:var(--text-200);font-weight:400}
+.panel-title:hover .collapse-toggle{color:var(--gold)}
 .setting-group{margin-bottom:14px}
 .setting-group>label{color:var(--text-200);font-size:12px;display:block;margin-bottom:4px;font-weight:bold}
 .sub-style-grid{display:flex;flex-wrap:wrap;gap:4px}
