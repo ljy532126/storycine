@@ -485,8 +485,9 @@ async function handleAutoGenerate() {
     });
 
     // 3. 批量同步到故事板
+    const token = localStorage.getItem('token');
     const rawRes = await fetch('/api/v1/storyboards/auto-generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ scriptId: currentScriptId.value, projectId: currentProjectId.value, batchShots: shots }),
     });
     const data = await rawRes.json();
@@ -516,7 +517,8 @@ async function deleteStoryboard() {
   try { await ElMessageBox.confirm('确定删除当前故事板？删除后可以重新生成。', '删除故事板', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '下次再说叭' }); } catch { return; }
   deletingSB.value = true;
   try {
-    await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}`, { method: 'DELETE' });
+    const token = localStorage.getItem('token');
+    await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     currentStoryboard.value = null;
     currentShot.value = null;
     ElMessage.success('故事板已删除，可重新生成');
@@ -593,8 +595,9 @@ function setMatAsCurrent(m) {
     currentShot.value.renderedImage = m.url;
   }
   if (currentStoryboard.value?._id) {
+    const token = localStorage.getItem('token');
     fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${currentShot.value.shotNumber}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(m.type === 'video' ? { renderedVideo: m.url } : { renderedImage: m.url }),
     }).catch(() => {});
   }
@@ -776,12 +779,12 @@ async function batchGenerateImages() {
     try {
       const prompt = s._imagePrompt || s.imageDescription;
       const res = await fetch('/api/v1/assets/generate-image', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt, model: selectedModel.value, referenceImages: s._refImages || [] })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
-      if (data.data?.imageUrl) { s.renderedImage = data.data.imageUrl; done++; const mats2 = s.materials || []; mats2.push({ version: mats2.length + 1, type: "image", url: data.data.imageUrl, prompt: s._imagePrompt || "", createdAt: new Date().toISOString() }); s.materials = mats2; const mats = s.materials || []; mats.push({ version: mats.length + 1, type: "image", url: data.data.imageUrl, prompt: s._imagePrompt || "", createdAt: new Date().toISOString() }); s.materials = mats; try { if (currentStoryboard.value?._id) await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${s.shotNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ renderedImage: data.data.imageUrl, materials: s.materials }) }); } catch {} }
+      if (data.data?.imageUrl) { s.renderedImage = data.data.imageUrl; done++; const mats2 = s.materials || []; mats2.push({ version: mats2.length + 1, type: "image", url: data.data.imageUrl, prompt: s._imagePrompt || "", createdAt: new Date().toISOString() }); s.materials = mats2; const mats = s.materials || []; mats.push({ version: mats.length + 1, type: "image", url: data.data.imageUrl, prompt: s._imagePrompt || "", createdAt: new Date().toISOString() }); s.materials = mats; try { if (currentStoryboard.value?._id) { const token2 = localStorage.getItem('token'); await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${s.shotNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token2}` }, body: JSON.stringify({ renderedImage: data.data.imageUrl, materials: s.materials }) }); } } catch {} }
     } catch (e) { console.error('batch image fail:', e); }
   }
   batchGenning.value = false;
@@ -803,12 +806,12 @@ async function batchGenerateVideos() {
     try {
       const prompt = s._videoPrompt || s.imageDescription;
       const res = await fetch('/api/v1/assets/generate-image', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', duration: s.duration || 5 })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
-      if (data.data?.imageUrl) { s.renderedVideo = data.data.imageUrl; done++; try { if (currentStoryboard.value?._id) await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${s.shotNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ renderedVideo: data.data.imageUrl }) }); } catch {} }
+      if (data.data?.imageUrl) { s.renderedVideo = data.data.imageUrl; done++; try { if (currentStoryboard.value?._id) { const token = localStorage.getItem('token'); await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${s.shotNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ renderedVideo: data.data.imageUrl }) }); } } catch {} }
     } catch (e) { console.error('batch video fail:', e); }
   }
   batchGenningVideo.value = false;
@@ -827,7 +830,7 @@ async function generatePromptForShot() {
   genningPrompt.value = true;
   try {
     const res = await fetch('/api/v1/assets/generate-prompt', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: currentProjectId.value, assetType: 'storyboard', existingPrompt: '你是AI绘图提示词专家。根据分镜描述生成高质量中文图片提示词，包含画面内容、人物动作、场景氛围、光影、构图、风格。只输出完整提示词。\\n\\n分镜描述：' + currentShotPrompt.value + '\\n\\n请生成完整图片提示词。' })
     });
     const data = await res.json();
@@ -861,7 +864,7 @@ async function generateVideoPromptForShot() {
       s.imageDescription ? '画面描述：' + s.imageDescription : '',
     ].filter(Boolean).join('\n');
     const res = await fetch('/api/v1/assets/generate-prompt', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: currentProjectId.value, assetType: 'video', existingPrompt: '你是短视频导演。根据以下分镜信息生成一段完整的视频提示词。要求：包含画面描述、运镜方式、人物动作、台词节奏、光影氛围，适合' + videoDuration.value + '秒竖屏短视频。只输出视频提示词文本。\n\n' + parts })
     });
     const data = await res.json();
@@ -903,7 +906,7 @@ async function generateImageForShot() {
     }
     console.log('[生图] 参考图数量:', refUrls.length, '角色外貌描述:', charAppearances.length, 'URLs:', refUrls);
     const res = await fetch('/api/v1/assets/generate-image', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt: enrichedPrompt, model: selectedModel.value, referenceImages: refUrls })
     });
     const data = await res.json();
@@ -939,7 +942,7 @@ async function recoverVideo() {
   recovering.value = true;
   try {
     const res = await fetch('/api/v1/assets/video-tasks/recover', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ taskIds: [tid] }),
     });
     const json = await res.json();
@@ -985,7 +988,7 @@ async function generateVideoForShot() {
     console.log('[生视频] 参考图数量:', refUrls.length);
 
     const res = await fetch('/api/v1/assets/generate-image', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: currentVideoPrompt.value, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value })
     });
     const data = await res.json();
@@ -1025,7 +1028,8 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
 
   videoPollTimer = setInterval(async () => {
     try {
-      const res = await fetch(`/api/v1/assets/video-task/${taskId}?provider=doubao`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/v1/assets/video-task/${taskId}?provider=doubao`, { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       const d = json.data;
       if ((d.status === 'completed' || d.status === 'succeeded') && d.videoUrl) {
@@ -1105,7 +1109,7 @@ async function handleExport() {
   showExportDialog.value = false;
   try {
     const res = await fetch('/api/v1/export', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({
         projectId: currentProjectId.value,
         episodeIds: exportEpisodes.value,
