@@ -522,18 +522,16 @@ async function handleExport() {
   .flow-step:not(.done) { background: var(--bg-100); }
   .flow-arrow { display: none; }
 
-  /* 三列：自然撑开，无高度限制 */
+  /* 三列：撑满剩余高度，内部面板也填满 */
   .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow-y: visible; }
 
-  /* 左/中面板 */
-  .left-panel { width: 100%; overflow-y: visible; flex: none; padding: 12px 16px; }
+  /* 左/中/右面板：自动撑满父容器 */
+  .left-panel { width: 100%; flex: 1; min-height: 0; padding: 12px 16px; }
   .left-panel :deep(.episode-list) { overflow-y: visible; }
   .left-panel :deep(.ep-item) { white-space: normal; padding: 10px 12px; font-size: 0.875rem; }
-  .center-panel { width: 100%; min-width: 0; padding: 12px 16px; overflow-y: visible; flex: none; }
-
-  /* 右面板：无高度限制，内容自然撑开 */
-  .right-panel { width: 100%; padding: 16px; overflow-y: visible; flex: none; max-height: none; }
-  .right-panel.collapsed { width: 100%; padding: 12px 16px; }
+  .center-panel { width: 100%; min-width: 0; padding: 12px 16px; flex: 1; min-height: 0; }
+  .right-panel { width: 100%; padding: 16px; flex: 1; min-height: 0; }
+  .right-panel.collapsed { width: 100%; padding: 12px 16px; flex: none; }
   .right-panel .panel-title { font-size: 1rem; padding: 8px 0 12px; cursor: pointer; border-bottom: 1px solid var(--bg-300); margin-bottom: 14px; }
   .collapse-toggle { font-size: 0.75rem; }
 
