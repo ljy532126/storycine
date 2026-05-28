@@ -97,7 +97,7 @@
       </div>
     </div>
     <el-empty v-if="!currentProjectId" description="请先在上方选择一个片场 🎬" style="margin-top:80px" />
-    <el-dialog v-model="showDirectorDialog" title="导演全局设定 🎬" width="650px" destroy-on-close>
+    <el-dialog v-model="showDirectorDialog" title="导演全局设定 🎬" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
       <el-form :model="directorForm" label-position="top">
         <el-form-item label="画质与质感 🖌️"><el-input v-model="directorForm.qualityKeywords" type="textarea" :rows="2" placeholder="8K、超写实、电影级摄影..." /></el-form-item>
         <el-form-item label="氛围与光影 🌅"><el-input v-model="directorForm.atmosphereLighting" placeholder="情感氛围描述..." /></el-form-item>
@@ -106,7 +106,7 @@
       <div class="ai-hint"><el-alert type="info" :closable="false" show-icon><template #title>AI 会读懂你的设定，自动优化后应用到全剧所有镜头 ✨</template></el-alert></div>
       <template #footer><el-button @click="showDirectorDialog=false">下次再说叭</el-button><el-button type="primary" @click="handleAIUnderstand" :loading="aiUnderstanding">AI 理解并润色 ✨</el-button><el-button type="success" @click="handleApplyDirectorSettings">应用到全剧 ✅</el-button></template>
     </el-dialog>
-    <el-dialog v-model="showExtractDialog" title="提取结果 👥" width="650px" destroy-on-close>
+    <el-dialog v-model="showExtractDialog" title="提取结果 👥" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
       <div v-if="extracting" style="text-align:center;padding:40px"><p style="color:var(--text-100)">AI 正在识别剧本中的角色、场景、道具...</p></div>
       <div v-else-if="extractResult">
         <el-divider content-position="left"><strong>角色 ({{extractResult.characters?.length||0}})</strong></el-divider>
@@ -120,7 +120,7 @@
       <template #footer><el-button @click="showExtractDialog=false">知道啦</el-button><el-button type="primary" @click="goToAssets">去主体管理看看</el-button></template>
     </el-dialog>
     <!-- AI 拆镜对比 -->
-    <el-dialog v-model="showStoryboardDiff" title="AI 拆镜前后对比 🎯" width="700px" destroy-on-close>
+    <el-dialog v-model="showStoryboardDiff" title="AI 拆镜前后对比 🎯" :width="screenWidth < 768 ? '94%' : '700px'" destroy-on-close>
       <el-alert type="success" :closable="false" show-icon style="margin-bottom:14px"><template #title>AI 已优化 {{ diffChanges }} 处参数</template></el-alert>
       <div style="max-height:50vh;overflow-y:auto">
         <div v-for="(d, i) in diffShots" :key="i" v-if="d && d.changes && d.changes.length > 0" style="margin-bottom:10px;padding:12px;background:var(--bg-100);border-radius:8px">
@@ -138,7 +138,7 @@
         <el-button @click="showStoryboardDiff = false">保留优化</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="showExportDialog" title="导出分镜内容 📋" width="540px">
+    <el-dialog v-model="showExportDialog" title="导出分镜内容 📋" :width="screenWidth < 768 ? '94%' : '540px'">
       <el-form label-position="top" size="small">
         <el-form-item label="选择剧集">
           <el-select v-model="exportEpisodes" style="width:100%" multiple collapse-tags placeholder="全部剧集（不选=导出全部）"><el-option v-for="ep in scripts" :key="ep._id" :label="formatEpLabel(ep)" :value="ep._id" /></el-select>
@@ -156,6 +156,9 @@
 <script setup>
 import { ref,reactive,computed,onMounted,nextTick } from 'vue';
 import { useRoute,useRouter } from 'vue-router';
+
+const screenWidth = ref(window.innerWidth);
+window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 import { ElMessage,ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
@@ -439,12 +442,52 @@ async function handleExport() {
 .sg-project-pills::-webkit-scrollbar { height: 4px; }
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
 @media (max-width: 768px) {
+  .script-edit-root { max-width: 100vw; overflow-x: hidden; }
+  .top-bar { flex-wrap: wrap; gap: 8px; }
+  .top-bar .el-button { min-height: 44px; }
+  .word-count { width: 100%; margin-left: 0 !important; justify-content: flex-end; }
+
+  /* 流程引导 */
+  .flow-guide { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px; padding: 6px 8px; }
+  .flow-step { font-size: 10px; padding: 3px 8px; }
+  .flow-arrow { display: none; }
+
+  /* 三列堆叠 */
+  .three-column { flex-direction: column; gap: 8px; overflow-y: auto; }
+  .left-panel { width: 100%; flex-shrink: 0; max-height: 150px; overflow-y: auto; }
+  .left-panel :deep(.episode-list) { display: flex; gap: 6px; overflow-x: auto; }
+  .left-panel :deep(.ep-item) { flex-shrink: 0; min-width: 120px; white-space: nowrap; }
+  .center-panel { width: 100%; min-width: 0; padding: 10px; }
+  .right-panel { width: 100%; max-height: none; padding: 10px; }
+
+  /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 6px; }
-  .ep-header .el-input { width: 100% !important; }
-  .ep-header .el-button { font-size: 11px; padding: 5px 10px; }
+  .ep-header :deep(.title-input) { flex: 1 1 100%; }
+  .ep-header .el-button { font-size: 0.75rem; padding: 6px 10px; min-height: 40px; }
+  .scene-count { font-size: 0.75rem; }
+
+  /* 分镜卡片 */
   .scene-meta-row { gap: 4px; }
-  .scene-meta-row .el-select { width: 100% !important; }
-  .three-column { gap: 8px; }
-  .left-panel, .right-panel { max-height: 180px; }
+  .meta-item { min-width: 45%; flex: 1 1 45%; }
+  .meta-item .el-select,
+  .meta-item .el-input,
+  .meta-item .el-input-number { width: 100% !important; }
+
+  /* 对话行 */
+  .dialogue-row { flex-wrap: wrap; gap: 4px; }
+  .dialogue-row .el-input { min-width: 0 !important; }
+  .dialogue-row .el-input:first-child { width: 70px !important; flex-shrink: 0; }
+  .dialogue-row .el-input:nth-child(2) { flex: 1 1 100px; }
+  .dialogue-row .el-input:nth-child(3) { width: 100px !important; }
+  .colon { display: none; }
+
+  /* 右侧导演设定 */
+  .sub-style-grid { gap: 3px; }
+  .sub-style-item { padding: 4px 10px; font-size: 0.75rem; min-height: 32px; display: flex; align-items: center; }
+
+  /* 所有交互元素 */
+  :deep(.el-button) { min-height: 40px; }
+  :deep(.el-input__wrapper) { min-height: 40px; }
+  :deep(.el-select__wrapper) { min-height: 40px; }
 }
 </style>
