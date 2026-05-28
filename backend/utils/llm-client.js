@@ -72,6 +72,32 @@ function sanitizeJSON(text) {
     }
   }
 
+  // 尝试修复截断/不完整的 JSON（常见于 token 限制导致输出被截断）
+  try { JSON.parse(result); return result; } catch (e2) {
+    // 查找最后一个完整的 JSON 结构
+    // 策略：从末尾向前找最后一个完整的对象或数组结束
+    let lastValid = -1;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = 0; i < result.length; i++) {
+      const c = result[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\' && inStr) { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{' || c === '[') depth++;
+      if (c === '}' || c === ']') { depth--; if (depth === 0) lastValid = i; }
+    }
+    if (lastValid > 0 && lastValid < result.length - 1) {
+      result = result.substring(0, lastValid + 1);
+      // 补全缺失的顶层结构
+      const opens = (result.match(/\{/g) || []).length;
+      const closes = (result.match(/\}/g) || []).length;
+      for (let k = closes; k < opens; k++) result += '}';
+    }
+  }
+
   return result;
 }
 
