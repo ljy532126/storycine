@@ -552,8 +552,9 @@ ${hasRefImage ? '⚠️ 该角色已上传参考图，必须100%继承参考图�
 
     // director / storyboard 等通用类型：直接透传 prompt 给 LLM
     if (assetType === 'director' || assetType === 'storyboard') {
+      console.log('[generate-prompt] storyboard, promptLen:', (existingPrompt || '').length);
       const prompt = await callLLM('你是一个有帮助的AI助手。只输出请求的内容，不要额外解释。', existingPrompt || '', { temperature: 0.7, maxTokens: 2000 });
-      return res.json({ data: { prompt: prompt.trim() } });
+      return res.json({ data: { prompt: (prompt || '').trim() } });
     }
 
     res.status(400).json({ message: '未知资产类型: ' + assetType });
