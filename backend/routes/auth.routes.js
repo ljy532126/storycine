@@ -62,7 +62,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     await logLogin(username, ip, ua, true, '注册成功', user._id);
     const token = generateToken(user);
-    res.status(201).json({ message: '注册成功', data: { token, user: { id: user._id, username, role: user.role } } });
+    res.status(201).json({ message: '注册成功', data: { token, user: { id: user._id, uid: user.uid, username, role: user.role } } });
   } catch (e) {
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
@@ -122,7 +122,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     await logLogin(username, ip, ua, true, '登录成功', user._id);
     const token = generateToken(user);
-    res.json({ message: '登录成功', data: { token, user: { id: user._id, username, nickname: user.nickname || username, avatar: user.avatar || '', role: user.role } } });
+    res.json({ message: '登录成功', data: { token, user: { id: user._id, uid: user.uid, username, nickname: user.nickname || username, avatar: user.avatar || '', role: user.role } } });
   } catch (e) {
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
@@ -130,7 +130,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // ===== 获取当前用户信息 =====
 router.get('/me', authRequired, (req, res) => {
-  res.json({ data: { id: req.user._id, username: req.user.username, nickname: req.user.nickname || req.user.username, avatar: req.user.avatar || '', role: req.user.role, createdAt: req.user.createdAt } });
+  res.json({ data: { id: req.user._id, uid: req.user.uid, username: req.user.username, nickname: req.user.nickname || req.user.username, avatar: req.user.avatar || '', role: req.user.role, createdAt: req.user.createdAt } });
 });
 
 // 更新个人信息
@@ -172,6 +172,13 @@ router.get('/users', adminRequired, async (req, res) => {
 
     res.json({ data: { users, total, page: Number(page), size: Number(size) } });
   } catch (e) { res.status(500).json({ message: '查询失败' }); }
+});
+
+// ===== 管理员：按 UID 查询用户 =====
+router.get('/users/uid/:uid', adminRequired, async (req, res) => {
+  const user = await User.findOne({ uid: req.params.uid }).select('-password');
+  if (!user) return res.status(404).json({ message: '用户不存在' });
+  res.json({ data: user });
 });
 
 // ===== 管理员：用户详情 =====

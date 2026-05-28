@@ -53,6 +53,10 @@
       <!-- 登录信息 -->
       <div class="pf-card">
         <h3 class="pf-card-title">登录信息</h3>
+        <div class="pf-info-row">
+          <span>用户ID</span>
+          <strong class="pf-uid" @click="copyUid" :title="copied ? '已复制' : '点击复制'">{{ user.uid || '-' }}</strong>
+        </div>
         <div class="pf-info-row"><span>角色</span><strong>{{ user.role === 'admin' ? '管理员' : '普通用户' }}</strong></div>
         <div class="pf-info-row"><span>注册时间</span><strong>{{ fmt(user.createdAt) }}</strong></div>
         <div class="pf-info-row"><span>最后登录</span><strong>{{ fmt(user.lastLoginAt) }}</strong></div>
@@ -70,6 +74,12 @@ const user = reactive({ username: '', nickname: '', avatar: '', role: '', create
 const form = reactive({ nickname: '', avatar: '' });
 const saving = ref(false);
 const changing = ref(false);
+const copied = ref(false);
+
+async function copyUid() {
+  if (!user.uid) return;
+  try { await navigator.clipboard.writeText(user.uid); copied.value = true; setTimeout(() => copied.value = false, 2000); } catch {}
+}
 const fileInput = ref(null);
 const pwdForm = ref(null);
 
@@ -154,5 +164,7 @@ onMounted(() => loadUser());
 .pf-info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--bg-300); font-size: 13px; }
 .pf-info-row span { color: var(--text-200); }
 .pf-info-row strong { color: var(--text-100); }
+.pf-uid { cursor: pointer; font-family: 'Courier New', monospace; letter-spacing: 1px; user-select: all; }
+.pf-uid:hover { color: var(--gold); }
 @media (max-width: 700px) { .pf-cards { grid-template-columns: 1fr; } .pf-card:nth-child(3) { grid-column: span 1; } }
 </style>
