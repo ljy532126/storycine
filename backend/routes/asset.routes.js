@@ -624,13 +624,15 @@ router.post('/generate-image', async (req, res, next) => {
     let provider = 'wan27';
     if (model === 'doubao_image' || model === 'doubao_image_4k') provider = 'doubao';
     else if (model === 'jimeng' || model === 'jimeng_4k') provider = 'jimeng';
+    else if (model === 'openai_image' || model?.includes('dall-e') || model?.includes('gpt-image')) provider = 'openai';
 
     const sizeMap = { '9:16': '1280x2880', '16:9': '2880x1280', '4:3': '1920x1920', '3:4': '1440x2560' };
     let size = sizeMap[ratio] || '1280x2880';
     if (model === 'doubao_image_4k' || model === 'jimeng_4k') size = '1920x2880';
 
     // 从运行时配置读取用户设置的生图模型
-    const imageModel = appConfig.llm.doubao?.imageModel || appConfig.llm.doubao?.model || 'doubao-seedream-4-5-251128';
+    const llmCfg = appConfig.llm[provider] || {};
+    const imageModel = llmCfg.imageModel || llmCfg.model || 'doubao-seedream-4-5-251128';
     const genParams = { provider, size, model: imageModel };
     if (resolvedRefs && resolvedRefs.length > 0) genParams.referenceImages = resolvedRefs;
     if (resolvedInput) genParams.inputImage = resolvedInput;

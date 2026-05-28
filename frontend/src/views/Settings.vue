@@ -52,9 +52,14 @@
                   <div style="margin-top:2px"><a href="https://platform.openai.com/api-keys" target="_blank" class="key-link">🔑 获取 Key →</a></div>
                 </el-form-item>
                 <el-form-item label="Base URL"><el-input v-model="form.openai.baseUrl" placeholder="https://api.openai.com/v1" /></el-form-item>
-                <el-form-item label="Model">
+                <el-form-item label="Chat Model">
                   <el-select v-model="form.openai.model" filterable allow-create>
                     <el-option v-for="m in openaiModels" :key="m" :label="m" :value="m" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="Image Model (生图)">
+                  <el-select v-model="form.openai.imageModel" filterable allow-create>
+                    <el-option v-for="m in openaiImageModels" :key="m" :label="m" :value="m" />
                   </el-select>
                 </el-form-item>
                 <div style="display:flex;gap:8px">
@@ -217,12 +222,13 @@ const llmStatus = reactive({ configured: false, activeProvider: '', model: '' })
 const summary = reactive({ deepseek: { apiKey: '' }, doubao: { apiKey: '' }, tongyi: { apiKey: '' }, openai: { apiKey: '' }, activeProvider: '' });
 const form = reactive({
   deepseek: { apiKey: '', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-  openai: { apiKey: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o' },
+  openai: { apiKey: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o', imageModel: '' },
   doubao: { apiKey: '', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seedance-2-0-260128', imageModel: '' },
   tongyi: { apiKey: '', baseUrl: '', model: '' },
 });
 const deepseekModels = ['deepseek-chat', 'deepseek-reasoner'];
 const openaiModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+const openaiImageModels = ['gpt-image-2', 'dall-e-3', 'dall-e-2'];
 const doubaoModels = ['doubao-seedance-2-0-260128', 'doubao-pro-32k', 'doubao-lite-32k'];
 const seedreamModels = ['doubao-seedream-4-5-251128', 'doubao-seedream-4-0-250828'];
 const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instruct'];
@@ -238,7 +244,7 @@ async function refreshStatus() {
 
 async function saveConfig(provider) {
   saving.value = true;
-  try { const cfg = form[provider]; await configAPI.updateLLMConfig({ provider, apiKey: cfg.apiKey, baseUrl: cfg.baseUrl, model: cfg.model, imageModel: cfg.imageModel }); ElMessage.success(`${provider} 已保存到数据库，重启不丢失`); await refreshStatus(); }
+  try { const cfg = form[provider]; await configAPI.updateLLMConfig({ provider, apiKey: cfg.apiKey, baseUrl: cfg.baseUrl, model: cfg.model, imageModel: cfg.imageModel || '' }); ElMessage.success(`${provider} 已保存到数据库，重启不丢失`); await refreshStatus(); }
   catch (e) { ElMessage.error('保存失败: ' + (e.response?.data?.message || e.message)); }
   finally { saving.value = false; }
 }
