@@ -29,6 +29,14 @@
       <div class="flow-step" :class="{ done: flowDoneSync }">⑤ 同步至故事板（去故事板生图/生视频）</div>
     </div>
 
+    <!-- PC 端：剧集横排 -->
+    <div class="episode-row" v-if="currentProjectId && screenWidth >= 768">
+      <span class="er-label">剧集：</span>
+      <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
+      <el-button size="small" text @click="addEpisode" title="新建剧集" class="er-add">+ 新建</el-button>
+      <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
+    </div>
+
     <!-- 移动端 Tab 导航 -->
     <div class="mobile-tabs" v-if="currentProjectId && screenWidth < 768">
       <div :class="['mtab', { active: mobileTab === 'episodes' }]" @click="mobileTab = 'episodes'">📋 剧集</div>
@@ -37,11 +45,12 @@
     </div>
 
     <div class="three-column" v-if="currentProjectId">
-      <div class="left-panel" v-show="screenWidth >= 768 || mobileTab === 'episodes'">
+      <!-- 移动端才显示左侧剧集面板 -->
+      <div class="left-panel" v-if="screenWidth < 768" v-show="mobileTab === 'episodes'">
         <div class="panel-title"><span>剧集列表</span><span class="panel-actions"><el-button size="small" text @click="addEpisode" title="新建剧集">+</el-button><el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉</el-button></span></div>
         <div class="episode-list"><div v-for="ep in scripts" :key="ep._id" :class="['ep-item',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)"><span class="ep-num">第 {{ ep.episodeNumber }} 集</span><span class="ep-title">{{ ep.episodeTitle||'未命名剧集' }}</span></div></div>
       </div>
-      <div class="center-panel" v-if="currentScript" v-show="screenWidth >= 768 || mobileTab === 'scenes'">
+      <div class="center-panel" v-if="currentScript && (screenWidth >= 768 || mobileTab === 'scenes')">
         <div class="ep-header">
           <el-input v-model="currentScript.episodeTitle" placeholder="给这集起个名字..." size="large" class="title-input" @change="markDirty" />
           <el-tooltip content="AI 根据剧本内容自动推荐景别/运镜/光影/时长，点击后弹出前后对比" placement="bottom"><el-button type="primary" @click="handleAutoStoryboard" :loading="autoStoryboarding" style="margin-left:12px">AI 智能拆镜 🎯</el-button></el-tooltip>
@@ -83,8 +92,8 @@
         </div>
         <el-button style="margin-top:12px;width:100%" @click="addScene" dashed>+ 添加新镜头</el-button>
       </div>
-      <div class="center-panel center-empty" v-if="!currentScript && scripts.length===0"><el-empty description="点击左侧「新剧集」创建第一集 ✨" /></div>
-      <div class="center-panel center-empty" v-if="!currentScript && scripts.length>0"><el-empty description="点击左侧剧集，开始编辑 ✍️" /></div>
+      <div class="center-panel center-empty" v-if="!currentScript && scripts.length===0 && (screenWidth >= 768 || mobileTab === 'scenes')"><el-empty description="点击上方剧集「新建」创建第一集 ✨" /></div>
+      <div class="center-panel center-empty" v-if="!currentScript && scripts.length>0 && (screenWidth >= 768 || mobileTab === 'scenes')"><el-empty description="点击上方剧集，开始编辑 ✍️" /></div>
       <div class="right-panel" v-show="screenWidth >= 768 || mobileTab === 'settings'">
         <div class="panel-title">导演设定 🎥</div>
         <div class="setting-group"><label>画面比例 📐</label><el-radio-group v-model="videoConfig.aspectRatio" size="small" @change="onVideoConfigChange"><el-radio-button value="16:9">16:9</el-radio-button><el-radio-button value="9:16">9:16</el-radio-button><el-radio-button value="4:3">4:3</el-radio-button><el-radio-button value="3:4">3:4</el-radio-button></el-radio-group></div>
@@ -430,6 +439,13 @@ async function handleExport() {
 .sub-style-item.active{background:var(--primary-100);border-color:var(--primary-200);color:var(--primary-200)}
 .ai-hint{margin-top:12px}
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
+/* PC 端剧集横排 */
+.episode-row{display:flex;align-items:center;gap:6px;padding:8px 12px;margin-bottom:10px;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);overflow-x:auto;flex-shrink:0;flex-wrap:wrap}
+.er-label{font-size:12px;color:var(--text-200);font-weight:600;flex-shrink:0}
+.er-chip{padding:5px 12px;border-radius:14px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);white-space:nowrap;transition:all 0.15s}
+.er-chip:hover{border-color:var(--gold);color:var(--text-100)}
+.er-chip.active{background:var(--navy);border-color:var(--gold);color:var(--gold);font-weight:700}
+.er-add{flex-shrink:0;font-size:12px;color:var(--gold-dark)}
 .flow-step{padding:4px 10px;border-radius:12px;background:var(--bg-200);white-space:nowrap}
 .flow-step.done{background:#E8F5E9;color:#2E7D32;font-weight:600}
 .flow-arrow{color:var(--gold-dark);font-weight:700}
