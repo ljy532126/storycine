@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search,
@@ -190,7 +190,9 @@ function handleLogout() {
 }
 const collapsed = ref(false);
 const mobileMenuOpen = ref(false);
-const userRole = ref('');
+const userRole = ref((() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}').role || ''; } catch { return ''; }
+})());
 
 // 从 localStorage 初始化（快速首屏渲染）
 const currentUser = ref((() => {
@@ -279,6 +281,9 @@ function onKeydown(e) {
   if (e.ctrlKey && e.key === 'Enter') { window.__triggerGenerate?.(); return; }
   if (e.ctrlKey && e.key === 's') { e.preventDefault(); window.__triggerSave?.(); return; }
 }
+
+// 路由变化时刷新用户信息（解决登录后 App 不重载的问题）
+watch(() => route.path, () => { if (localStorage.getItem('token')) refreshUser(); });
 
 onMounted(() => {
   refreshUser();
