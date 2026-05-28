@@ -18,11 +18,13 @@
     </div>
 
     <!-- PC 端：剧集横排 -->
-    <div class="episode-row" v-if="currentProjectId && screenWidth >= 768">
+    <div class="episode-row-wrap" v-if="currentProjectId && screenWidth >= 768">
       <span class="er-label">剧集：</span>
-      <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
-      <el-button size="small" text @click="addEpisode" title="新建剧集" class="er-add">+ 新建</el-button>
-      <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
+      <div class="episode-row">
+        <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
+        <el-button size="small" text @click="addEpisode" title="新建剧集" class="er-add">+ 新建</el-button>
+        <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
+      </div>
     </div>
 
     <!-- 移动端 Tab 导航 -->
@@ -444,11 +446,13 @@ async function handleExport() {
 .ai-hint{margin-top:12px}
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
 /* PC 端剧集列表（固定高度 + 上下滚动 + 底部渐变遮罩） */
+.episode-row-wrap{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;flex-shrink:0}
+.er-label{font-size:12px;color:var(--text-200);font-weight:600;flex-shrink:0;padding-top:10px}
 .episode-row{
-  position:relative; display:flex; flex-direction:column; flex-wrap:nowrap;
-  gap:4px; padding:8px 12px; margin-bottom:10px; max-height:76px;
+  position:relative; display:flex; flex-direction:column; flex-wrap:nowrap; flex:1;
+  gap:4px; padding:8px 12px; max-height:96px;
   background:var(--bg-200); border-radius:8px; border:1px solid var(--bg-300);
-  overflow-y:auto; overflow-x:hidden; flex-shrink:0;
+  overflow-y:auto; overflow-x:hidden;
   scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
   -webkit-mask-image:linear-gradient(to bottom,black 0%,black calc(100% - 20px),transparent 100%);
   mask-image:linear-gradient(to bottom,black 0%,black calc(100% - 20px),transparent 100%);
@@ -457,7 +461,6 @@ async function handleExport() {
 .episode-row::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px}
 .episode-row::-webkit-scrollbar-track{background:transparent}
 
-.er-label{font-size:11px;color:var(--text-200);font-weight:600;flex-shrink:0;padding-bottom:2px}
 .er-chip{padding:5px 12px;border-radius:14px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);white-space:nowrap;transition:all 0.15s;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
 .er-chip:hover{border-color:var(--gold);color:var(--text-100)}
 .er-chip.active{background:var(--navy);border-color:var(--gold);color:var(--gold);font-weight:700}
