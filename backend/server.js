@@ -192,11 +192,6 @@ connectDB().then(async () => {
     console.log('  \\x1b[33m                      |___/                  \\x1b[0m');
     console.log('');
     console.log(`       36m  ➜  http://localhost:${PORT}`);
-    if (appConfig.hasLLMConfigured()) {
-      console.log(`  \\x1b[32m➜  LLM:     ${appConfig.getActiveLLM().provider} (ready)\\x1b[0m`);
-    } else {
-      console.log(`  \\x1b[33m➜  LLM:     not configured yet\\x1b[0m`);
-    }
     console.log('');
   });
 }).catch((err) => {
