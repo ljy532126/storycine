@@ -452,10 +452,10 @@ async function handleExport() {
 .er-header{display:flex;align-items:center;gap:8px}
 .er-label{font-size:12px;color:var(--text-200);font-weight:600}
 .episode-row{
-  position:relative; display:flex; flex-direction:column; flex-wrap:nowrap; flex:1;
+  position:relative; display:flex; flex-direction:row; flex-wrap:wrap; flex:1;
   gap:4px; padding:8px 12px; max-height:96px;
   background:var(--bg-200); border-radius:8px; border:1px solid var(--bg-300);
-  overflow-y:auto; overflow-x:hidden;
+  overflow-y:auto; overflow-x:hidden; align-content:flex-start;
   scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
   -webkit-mask-image:linear-gradient(to bottom,black 0%,black calc(100% - 20px),transparent 100%);
   mask-image:linear-gradient(to bottom,black 0%,black calc(100% - 20px),transparent 100%);
