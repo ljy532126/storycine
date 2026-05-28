@@ -207,9 +207,6 @@ const currentUser = computed(() => {
 const avatarLetter = computed(() => (currentUser.value.nickname || currentUser.value.username || '?')[0]?.toUpperCase());
 const isAdmin = computed(() => userRole.value === 'admin');
 
-import { onMounted } from 'vue';
-onMounted(() => refreshUser());
-
 const activeMenu = computed(() => {
   mobileMenuOpen.value = false;
   return route.path;
@@ -275,6 +272,7 @@ function onKeydown(e) {
 }
 
 onMounted(() => {
+  refreshUser();
   document.addEventListener('keydown', onKeydown);
   nextTick(() => { if (searchInput.value) searchInput.value.focus(); });
 });
