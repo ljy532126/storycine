@@ -106,12 +106,12 @@
         <div class="setting-group" v-if="videoConfig.visualStyle"><label>风格细分 ✨</label><div class="sub-style-grid"><div v-for="s in currentSubStyles" :key="s" :class="['sub-style-item',{active:videoConfig.subStyle===s}]" @click="selectSubStyle(s)">{{ s }}</div></div></div>
         <div class="setting-group">
           <el-tooltip content="从剧本中自动识别角色、场景、道具，一键创建到「角色小店」方便后续生图时参考" placement="left">
-            <el-button style="width:100%" @click="handleExtractSubjects" :disabled="!currentScriptId">提取主体 👥</el-button>
+            <el-button size="small" style="width:100%" @click="handleExtractSubjects" :disabled="!currentScriptId">提取主体 👥</el-button>
           </el-tooltip>
         </div>
         <div class="setting-group">
           <el-tooltip content="选完右侧风格后自动填充。点击手动检查和微调导演设定参数" placement="left">
-            <el-button type="warning" style="width:100%" @click="openDirectorDialog" :disabled="!currentProjectId">导演全局设定 🎬</el-button>
+            <el-button size="small" type="warning" style="width:100%" @click="openDirectorDialog" :disabled="!currentProjectId">导演全局设定 🎬</el-button>
           </el-tooltip>
         </div>
         </div><!-- end right-panel-body -->
@@ -125,7 +125,7 @@
         <el-form-item label="画风指令 🎨"><el-input v-model="directorForm.artStyleCommands" type="textarea" :rows="3" placeholder="写实风、电影颗粒感..." /></el-form-item>
       </el-form>
       <div class="ai-hint"><el-alert type="info" :closable="false" show-icon><template #title>AI 会读懂你的设定，自动优化后应用到全剧所有镜头 ✨</template></el-alert></div>
-      <template #footer><el-button @click="showDirectorDialog=false">下次再说叭</el-button><el-button type="primary" @click="handleAIUnderstand" :loading="aiUnderstanding">AI 理解并润色 ✨</el-button><el-button type="success" @click="handleApplyDirectorSettings">应用到全剧 ✅</el-button></template>
+      <template #footer><el-button size="small" @click="showDirectorDialog=false">下次再说叭</el-button><el-button size="small" type="primary" @click="handleAIUnderstand" :loading="aiUnderstanding">AI 理解并润色 ✨</el-button><el-button size="small" type="success" @click="handleApplyDirectorSettings">应用到全剧 ✅</el-button></template>
     </el-dialog>
     <el-dialog v-model="showExtractDialog" title="提取结果 👥" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
       <div v-if="extracting" style="text-align:center;padding:40px"><p style="color:var(--text-100)">AI 正在识别剧本中的角色、场景、道具...</p></div>
@@ -550,7 +550,7 @@ async function handleExport() {
   .sub-style-item.active { background: var(--navy); color: var(--gold); border-color: var(--gold); }
 
   /* 操作按钮全宽 */
-  .setting-group .el-button { width: 100% !important; height: 48px; font-size: 0.9375rem; }
+  .setting-group .el-button { width: 100% !important; font-size: 0.875rem; }
 
   /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 8px; }
