@@ -76,9 +76,16 @@
                 <el-input v-model="d.characterName" size="small" placeholder="角色" style="width:90px" @change="markDirty" /><span class="colon">：</span>
                 <el-input v-model="d.text" size="small" placeholder="对话内容" style="flex:1" @change="markDirty" />
                 <el-input v-model="d.actionHint" size="small" placeholder="动作/表情" style="width:120px" @change="markDirty" />
+                <el-input v-model="d.cameraHint" size="small" placeholder="镜头" style="width:100px" @change="markDirty" />
                 <el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button>
+                <div class="dialogue-extra" style="width:100%;display:flex;gap:4px">
+                  <el-input v-model="d.innerThought" size="small" placeholder="内心独白" style="flex:1" @change="markDirty" />
+                </div>
               </div>
               <el-button size="small" text type="primary" @click="addDialogue(scene)" style="margin-top:4px">+ 加句台词</el-button>
+              <div class="scene-notes-row" style="margin-top:6px">
+                <el-input v-model="scene.notes" size="small" placeholder="备注（环境音/BGM/转场）" @change="markDirty" />
+              </div>
             </div>
           </div>
         </div>
