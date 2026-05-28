@@ -452,28 +452,28 @@ async function handleExport() {
 /* 移动端 Tab 导航 */
 .mobile-tabs { display: none; }
 @media (max-width: 768px) {
-  .mobile-tabs { display: flex; gap: 4px; margin-bottom: 8px; background: var(--bg-200); border-radius: 10px; padding: 4px; border: 1px solid var(--bg-300); }
+  .mobile-tabs { display: flex; gap: 4px; margin-bottom: 8px; background: var(--bg-200); border-radius: 10px; padding: 4px; border: 1px solid var(--bg-300); flex-shrink: 0; }
   .mtab { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--text-200); cursor: pointer; transition: all 0.15s; }
   .mtab.active { background: var(--navy); color: var(--gold); }
   .mtab:hover { color: var(--text-100); }
 
-  .script-edit-root { max-width: 100vw; overflow-x: hidden; }
+  .script-edit-root { max-width: 100vw; overflow-x: hidden; display: flex; flex-direction: column; height: calc(100vh - 56px); }
   .top-bar { flex-wrap: wrap; gap: 8px; }
   .top-bar .el-button { min-height: 44px; }
   .word-count { width: 100%; margin-left: 0 !important; justify-content: flex-end; }
 
   /* 流程引导 */
-  .flow-guide { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px; padding: 6px 8px; }
+  .flow-guide { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px; padding: 6px 8px; flex-shrink: 0; }
   .flow-step { font-size: 10px; padding: 3px 8px; }
   .flow-arrow { display: none; }
 
-  /* 三列：只显示当前 tab */
-  .three-column { flex-direction: column; gap: 0; overflow-y: auto; flex: 1; }
-  .left-panel { width: 100%; max-height: none; flex: 1; overflow-y: auto; }
-  .left-panel :deep(.episode-list) { display: flex; flex-direction: column; overflow-y: auto; }
+  /* 三列：只显示当前 tab，占满剩余高度 */
+  .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
+  .left-panel { width: 100%; max-height: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .left-panel :deep(.episode-list) { flex: 1; overflow-y: auto; }
   .left-panel :deep(.ep-item) { white-space: normal; }
-  .center-panel { width: 100%; min-width: 0; padding: 10px; flex: 1; overflow-y: auto; }
-  .right-panel { width: 100%; max-height: none; padding: 10px; flex: 1; overflow-y: auto; }
+  .center-panel { width: 100%; min-width: 0; padding: 10px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .right-panel { width: 100%; max-height: none; padding: 10px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 6px; }
