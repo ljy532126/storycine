@@ -79,7 +79,7 @@ const appConfig = {
       return {
         apiKey: runtimeConfig.deepseek.apiKey || process.env.DEEPSEEK_API_KEY || '',
         baseUrl: runtimeConfig.deepseek.baseUrl || process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
-        model: runtimeConfig.deepseek.model || process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+        model: runtimeConfig.deepseek.model || process.env.DEEPSEEK_MODEL || 'deepseek-v4-pro',
       };
     },
     get doubao() {

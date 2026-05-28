@@ -9,7 +9,7 @@ const settingsSchema = new mongoose.Schema({
     deepseek: {
       apiKey: { type: String, default: '' },
       baseUrl: { type: String, default: 'https://api.deepseek.com/v1' },
-      model: { type: String, default: 'deepseek-chat' },
+      model: { type: String, default: 'deepseek-v4-pro' },
     },
     doubao: {
       apiKey: { type: String, default: '' },
