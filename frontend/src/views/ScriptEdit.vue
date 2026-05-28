@@ -467,13 +467,13 @@ async function handleExport() {
   .flow-step { font-size: 10px; padding: 3px 8px; }
   .flow-arrow { display: none; }
 
-  /* 三列：只显示当前 tab，占满剩余高度 */
-  .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
-  .left-panel { width: 100%; max-height: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .left-panel :deep(.episode-list) { flex: 1; overflow-y: auto; }
+  /* 三列：只显示当前 tab */
+  .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .left-panel { width: 100%; max-height: none; overflow-y: visible; flex: none; }
+  .left-panel :deep(.episode-list) { overflow-y: visible; }
   .left-panel :deep(.ep-item) { white-space: normal; }
-  .center-panel { width: 100%; min-width: 0; padding: 10px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .right-panel { width: 100%; max-height: none; padding: 10px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .center-panel { width: 100%; min-width: 0; padding: 10px; overflow-y: visible; flex: none; }
+  .right-panel { width: 100%; max-height: none; padding: 10px; overflow-y: visible; flex: none; }
 
   /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 6px; }
