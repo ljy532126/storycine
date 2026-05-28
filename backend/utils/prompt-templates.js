@@ -16,7 +16,7 @@ function buildStyleInfo(state) {
     atmosphere: ds.atmosphereLighting || '',
   };
   if (info.visualStyle || info.artStyle) {
-    console.log(`[prompt] 注入风格信息: 比例=${info.aspectRatio} 风格=${info.visualStyle}/${info.subStyle} 画质=${info.quality?.substring(0,30)}...`);
+    console.log(`[prompt] 注入风格信息: 比例=${info.aspectRatio} 风格=${info.visualStyle}/${info.subStyle} 画质=${info.quality?.substring(0, 30)}...`);
   }
   return info;
 }
@@ -117,13 +117,18 @@ ${styleInfo ? `\n【视觉风格参考】${styleInfo.visualStyle || ''} ${styleI
   },
 
   scriptWriter: {
-    system: `你是资深短剧编剧，擅长撰写高张力的短剧剧本。写作要求：
-1. 每集开头抓住观众注意力
-2. 台词简短有力，适合短视频节奏
-3. 每集结尾留有悬念
-4. 使用短剧常见的反转、打脸、误会等手法
-5. 场景描述和镜头提示需要匹配指定的视觉风格和画面比例`,
-    userTemplate: (plotStructure, characters, episodeNumber, styleInfo) => `
+    system: `你是资深短剧编剧+影视镜头顾问，专攻古风权谋、虐恋、逆袭类网络短剧，擅长撰写高张力的短剧剧本，产出剧本可直接用于实拍、AI生视频、分镜拆解。严格遵守以下强制写作规范：
+1. 节奏要求：单集开场强冲突抓眼球，台词简短精炼适配短视频节奏，每集结尾预留悬念、伏笔，符合网生短剧逻辑。使用短剧常见的反转、打脸、误会等手法
+2. 人设要求：角色动作、神态、台词严格匹配前期人物设定，杜绝人设崩塌。
+3. 场景描述(sceneDescription)：细化环境、道具、光线、氛围、画面细节，满足AI绘图/视频生成需求。
+4. 动作提示(actionHint)：精准描述肢体动作、面部表情、神态变化、语气情绪，细节落地，可直接指导演员表演。
+5. 内心独白(innerThought)：结合当下剧情写出角色真实心理活动，深化人物层次。
+6. 镜头提示(cameraHint)：必须使用影视专业术语，标注【景别+运镜+镜头角度+构图方式】，例如：特写/近景/中景/全景、推/拉/摇/移/固定机位、仰拍/俯拍/平视、三分构图/中心构图/框架构图，为后续分镜制作提供依据。
+7. 备注(notes)：统一填写环境音、BGM曲风、转场方式（硬切/淡入淡出），完善音画搭配。
+8. 格式硬性要求：严格遵循指定JSON结构，每集至少个6场次，台词总数不少于18句，字段不缺失、不新增、不删减。`,
+    userTemplate: (plotStructure, characters, episodeNumber, styleInfo, showInnerThought = true) => {
+      const innerThoughtLine = showInnerThought ? ',\n          "innerThought": "内心独白"' : '';
+      return `
 剧情架构：${JSON.stringify(plotStructure)}
 角色设定：${JSON.stringify(characters)}
 目标集数：第${episodeNumber}集
@@ -145,8 +150,7 @@ ${styleInfo ? `\n【视觉规范】画面比例：${styleInfo.aspectRatio || '9:
         {
           "characterName": "角色名",
           "text": "台词内容",
-          "actionHint": "动作提示",
-          "innerThought": "内心独白",
+          "actionHint": "动作提示"${innerThoughtLine}
           "cameraHint": "镜头提示"
         }
       ],
@@ -154,7 +158,8 @@ ${styleInfo ? `\n【视觉规范】画面比例：${styleInfo.aspectRatio || '9:
     }
   ]
 }
-每集至少包含5个场次，台词总数不少于20句。只输出JSON。`,
+每集至少包含5个场次，台词总数不少于20句。只输出JSON。`;
+    },
   },
 
   scriptContinue: {

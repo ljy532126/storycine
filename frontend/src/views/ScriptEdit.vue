@@ -296,9 +296,38 @@ async function handleAutoStoryboard(){
     const res=await fetch('/api/v1/assets/generate-prompt',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({projectId:currentProjectId.value,assetId:currentProjectId.value,assetType:'storyboard',existingPrompt:`${sysPrompt}\n\n剧本：\n${scriptFull}\n\n为以上${scenes.length}个分镜推荐参数。只输出JSON数组。`})});
     const data=await res.json();const raw=data.data?.prompt||'';const m=raw.match(/\[[\s\S]*\]/);const rec=m?JSON.parse(m[0]):[];
     let filled=0;rec.forEach(r=>{if(scenes[r.index]!==undefined){const s=scenes[r.index];if(r.shotType)s.shotType=r.shotType;if(r.composition)s.composition=r.composition;if(r.cameraMovement)s.cameraMovement=r.cameraMovement;if(r.lighting)s.lighting=r.lighting;if(r.duration)s.duration=r.duration;if(r.soundEffect)s.soundEffect=r.soundEffect;if(r.sceneDescription)s.sceneDescription=r.sceneDescription.replace(/^\[镜\d+\]\s*/,'');filled++}});
+    // 1.5. 自动拆分台词过多的分镜（≥3句台词拆成新镜号）
+    let splitCount = 0;
+    const newScenes = [];
+    scenes.forEach(s => {
+      const dialogs = s.dialogues || [];
+      if (dialogs.length >= 4) {
+        // 拆成两个分镜：前2句 + 剩余
+        const s1 = { ...s, dialogues: dialogs.slice(0, 2) };
+        const s2 = { ...JSON.parse(JSON.stringify(s)), dialogues: dialogs.slice(2), sceneNumber: 0 };
+        newScenes.push(s1, s2);
+        splitCount++;
+      } else if (dialogs.length === 3) {
+        // 拆成两个分镜：前2句 + 最后1句
+        const s1 = { ...s, dialogues: dialogs.slice(0, 2) };
+        const s2 = { ...JSON.parse(JSON.stringify(s)), dialogues: dialogs.slice(2), sceneNumber: 0 };
+        newScenes.push(s1, s2);
+        splitCount++;
+      } else {
+        newScenes.push(s);
+      }
+    });
+    if (splitCount > 0) {
+      // 重新编号
+      newScenes.forEach((s, i) => { s.sceneNumber = i + 1; });
+      currentScript.value.scenes = newScenes;
+      charactersStr.value = newScenes.map(s => (s.characters || []).join(', '));
+      ElMessage.success(`已自动拆分 ${splitCount} 个台词过多的分镜`);
+    }
+    const finalScenes = currentScript.value.scenes;
     markDirty();
-    // 2. 构建前后对比数据
-    const diffResult=scenes.map((s,i)=>{const b=backup[i];const changes=[];const fields=[{key:'shotType',label:'景别'},{key:'composition',label:'构图'},{key:'cameraMovement',label:'运镜'},{key:'lighting',label:'光影'},{key:'duration',label:'时长'},{key:'soundEffect',label:'音效'},{key:'sceneDescription',label:'描述'}];fields.forEach(f=>{if(b[f.key]!==s[f.key]&&(s[f.key]||b[f.key]))changes.push({field:f.key,label:f.label,old:b[f.key]||'(空)',new:s[f.key]||'(空)'});});return {shotNumber:s.sceneNumber,changes};});
+    // 2. 构建前后对比数据（使用拆分后的分镜）
+    const diffResult=finalScenes.map((s,i)=>{const b=backup[i];const changes=[];const fields=[{key:'shotType',label:'景别'},{key:'composition',label:'构图'},{key:'cameraMovement',label:'运镜'},{key:'lighting',label:'光影'},{key:'duration',label:'时长'},{key:'soundEffect',label:'音效'},{key:'sceneDescription',label:'描述'}];fields.forEach(f=>{if(b[f.key]!==s[f.key]&&(s[f.key]||b[f.key]))changes.push({field:f.key,label:f.label,old:b[f.key]||'(空)',new:s[f.key]||'(空)'});});return {shotNumber:s.sceneNumber,changes};});
     let totalChanges=0;diffResult.forEach(d=>totalChanges+=d.changes.length);
     diffShots.value=diffResult;diffChanges.value=totalChanges;
     console.log('[AI拆镜] 变化数:', totalChanges, 'filled:', filled);if(totalChanges>0){showStoryboardDiff.value=true;}else{ElMessage.success('所有分镜参数已是最优，无需调整 ✨');}

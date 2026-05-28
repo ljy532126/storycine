@@ -52,9 +52,14 @@
             </el-select>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre">
-              {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集 📖' : 'AI 开写！✍️' }}
-            </el-button>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre">
+                {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集 📖' : 'AI 开写！✍️' }}
+              </el-button>
+              <el-tooltip content="开启后生成内心独白字段，可加深角色层次；关闭可加快生成速度" placement="top">
+                <el-checkbox v-model="showInnerThought" border size="large" :disabled="scriptStore.generating">💭 内心独白</el-checkbox>
+              </el-tooltip>
+            </div>
           </el-form-item>
         </el-form>
       </el-card>
@@ -314,6 +319,7 @@ const importContent = ref('');
 const showImportDialog = ref(false);
 const showStorylineDialog = ref(false);
 const logCollapsed = ref(true);
+const showInnerThought = ref(true);
 const logPos = reactive({ x: 0, y: 0 });
 const selectedScripts = ref([]);
 
@@ -601,7 +607,7 @@ async function handleGenerate() {
   });
 
   try {
-    await scriptStore.aiGenerate(currentProjectId.value, { ...tags });
+    await scriptStore.aiGenerate(currentProjectId.value, { ...tags, showInnerThought: showInnerThought.value });
     ElMessage.info('已提交！右下角查看创作进度 📋');
   } catch (e) {
     addLog('提交失败，请稍后重试: ' + (e.response?.data?.message || e.message), 'error');

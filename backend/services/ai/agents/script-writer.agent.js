@@ -12,7 +12,8 @@ async function run(state) {
   const episodeNumber = state.episodeNumber || 1;
   const styleInfo = buildStyleInfo(state);
   const systemPrompt = prompts.scriptWriter.system;
-  let userPrompt = prompts.scriptWriter.userTemplate(state.plotStructure, state.characters, episodeNumber, styleInfo);
+  const showInnerThought = state.showInnerThought !== false;
+  let userPrompt = prompts.scriptWriter.userTemplate(state.plotStructure, state.characters, episodeNumber, styleInfo, showInnerThought);
 
   // 如果是重试，注入校验反馈
   if (state.lastValidationFeedback) {
