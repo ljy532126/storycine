@@ -33,28 +33,33 @@ function sanitizeScriptData(scriptData) {
       if (hasAction && estDuration > 6) estDuration = Math.min(estDuration, 6);
       if (hasEmotion && estDuration < 5) estDuration = 5;
     }
-    return {
-    sceneNumber: scene.sceneNumber || 1,
-    timeOfDay: VALID_TIMES.includes(scene.timeOfDay) ? scene.timeOfDay : '白天',
-    location: (scene.location || '未知地点').substring(0, 200),
-    shotType: VALID_SHOT_TYPES.includes(scene.shotType) ? scene.shotType : '中景',
-    composition: (scene.composition || '').substring(0, 200),
-    cameraMovement: VALID_CAM_MOVES.includes(scene.cameraMovement) ? scene.cameraMovement : '静止',
-    lighting: (scene.lighting || '').substring(0, 200),
-    soundEffect: (scene.soundEffect || '').substring(0, 200),
-    duration: estDuration || 3,
-    characters: (scene.characters || []).map(c => String(c).substring(0, 50)),
-    atmosphere: (scene.atmosphere || '').substring(0, 200),
-    sceneDescription: (scene.sceneDescription || '').substring(0, 2000),
-    dialogues: (scene.dialogues || []).map(d => ({
+    // 清洗对话（保留已知字段 + 透传未知字段）
+    const cleanDialogues = (scene.dialogues || []).map(d => ({
+      ...d,
       characterName: String(d.characterName || '未知').substring(0, 50),
       text: String(d.text || '').substring(0, 2000),
       actionHint: (d.actionHint || '').substring(0, 500),
       innerThought: (d.innerThought || '').substring(0, 1000),
       cameraHint: (d.cameraHint || '').substring(0, 200),
-    })),
-    notes: (scene.notes || '').substring(0, 1000),
-  }; // end of return object
+    }));
+    // 清洗场景（保留已知字段 + 透传未知字段，确保枚举字段合法）
+    return {
+      ...scene,
+      sceneNumber: scene.sceneNumber || 1,
+      timeOfDay: VALID_TIMES.includes(scene.timeOfDay) ? scene.timeOfDay : '白天',
+      location: (scene.location || '未知地点').substring(0, 200),
+      shotType: VALID_SHOT_TYPES.includes(scene.shotType) ? scene.shotType : '中景',
+      composition: (scene.composition || '').substring(0, 200),
+      cameraMovement: VALID_CAM_MOVES.includes(scene.cameraMovement) ? scene.cameraMovement : '静止',
+      lighting: (scene.lighting || '').substring(0, 200),
+      soundEffect: (scene.soundEffect || '').substring(0, 200),
+      duration: estDuration || (scene.duration || 3),
+      characters: (scene.characters || []).map(c => String(c).substring(0, 50)),
+      atmosphere: (scene.atmosphere || '').substring(0, 200),
+      sceneDescription: (scene.sceneDescription || '').substring(0, 2000),
+      dialogues: cleanDialogues,
+      notes: (scene.notes || '').substring(0, 1000),
+    };
   }); // end of map
   return scriptData;
 }

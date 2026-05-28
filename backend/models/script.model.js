@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const sceneSchema = new mongoose.Schema({
+  // strict: false 允许 AI 生成的额外字段透传，不会被 Mongoose 丢弃
+}, { strict: false });
+// legacy — 以下字段定义保留作为文档参考（strict:false 模式下实际不做校验）
+sceneSchema.add({
   sceneNumber: { type: Number, required: true },
   timeOfDay: { type: String, enum: ['白天', '夜晚', '黄昏', '傍晚', '清晨', '黎明', '正午', '深夜', '雨天', '雪天', '不限'], default: '白天' },
   location: { type: String, required: true },
