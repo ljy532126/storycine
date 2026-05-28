@@ -226,7 +226,7 @@ const form = reactive({
   doubao: { apiKey: '', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seedance-2-0-260128', imageModel: '' },
   tongyi: { apiKey: '', baseUrl: '', model: '' },
 });
-const deepseekModels = ['deepseek-chat', 'deepseek-reasoner'];
+const deepseekModels = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v3', 'deepseek-r1'];
 const openaiModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
 const openaiImageModels = ['gpt-image-2', 'dall-e-3', 'dall-e-2'];
 const doubaoModels = ['doubao-seedance-2-0-260128', 'doubao-pro-32k', 'doubao-lite-32k'];
