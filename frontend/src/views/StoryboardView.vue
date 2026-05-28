@@ -1318,7 +1318,10 @@ async function handleImport() {
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
 @media (max-width: 768px) {
   .sb-body { gap: 8px; }
-  .sb-left, .sb-right { max-height: 200px; }
+  .sb-left { max-height: 160px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--gold) transparent; -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%); mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%); }
+  .sb-left::-webkit-scrollbar { width: 3px; }
+  .sb-left::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+  .sb-right { max-height: 200px; }
   .tl-track-row { flex-wrap: wrap; gap: 4px; }
 }
 </style>
