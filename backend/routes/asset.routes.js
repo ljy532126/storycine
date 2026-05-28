@@ -443,6 +443,7 @@ ${charListText}
 // ===== AI 生成提示词 =====
 router.post('/generate-prompt', async (req, res, next) => {
   try {
+    await appConfig.loadUserConfig(req.user._id);
     const { projectId, assetId, assetType, existingPrompt } = req.body;
     if (!assetId || !assetType) {
       return res.status(400).json({ message: '缺少参数: assetId, assetType' });
