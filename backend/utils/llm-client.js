@@ -22,7 +22,7 @@ function sanitizeJSON(text) {
   // 如果已经能解析，直接返回
   try { JSON.parse(text); return text; } catch (_) { /* 需要清洗 */ }
 
-  // 逐字符扫描：仅转义 JSON 字符串值内部的 ASCII 控制字符
+  // 逐字符扫描：转义控制字符 + 修复字符串内未转义的双引号
   let result = '';
   let inString = false;
   let escaped = false;
@@ -44,9 +44,23 @@ function sanitizeJSON(text) {
     }
 
     if (ch === '"') {
-      inString = !inString;
-      result += ch;
-      continue;
+      // 检查是否真的是字符串边界：前后应是 JSON 结构字符或空白
+      if (inString) {
+        // 向后看：如果是 , : } ] 或空白后跟这些，则是真正的结束引号
+        const after = text.slice(i + 1).match(/^\s*([,:}\]])/);
+        if (after) {
+          inString = false;
+          result += ch;
+          continue;
+        }
+        // 否则可能是字符串内的引号，转义它
+        result += '\\"';
+        continue;
+      } else {
+        inString = true;
+        result += ch;
+        continue;
+      }
     }
 
     if (inString && code < 0x20) {
