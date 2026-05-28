@@ -29,12 +29,19 @@
       <div class="flow-step" :class="{ done: flowDoneSync }">⑤ 同步至故事板（去故事板生图/生视频）</div>
     </div>
 
+    <!-- 移动端 Tab 导航 -->
+    <div class="mobile-tabs" v-if="currentProjectId && screenWidth < 768">
+      <div :class="['mtab', { active: mobileTab === 'episodes' }]" @click="mobileTab = 'episodes'">📋 剧集</div>
+      <div :class="['mtab', { active: mobileTab === 'scenes' }]" @click="mobileTab = 'scenes'">🎬 分镜</div>
+      <div :class="['mtab', { active: mobileTab === 'settings' }]" @click="mobileTab = 'settings'">🎥 设定</div>
+    </div>
+
     <div class="three-column" v-if="currentProjectId">
-      <div class="left-panel">
+      <div class="left-panel" v-show="screenWidth >= 768 || mobileTab === 'episodes'">
         <div class="panel-title"><span>剧集列表</span><span class="panel-actions"><el-button size="small" text @click="addEpisode" title="新建剧集">+</el-button><el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉</el-button></span></div>
         <div class="episode-list"><div v-for="ep in scripts" :key="ep._id" :class="['ep-item',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)"><span class="ep-num">第 {{ ep.episodeNumber }} 集</span><span class="ep-title">{{ ep.episodeTitle||'未命名剧集' }}</span></div></div>
       </div>
-      <div class="center-panel" v-if="currentScript">
+      <div class="center-panel" v-if="currentScript" v-show="screenWidth >= 768 || mobileTab === 'scenes'">
         <div class="ep-header">
           <el-input v-model="currentScript.episodeTitle" placeholder="给这集起个名字..." size="large" class="title-input" @change="markDirty" />
           <el-tooltip content="AI 根据剧本内容自动推荐景别/运镜/光影/时长，点击后弹出前后对比" placement="bottom"><el-button type="primary" @click="handleAutoStoryboard" :loading="autoStoryboarding" style="margin-left:12px">AI 智能拆镜 🎯</el-button></el-tooltip>
@@ -78,7 +85,7 @@
       </div>
       <div class="center-panel center-empty" v-if="!currentScript && scripts.length===0"><el-empty description="点击左侧「新剧集」创建第一集 ✨" /></div>
       <div class="center-panel center-empty" v-if="!currentScript && scripts.length>0"><el-empty description="点击左侧剧集，开始编辑 ✍️" /></div>
-      <div class="right-panel">
+      <div class="right-panel" v-show="screenWidth >= 768 || mobileTab === 'settings'">
         <div class="panel-title">导演设定 🎥</div>
         <div class="setting-group"><label>画面比例 📐</label><el-radio-group v-model="videoConfig.aspectRatio" size="small" @change="onVideoConfigChange"><el-radio-button value="16:9">16:9</el-radio-button><el-radio-button value="9:16">9:16</el-radio-button><el-radio-button value="4:3">4:3</el-radio-button><el-radio-button value="3:4">3:4</el-radio-button></el-radio-group></div>
         <div class="setting-group"><label>创作模式 🎞️</label><el-radio-group v-model="videoConfig.creationMode" size="small" @change="onVideoConfigChange"><el-radio-button value="image_to_video">生图转视频</el-radio-button><el-radio-button value="reference_video">参考生视频</el-radio-button></el-radio-group></div>
@@ -158,6 +165,7 @@ import { ref,reactive,computed,onMounted,nextTick } from 'vue';
 import { useRoute,useRouter } from 'vue-router';
 
 const screenWidth = ref(window.innerWidth);
+const mobileTab = ref('scenes');
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 import { ElMessage,ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
@@ -441,7 +449,14 @@ async function handleExport() {
 .sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
 .sg-project-pills::-webkit-scrollbar { height: 4px; }
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
+/* 移动端 Tab 导航 */
+.mobile-tabs { display: none; }
 @media (max-width: 768px) {
+  .mobile-tabs { display: flex; gap: 4px; margin-bottom: 8px; background: var(--bg-200); border-radius: 10px; padding: 4px; border: 1px solid var(--bg-300); }
+  .mtab { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--text-200); cursor: pointer; transition: all 0.15s; }
+  .mtab.active { background: var(--navy); color: var(--gold); }
+  .mtab:hover { color: var(--text-100); }
+
   .script-edit-root { max-width: 100vw; overflow-x: hidden; }
   .top-bar { flex-wrap: wrap; gap: 8px; }
   .top-bar .el-button { min-height: 44px; }
@@ -452,13 +467,13 @@ async function handleExport() {
   .flow-step { font-size: 10px; padding: 3px 8px; }
   .flow-arrow { display: none; }
 
-  /* 三列堆叠 */
-  .three-column { flex-direction: column; gap: 8px; overflow-y: auto; }
-  .left-panel { width: 100%; flex-shrink: 0; max-height: 150px; overflow-y: auto; }
-  .left-panel :deep(.episode-list) { display: flex; gap: 6px; overflow-x: auto; }
-  .left-panel :deep(.ep-item) { flex-shrink: 0; min-width: 120px; white-space: nowrap; }
-  .center-panel { width: 100%; min-width: 0; padding: 10px; }
-  .right-panel { width: 100%; max-height: none; padding: 10px; }
+  /* 三列：只显示当前 tab */
+  .three-column { flex-direction: column; gap: 0; overflow-y: auto; flex: 1; }
+  .left-panel { width: 100%; max-height: none; flex: 1; overflow-y: auto; }
+  .left-panel :deep(.episode-list) { display: flex; flex-direction: column; overflow-y: auto; }
+  .left-panel :deep(.ep-item) { white-space: normal; }
+  .center-panel { width: 100%; min-width: 0; padding: 10px; flex: 1; overflow-y: auto; }
+  .right-panel { width: 100%; max-height: none; padding: 10px; flex: 1; overflow-y: auto; }
 
   /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 6px; }
