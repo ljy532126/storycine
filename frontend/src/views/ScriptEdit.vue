@@ -539,9 +539,10 @@ async function handleExport() {
   .setting-group { margin-bottom: 10px; }
   .setting-group > label { font-size: 0.75rem; margin-bottom: 4px; display: block; font-weight: 600; }
 
-  /* radio-button：横向排列，紧凑 */
-  .setting-group :deep(.el-radio-group) { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; width: 100%; }
-  .setting-group :deep(.el-radio-button__inner) { padding: 6px 10px; font-size: 0.75rem; min-height: 32px; border-radius: 6px !important; border: 1px solid var(--bg-300) !important; }
+  /* radio-button：一行两个均分，4 个时自动换行 */
+  .setting-group :deep(.el-radio-group) { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; width: 100%; }
+  .setting-group :deep(.el-radio-button) { flex: 1; min-width: calc(50% - 6px); }
+  .setting-group :deep(.el-radio-button__inner) { width: 100%; padding: 8px 6px; font-size: 0.8125rem; min-height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; border: 1px solid var(--bg-300) !important; }
 
   /* 风格细分：3 列紧凑网格 */
   .sub-style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
