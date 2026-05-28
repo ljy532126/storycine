@@ -73,13 +73,15 @@
             <div class="scene-desc-row"><label>分镜描述 ✍️ <span style="font-size:10px;color:var(--text-200);font-weight:400">（只写画面内容，不用写运镜/景别，那些有专门参数）</span></label><el-input v-model="scene.sceneDescription" type="textarea" :rows="3" placeholder="写清4要素：①谁在画面 ②做什么动作 ③什么环境 ④什么情绪。运镜/景别/光影用上方参数设置，不要写进描述里。例：林晓站在落地窗前，夕阳勾勒出轮廓，办公室空无一人，她低头看手机嘴角微扬" @change="markDirty" /></div>
             <div class="dialogues-block">
               <div v-for="(d,di) in scene.dialogues" :key="di" class="dialogue-row">
-                <el-input v-model="d.characterName" size="small" placeholder="角色" style="width:90px" @change="markDirty" /><span class="colon">：</span>
-                <el-input v-model="d.text" size="small" placeholder="对话内容" style="flex:1" @change="markDirty" />
-                <el-input v-model="d.actionHint" size="small" placeholder="动作/表情" style="width:120px" @change="markDirty" />
-                <el-input v-model="d.cameraHint" size="small" placeholder="镜头" style="width:100px" @change="markDirty" />
-                <el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button>
-                <div class="dialogue-extra" style="width:100%;display:flex;gap:4px">
-                  <el-input v-model="d.innerThought" size="small" placeholder="内心独白" style="flex:1" @change="markDirty" />
+                <div class="dr-top">
+                  <el-input v-model="d.characterName" size="small" placeholder="角色" class="dr-role" @change="markDirty" />
+                  <el-input v-model="d.text" size="small" placeholder="对话内容" class="dr-text" @change="markDirty" />
+                  <el-input v-model="d.actionHint" size="small" placeholder="动作/表情" class="dr-action" @change="markDirty" />
+                  <el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" class="dr-camera" @change="markDirty" />
+                  <el-button size="small" text type="danger" class="dr-del" @click="removeDialogue(scene,di)">×</el-button>
+                </div>
+                <div class="dr-bottom">
+                  <el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" />
                 </div>
               </div>
               <el-button size="small" text type="primary" @click="addDialogue(scene)" style="margin-top:4px">+ 加句台词</el-button>
@@ -439,8 +441,15 @@ async function handleExport() {
 .scene-desc-row{margin-bottom:8px}
 .scene-desc-row label{color:var(--text-100);font-size:11px;display:block;margin-bottom:4px}
 .dialogues-block{padding-left:8px}
-.dialogue-row{display:flex;gap:4px;align-items:center;margin-bottom:4px}
-.colon{color:var(--text-100);font-size:14px}
+.dialogue-row{display:flex;flex-direction:column;gap:3px;margin-bottom:6px;padding:8px;background:var(--bg-100);border-radius:6px}
+.dr-top{display:flex;gap:6px;align-items:center}
+.dr-role{width:80px;flex-shrink:0}
+.dr-text{flex:1;min-width:0}
+.dr-action{width:110px;flex-shrink:0}
+.dr-camera{width:110px;flex-shrink:0}
+.dr-del{flex-shrink:0}
+.dr-bottom{display:flex}
+.dr-bottom .el-input{flex:1}
 .right-panel{width:250px;flex-shrink:0;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:12px;overflow-y:auto;transition:width 0.25s}
 .right-panel.collapsed{width:40px;padding:12px 8px;overflow:hidden}
 .right-panel.collapsed .right-panel-body{display:none}
@@ -570,13 +579,11 @@ async function handleExport() {
   .meta-item .el-input,
   .meta-item .el-input-number { width: 100% !important; }
 
-  /* 对话行 */
-  .dialogue-row { flex-wrap: wrap; gap: 4px; }
-  .dialogue-row .el-input { min-width: 0 !important; }
-  .dialogue-row .el-input:first-child { width: 70px !important; flex-shrink: 0; }
-  .dialogue-row .el-input:nth-child(2) { flex: 1 1 100px; }
-  .dialogue-row .el-input:nth-child(3) { width: 100px !important; }
-  .colon { display: none; }
+  /* 对话行：移动端两行 */
+  .dr-top { flex-wrap: wrap; gap: 4px; }
+  .dr-role { width: 65px !important; }
+  .dr-text { flex: 1 1 120px !important; min-width: 0; }
+  .dr-action, .dr-camera { width: 90px !important; }
 
   /* 所有交互元素 ≥44px */
   :deep(.el-button) { min-height: 44px; }
