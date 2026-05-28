@@ -164,7 +164,7 @@ const appConfig = {
     }
     // 有 settings 但不包含任何 apiKey → 用户未配置，不泄露 runtime 缓存
     if (settings) return { provider: null, model: null };
-    // 无 settings → 内部调用，使用 runtimeConfig
+    // 无 settings → 内部调用，使用 runtimeConfig（按照优先级）
     const deepseek = this.llm.deepseek;
     const doubao = this.llm.doubao;
     const tongyi = this.llm.tongyi;
@@ -172,7 +172,8 @@ const appConfig = {
     if (deepseek.apiKey) return { provider: 'deepseek', ...deepseek };
     if (doubao.apiKey) return { provider: 'doubao', ...doubao };
     if (tongyi.apiKey) return { provider: 'tongyi', ...tongyi };
-    return { provider: 'openai', ...openai };
+    if (openai.apiKey) return { provider: 'openai', ...openai };
+    return { provider: 'deepseek', ...deepseek };
   },
 
   hasLLMConfigured(settings) {

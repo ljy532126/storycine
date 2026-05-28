@@ -73,7 +73,7 @@ async function callLLM(systemPrompt, userPrompt, options = {}) {
   const { temperature = 0.8, maxTokens = 4096, responseFormat } = options;
 
   if (!llm.apiKey) {
-    throw new Error(`LLM API key not configured for provider: ${llm.provider}`);
+    throw new Error('请先在系统设置中配置 LLM API Key（DeepSeek / 豆包 / 通义 / OpenAI 任选一个）');
   }
 
   const messages = [

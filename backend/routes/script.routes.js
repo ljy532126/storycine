@@ -145,6 +145,7 @@ router.post('/ai-generate', async (req, res, next) => {
 // 剧本续写
 router.post('/continue', async (req, res, next) => {
   try {
+    await appConfig.loadUserConfig(req.user._id);
     const { projectId, episodeId, continueCount = 1 } = req.body;
     const io = req.app.get('io');
 
