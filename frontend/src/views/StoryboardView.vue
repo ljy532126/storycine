@@ -114,6 +114,7 @@
                   <span class="tl-type">{{ s.shotType }}</span>
                   <span>{{ s.shotNumber }}</span>
                 </div>
+                <div class="tl-desc" v-if="s.imageDescription" :title="s.imageDescription">{{ s.imageDescription }}</div>
                 <div class="tl-actions">
                   <label class="tl-btn" title="上传图片" @click.stop>
                     <input type="file" accept="image/*" hidden @change="e => uploadShotImage(s, e)" />🖼️
@@ -1245,6 +1246,7 @@ async function handleImport() {
 .tl-img img { width: 100%; height: 100%; object-fit: cover; }
 .tl-placeholder { color: var(--gold); font-size: 11px; opacity: 0.5; letter-spacing: 1px; }
 .tl-meta { display: flex; justify-content: space-between; padding: 3px 8px 0; font-size: 10px; cursor: pointer; }
+.tl-desc { padding: 3px 8px 0; font-size: 10px; color: var(--text-200); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
 .tl-type { color: var(--gold-dark); font-weight: 600; letter-spacing: 0.5px; }
 .tl-insert {
   flex-shrink: 0; width: 22px; height: 60px; border-radius: 4px;
