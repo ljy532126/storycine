@@ -656,13 +656,14 @@ async function handleImport() {
 }
 
 function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
-function exportScriptText(row) {
-  if (!row || !row.scenes) { ElMessage.warning('该剧集暂无剧本内容'); return; }
+function exportScriptText(raw) {
+  const row = raw && typeof raw === 'object' ? JSON.parse(JSON.stringify(raw)) : null;
+  if (!row || !row.scenes || !row.scenes.length) { ElMessage.warning('该剧集暂无剧本内容，请先生成剧本'); return; }
   const lines = [];
   lines.push(`第${row.episodeNumber || '?'}集：${row.episodeTitle || '未命名'}`);
   lines.push('');
   if (row.summary) { lines.push(`【剧情摘要】${row.summary}`); lines.push(''); }
-  const scenes = row.scenes || [];
+  const scenes = row.scenes;
   scenes.forEach((s, i) => {
     lines.push(`--- 第${s.sceneNumber || i+1}场 ---`);
     if (s.location) lines.push(`场景：${s.location}`);
