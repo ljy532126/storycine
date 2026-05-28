@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref,reactive,computed,onMounted,nextTick } from 'vue';
+import { ref,reactive,computed,onMounted,nextTick,watch } from 'vue';
 import { useRoute,useRouter } from 'vue-router';
 
 const screenWidth = ref(window.innerWidth);
@@ -245,6 +245,12 @@ window.__triggerSave=handleSave;
   const qProjectId=route.query.projectId;
   if(qProjectId){currentProjectId.value=qProjectId;onProjectChange(qProjectId)}
   else{const restored=await projectStore.restoreLastProject();if(restored){currentProjectId.value=restored._id;onProjectChange(restored._id)}}
+});
+// keep-alive 缓存后，每次进入页面重新拉取剧集列表
+watch(() => route.path, (p) => {
+  if (p === '/script-edit' && currentProjectId.value) {
+    scriptStore.fetchScripts(currentProjectId.value).then(() => { scripts.value = [...scriptStore.scripts]; });
+  }
 });
 
 async function onProjectChange(val){
