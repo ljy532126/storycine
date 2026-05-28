@@ -191,7 +191,7 @@
     </div>
 
     <!-- 故事线弹窗 -->
-    <el-dialog v-model="showStorylineDialog" title="故事线总览 📖" width="750px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="showStorylineDialog" title="故事线总览 📖" :width="screenWidth < 768 ? '94%' : '750px'" destroy-on-close :close-on-click-modal="false">
       <div class="storyline-wrap" v-if="scripts.length > 0">
         <div class="storyline-summary-box">
           <div class="sl-label">创作进度</div>
@@ -232,7 +232,7 @@
     </el-dialog>
 
     <!-- 导入剧本弹窗 -->
-    <el-dialog v-model="showImportDialog" title="导入外部剧本 📥" width="650px" destroy-on-close>
+    <el-dialog v-model="showImportDialog" title="导入外部剧本 📥" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
       <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
         <template #title>把剧本粘贴进来，AI 会自动帮你识别场次、时间、地点、人物和台词，一键结构化！</template>
       </el-alert>
@@ -299,6 +299,8 @@ async function batchDeleteScripts() {
   }
 }
 const importing = ref(false);
+const screenWidth = ref(window.innerWidth);
+window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 
 const logPanelStyle = computed(() => ({
   left: Math.min(logPos.x, window.innerWidth - 500) + 'px',
@@ -739,11 +741,20 @@ function applyQuickTemplate(t) {
 .sl-pill { background: var(--bg-300); color: var(--text-200); padding: 3px 10px; border-radius: 4px; font-size: 11px; }
 
 @media (max-width: 768px) {
+  .sg-root { height: calc(100vh - 56px); }
   .sg-topbar { flex-wrap: wrap; gap: 8px; }
-  .topbar-right { width: 100%; flex-wrap: wrap; }
-  .topbar-right .el-select { width: 100% !important; }
+  .topbar-right { width: 100%; flex-wrap: wrap; flex-direction: column; gap: 8px; }
   .tag-form { flex-direction: column; }
+  .tag-form .el-form-item { margin-right: 0 !important; width: 100%; }
   .tag-form .el-select { width: 100% !important; }
-  .log-float-panel { width: calc(100vw - 32px); right: 16px; }
+  .card-header-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .card-header-row .el-button { width: 100%; justify-content: center; }
+  .history-fill { max-height: 40vh; }
+  .history-table :deep(.el-table__body-wrapper) { overflow-x: auto; }
+  .log-float-panel { width: calc(100vw - 32px) !important; left: 16px !important; }
+  .log-float-toggle { left: auto !important; right: 16px !important; }
+  .welcome-placeholder { padding: 40px 20px; }
+  .welcome-placeholder.full { padding: 60px 20px; }
+  .import-link { font-size: 13px; }
 }
 </style>
