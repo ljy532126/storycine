@@ -510,18 +510,37 @@ async function handleExport() {
   .flow-step:not(.done) { background: var(--bg-100); }
   .flow-arrow { display: none; }
 
-  /* 三列 */
-  .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .three-column::-webkit-scrollbar { width: 2px; }
-  .three-column::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 1px; }
+  /* 三列：自然撑开，无高度限制 */
+  .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow-y: visible; }
 
-  /* 左/中/右面板 */
-  .left-panel { width: 100%; overflow-y: visible; flex: none; padding: 12px; }
+  /* 左/中面板 */
+  .left-panel { width: 100%; overflow-y: visible; flex: none; padding: 12px 16px; }
   .left-panel :deep(.episode-list) { overflow-y: visible; }
   .left-panel :deep(.ep-item) { white-space: normal; padding: 10px 12px; font-size: 0.875rem; }
-  .center-panel { width: 100%; min-width: 0; padding: 12px; overflow-y: visible; flex: none; }
-  .right-panel { width: 100%; padding: 12px; overflow-y: visible; flex: none; max-height: none; }
-  .right-panel.collapsed { width: 100%; padding: 12px; }
+  .center-panel { width: 100%; min-width: 0; padding: 12px 16px; overflow-y: visible; flex: none; }
+
+  /* 右面板：无高度限制，内容自然撑开 */
+  .right-panel { width: 100%; padding: 16px; overflow-y: visible; flex: none; max-height: none; }
+  .right-panel.collapsed { width: 100%; padding: 12px 16px; }
+  .right-panel .panel-title { font-size: 1rem; padding: 8px 0 12px; cursor: pointer; border-bottom: 1px solid var(--bg-300); margin-bottom: 14px; }
+  .collapse-toggle { font-size: 0.75rem; }
+
+  /* 设定组：统一间距 */
+  .setting-group { margin-bottom: 16px; }
+  .setting-group > label { font-size: 0.8125rem; margin-bottom: 8px; display: block; font-weight: 600; }
+
+  /* radio-button 改为 1 列垂直 */
+  .setting-group :deep(.el-radio-group) { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .setting-group :deep(.el-radio-button) { width: 100%; }
+  .setting-group :deep(.el-radio-button__inner) { width: 100%; text-align: center; padding: 0; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 0.9375rem; border-radius: 10px !important; border: 1px solid var(--bg-300) !important; }
+
+  /* 风格细分：1 列垂直 */
+  .sub-style-grid { display: flex; flex-direction: column; gap: 10px; }
+  .sub-style-item { width: 100%; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 0.9375rem; border-radius: 10px; text-align: center; padding: 0; border: 1px solid var(--bg-300); }
+  .sub-style-item.active { background: var(--navy); color: var(--gold); border-color: var(--gold); }
+
+  /* 操作按钮全宽 */
+  .setting-group .el-button { width: 100% !important; height: 48px; font-size: 0.9375rem; }
 
   /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 8px; }
@@ -544,22 +563,6 @@ async function handleExport() {
   .dialogue-row .el-input:nth-child(2) { flex: 1 1 100px; }
   .dialogue-row .el-input:nth-child(3) { width: 100px !important; }
   .colon { display: none; }
-
-  /* 导演设定面板 */
-  .right-panel .panel-title { font-size: 1rem; padding: 8px 0; cursor: pointer; }
-  .collapse-toggle { font-size: 0.75rem; }
-
-  /* 设定内部：radio 改为顶部标签 */
-  .setting-group { margin-bottom: 12px; }
-  .setting-group > label { font-size: 0.8125rem; margin-bottom: 6px; display: block; }
-  .setting-group :deep(.el-radio-group) { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
-  .setting-group :deep(.el-radio-button) { flex: 1; min-width: 0; }
-  .setting-group :deep(.el-radio-button__inner) { width: 100%; text-align: center; padding: 10px 8px; font-size: 0.875rem; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; }
-
-  /* 风格细分：2 列网格 */
-  .sub-style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .sub-style-item { padding: 0; font-size: 0.875rem; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 8px; text-align: center; }
-  .sub-style-item.active { background: var(--navy); color: var(--gold); border-color: var(--gold); }
 
   /* 所有交互元素 ≥44px */
   :deep(.el-button) { min-height: 44px; }
