@@ -165,7 +165,7 @@
           <el-select v-model="exportEpisodes" style="width:100%" multiple collapse-tags placeholder="全部剧集（不选=导出全部）"><el-option v-for="ep in scripts" :key="ep._id" :label="formatEpLabel(ep)" :value="ep._id" /></el-select>
           <div style="display:flex;gap:8px;margin-top:4px"><el-button size="small" link @click="exportEpisodes = scripts.map(e => e._id)">全选</el-button><el-button size="small" link @click="exportEpisodes = currentScriptId ? [currentScriptId] : []">当前集</el-button><el-button size="small" link @click="exportEpisodes = []">清空</el-button></div>
         </el-form-item>
-        <el-form-item label="导出内容"><el-checkbox-group v-model="exportTypes"><el-checkbox label="script">📝 剧本全文</el-checkbox><el-checkbox label="shots">🎬 分镜全文</el-checkbox><el-checkbox label="full_storyboard">🎞️ 故事板全文</el-checkbox></el-checkbox-group></el-form-item>
+        <el-form-item label="导出内容"><el-checkbox-group v-model="exportTypes"><el-checkbox value="script">📝 剧本全文</el-checkbox><el-checkbox value="shots">🎬 分镜全文</el-checkbox><el-checkbox value="full_storyboard">🎞️ 故事板全文</el-checkbox></el-checkbox-group></el-form-item>
         <el-form-item label="导出格式"><el-select v-model="exportFormat" style="width:100%"><el-option label="PDF" value="pdf" /><el-option label="Markdown" value="markdown" /><el-option label="CSV" value="csv" /><el-option label="Word" value="word" /></el-select></el-form-item>
       </el-form>
       <el-alert type="info" :closable="false" show-icon style="margin-top:8px"><template #title>{{ formatHint }}</template></el-alert>

@@ -298,9 +298,9 @@
         </el-form-item>
         <el-form-item label="导出内容">
           <el-checkbox-group v-model="exportTypes">
-            <el-checkbox label="script">📝 剧本全文</el-checkbox>
-            <el-checkbox label="shots">🎬 分镜全文</el-checkbox>
-            <el-checkbox label="full_storyboard">🎞️ 故事板全文</el-checkbox>
+            <el-checkbox value="script">📝 剧本全文</el-checkbox>
+            <el-checkbox value="shots">🎬 分镜全文</el-checkbox>
+            <el-checkbox value="full_storyboard">🎞️ 故事板全文</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
         <el-form-item label="导出格式">
