@@ -156,6 +156,11 @@ git clone https://github.com/ljy532126/storycine.git /www/wwwroot/storycine && c
 # 打开浏览器 http://你的服务器IP:3012
 ```
 
+```bash
+# 后续更新（已有代码）
+cd /www/wwwroot/storycine && git pull && docker compose up -d --build
+```
+
 > `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。  
 > Dockerfile 已配置国内 npm 镜像 (`npmmirror.com`)，国内构建速度更快。
 
