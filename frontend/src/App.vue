@@ -181,10 +181,21 @@ import { useAssetStore } from './stores/asset';
 
 const route = useRoute();
 const router = useRouter();
-function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/'); }
+function handleLogout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  userRole.value = '';
+  currentUser.value = {};
+  router.push('/');
+}
 const collapsed = ref(false);
 const mobileMenuOpen = ref(false);
 const userRole = ref('');
+
+// 从 localStorage 初始化（快速首屏渲染）
+const currentUser = ref((() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+})());
 
 // 从 API 验证当前用户角色（不信任 localStorage）
 async function refreshUser() {
@@ -194,16 +205,14 @@ async function refreshUser() {
     const res = await fetch('/api/v1/auth/me', { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
       const data = await res.json();
-      userRole.value = data.data?.role || '';
-      localStorage.setItem('user', JSON.stringify(data.data || {}));
+      const user = data.data || {};
+      userRole.value = user.role || '';
+      currentUser.value = user;
+      localStorage.setItem('user', JSON.stringify(user));
     }
   } catch { /* ignore */ }
 }
 
-// === 页面过渡 ===
-const currentUser = computed(() => {
-  try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
-});
 const avatarLetter = computed(() => (currentUser.value.nickname || currentUser.value.username || '?')[0]?.toUpperCase());
 const isAdmin = computed(() => userRole.value === 'admin');
 
