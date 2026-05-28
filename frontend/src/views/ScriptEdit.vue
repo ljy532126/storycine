@@ -83,10 +83,10 @@
                 </div>
                 <div v-for="(d,di) in scene.dialogues" :key="di" class="dr-tr">
                   <div class="dr-td dr-td-role"><el-input v-model="d.characterName" size="small" placeholder="角色" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-text"><el-input v-model="d.text" size="small" placeholder="对话内容" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-action"><el-input v-model="d.actionHint" size="small" placeholder="动作/表情" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-text"><el-input v-model="d.text" type="textarea" :autosize="{ minRows:1, maxRows:4 }" size="small" placeholder="对话内容" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-action"><el-input v-model="d.actionHint" type="textarea" :autosize="{ minRows:1, maxRows:3 }" size="small" placeholder="动作/表情" @change="markDirty" /></div>
                   <div class="dr-td dr-td-camera"><el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-inner"><el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-inner"><el-input v-model="d.innerThought" type="textarea" :autosize="{ minRows:1, maxRows:3 }" size="small" placeholder="内心独白" @change="markDirty" /></div>
                   <div class="dr-td dr-td-op"><el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button></div>
                 </div>
               </div>
@@ -455,14 +455,17 @@ async function handleExport() {
 .dr-th-camera{width:120px;flex-shrink:0}
 .dr-th-inner{width:140px;flex-shrink:0}
 .dr-th-op{width:30px;flex-shrink:0;text-align:center}
-.dr-tr{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--bg-300);align-items:center}
+.dr-tr{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--bg-300);align-items:flex-start}
 .dr-tr:last-child{border-bottom:none}
 .dr-tr:nth-child(even){background:var(--bg-100)}
 .dr-td-role{width:90px;flex-shrink:0}
 .dr-td-text{flex:1;min-width:0}
+.dr-td-text :deep(textarea){word-break:break-all;white-space:pre-wrap}
 .dr-td-action{width:120px;flex-shrink:0}
+.dr-td-action :deep(textarea){word-break:break-all}
 .dr-td-camera{width:120px;flex-shrink:0}
 .dr-td-inner{width:140px;flex-shrink:0}
+.dr-td-inner :deep(textarea){word-break:break-all}
 .dr-td-op{width:32px;flex-shrink:0;text-align:center}
 .dr-td-op .el-button{width:24px;height:24px;padding:0;border-radius:50%;font-size:14px;color:#C44545;border:1px solid #C44545;display:inline-flex;align-items:center;justify-content:center}
 .dr-td-op .el-button:hover{background:#C44545;color:#fff}
