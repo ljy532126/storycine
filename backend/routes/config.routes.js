@@ -46,7 +46,7 @@ router.post('/llm/test', async (req, res) => {
 
     const testUrls = {
       deepseek: { url: `${baseUrl || 'https://api.deepseek.com/v1'}/models`, key: apiKey },
-      openai: { url: `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`, key: apiKey, method: 'POST', body: { model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 } },
+      openai: { url: req.body.model?.includes('image') ? `${baseUrl || 'https://api.openai.com/v1'}/images/generations` : `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`, key: apiKey, method: 'POST', body: req.body.model?.includes('image') ? { model: req.body.model, prompt: 'test', n: 1, size: '256x256' } : { model: req.body.model || 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 } },
       tongyi: { url: `${baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'}/models`, key: apiKey },
       doubao: { url: `${baseUrl || 'https://ark.cn-beijing.volces.com/api/v3'}/contents/generations/tasks`, key: apiKey, method: 'POST', body: { model: 'ep-20250501000000-xxxxx', content: [{ type: 'text', text: 'test' }] } },
     };
