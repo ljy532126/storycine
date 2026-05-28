@@ -296,26 +296,24 @@ async function handleAutoStoryboard(){
     const res=await fetch('/api/v1/assets/generate-prompt',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({projectId:currentProjectId.value,assetId:currentProjectId.value,assetType:'storyboard',existingPrompt:`${sysPrompt}\n\n剧本：\n${scriptFull}\n\n为以上${scenes.length}个分镜推荐参数。只输出JSON数组。`})});
     const data=await res.json();const raw=data.data?.prompt||'';const m=raw.match(/\[[\s\S]*\]/);const rec=m?JSON.parse(m[0]):[];
     let filled=0;rec.forEach(r=>{if(scenes[r.index]!==undefined){const s=scenes[r.index];if(r.shotType)s.shotType=r.shotType;if(r.composition)s.composition=r.composition;if(r.cameraMovement)s.cameraMovement=r.cameraMovement;if(r.lighting)s.lighting=r.lighting;if(r.duration)s.duration=r.duration;if(r.soundEffect)s.soundEffect=r.soundEffect;if(r.sceneDescription)s.sceneDescription=r.sceneDescription.replace(/^\[镜\d+\]\s*/,'');filled++}});
-    // 1.5. 自动拆分台词过多的分镜（≥3句台词拆成新镜号）
+    // 1.5. 自动拆分台词过多的分镜（按每镜最多2句拆分）
     let splitCount = 0;
     const newScenes = [];
     scenes.forEach(s => {
       const dialogs = s.dialogues || [];
-      if (dialogs.length >= 4) {
-        // 拆成两个分镜：前2句 + 剩余
-        const s1 = { ...s, dialogues: dialogs.slice(0, 2) };
-        const s2 = { ...JSON.parse(JSON.stringify(s)), dialogues: dialogs.slice(2), sceneNumber: 0 };
-        newScenes.push(s1, s2);
-        splitCount++;
-      } else if (dialogs.length === 3) {
-        // 拆成两个分镜：前2句 + 最后1句
-        const s1 = { ...s, dialogues: dialogs.slice(0, 2) };
-        const s2 = { ...JSON.parse(JSON.stringify(s)), dialogues: dialogs.slice(2), sceneNumber: 0 };
-        newScenes.push(s1, s2);
-        splitCount++;
-      } else {
+      if (dialogs.length <= 2) {
         newScenes.push(s);
+        return;
       }
+      // 按每镜最多2句台词拆分
+      for (let i = 0; i < dialogs.length; i += 2) {
+        const chunk = dialogs.slice(i, i + 2);
+        const newShot = JSON.parse(JSON.stringify(s));
+        newShot.dialogues = chunk;
+        newShot.sceneNumber = 0; // 后续统一编号
+        newScenes.push(newShot);
+      }
+      splitCount++;
     });
     if (splitCount > 0) {
       // 重新编号
