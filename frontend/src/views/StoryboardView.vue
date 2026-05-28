@@ -161,6 +161,7 @@
             <el-select v-model="selectedModel" size="small" style="width:100%">
               <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
               <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
+              <el-option label="gpt-image-2" value="openai_image" />
             </el-select>
             <el-button size="small" type="primary" style="width:100%;margin-top:8px" @click="generateImageForShot" :loading="genningImage" :disabled="!currentShot">生成图片</el-button>
           </div>

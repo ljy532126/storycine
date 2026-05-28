@@ -632,7 +632,11 @@ router.post('/generate-image', async (req, res, next) => {
 
     // 从运行时配置读取用户设置的生图模型
     const llmCfg = appConfig.llm[provider] || {};
-    const imageModel = llmCfg.imageModel || llmCfg.model || 'doubao-seedream-4-5-251128';
+    const imageModel = llmCfg.imageModel
+      || (provider === 'openai' ? 'gpt-image-2' : null)
+      || llmCfg.model
+      || 'doubao-seedream-4-5-251128';
+    console.log(`[generate-image] provider=${provider}, model=${imageModel}`);
     const genParams = { provider, size, model: imageModel };
     if (resolvedRefs && resolvedRefs.length > 0) genParams.referenceImages = resolvedRefs;
     if (resolvedInput) genParams.inputImage = resolvedInput;
@@ -657,14 +661,34 @@ router.post('/generate-image', async (req, res, next) => {
 
     // 通过存储服务持久化（本地模式 / 对象存储模式）
     let imageUrl = remoteUrl;
+    const catMap = { character: 'characters', scene: 'scenes', prop: 'props' };
+    const category = catMap[assetType] || 'storyboard';
+    const filename = `gen-${Date.now()}-${Math.random().toString(36).slice(2,8)}.png`;
+
     if (remoteUrl && !remoteUrl.startsWith('/uploads/')) {
       try {
-        const filename = `gen-${Date.now()}-${Math.random().toString(36).slice(2,8)}.png`;
-        const catMap = { character: 'characters', scene: 'scenes', prop: 'props' };
-        imageUrl = await storageService.uploadFromUrl(remoteUrl, filename, catMap[assetType] || 'storyboard');
-        const mode = imageUrl.startsWith('https://') || imageUrl.startsWith('http://') ? '云端 ☁️' : '本地 💾';
-        console.log(`[generate-image] 存储完成 [${mode}]: ${remoteUrl.substring(0,40)}... → ${imageUrl}`);
-      } catch (e) { console.warn('[generate-image] 存储失败，使用远程URL:', e.message); }
+        // 判断是 base64 数据还是远程 URL
+        const isBase64 = remoteUrl.startsWith('data:') || !remoteUrl.startsWith('http');
+        if (isBase64) {
+          let buf, ext = 'png';
+          if (remoteUrl.startsWith('data:')) {
+            const [meta, b64] = remoteUrl.split(',');
+            const mimeMatch = meta.match(/data:(image\/\w+);/);
+            if (mimeMatch) ext = mimeMatch[1].split('/')[1];
+            buf = Buffer.from(b64, 'base64');
+          } else {
+            // 原始 base64（无 data: 前缀）
+            buf = Buffer.from(remoteUrl, 'base64');
+          }
+          const finalFilename = filename.replace('.png', `.${ext}`);
+          imageUrl = await storageService.upload(buf, finalFilename, category);
+          console.log(`[generate-image] base64 存储完成 (${(buf.length/1024).toFixed(1)}KB): ${imageUrl}`);
+        } else {
+          imageUrl = await storageService.uploadFromUrl(remoteUrl, filename, category);
+          const mode = imageUrl.startsWith('https://') || imageUrl.startsWith('http://') ? '云端 ☁️' : '本地 💾';
+          console.log(`[generate-image] 存储完成 [${mode}]: ${remoteUrl.substring(0,40)}... → ${imageUrl}`);
+        }
+      } catch (e) { console.warn('[generate-image] 存储失败，使用原始URL:', e.message); }
     }
 
     // 更新资产图片

@@ -69,7 +69,6 @@ async function callImageGen(prompt, options = {}) {
   }
 
   try {
-    // 强约束前置：封面海报需要文字标题，可跳过
     let cleanPrompt = prompt;
     if (!skipConstraint) {
       cleanPrompt = '【强约束】画面中严禁出现任何文字、字母、乱码、logo、水印、标题、字幕、签名、符号、海报元素、排版文字，仅保留场景与角色，纯画面，无任何额外元素；' + prompt;
@@ -78,15 +77,16 @@ async function callImageGen(prompt, options = {}) {
     }
     console.log(`[image-gen] 提示词(前120字): ${cleanPrompt.substring(0, 120)}...`);
 
-    // 基础请求体：prompt 必填
-    const body = { model: model || imgConfig.model || 'doubao-seedream-4-0-260128', prompt: cleanPrompt, size, n: 1 };
+    const genModel = model || imgConfig.model || 'doubao-seedream-4-0-260128';
+
+    // 通用 Images API 请求体
+    const body = { model: genModel, prompt: cleanPrompt, size, n: 1 };
 
     if (watermark === false) {
       body.watermark = false;
       console.log('[image-gen] watermark=false');
     }
 
-    // 传入参考图（豆包 Seedream 图生图协议）
     if (referenceImages && referenceImages.length > 0) {
       body.reference_images = referenceImages;
       console.log(`[image-gen] 参考图: ${referenceImages.length} 张`);
@@ -96,15 +96,38 @@ async function callImageGen(prompt, options = {}) {
       console.log(`[image-gen] 底图: ${inputImage.substring(0, 60)}...`);
     }
 
-    const response = await axios.post(`${imgConfig.baseUrl}/images/generations`, body, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${imgConfig.apiKey}`,
-      },
+    const apiUrl = `${imgConfig.baseUrl}/images/generations`;
+    console.log(`[image-gen] provider=${provider}, model=${genModel}, url=${apiUrl}`);
+
+    const response = await axios.post(apiUrl, body, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${imgConfig.apiKey}` },
       timeout: 180000,
     });
 
-    return response.data.data?.[0]?.url || response.data.data?.url || '';
+    const result = response.data;
+
+    // 检测 HTML 响应（baseUrl 缺少 /v1）
+    if (typeof result === 'string' && (result.startsWith('<!DOCTYPE') || result.startsWith('<html'))) {
+      throw new Error(`API返回HTML页面而非JSON。Base URL 可能缺少 /v1 路径。请求: ${apiUrl}。请在设置中检查 Base URL（应以 /v1 结尾，如 https://你的中转站域名/v1）`);
+    }
+
+    // 检测 API 错误
+    if (result && typeof result === 'object' && result.error) {
+      const errDetail = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
+      console.error(`[image-gen] API Error: ${errDetail}`);
+      throw new Error(result.error.message || result.error.code || errDetail);
+    }
+
+    // 兼容多种响应格式：OpenAI / 中转站 / doubao
+    const imageUrl = result.data?.[0]?.url || result.data?.url || result.url
+      || result.data?.[0]?.b64_json || result.output?.[0]?.data || '';
+    console.log(`[image-gen] 响应keys: ${Object.keys(result || {}).join(',')}`);
+    if (imageUrl) {
+      console.log(`[image-gen] 成功, URL(前80字): ${imageUrl.substring(0, 80)}`);
+    } else {
+      console.error(`[image-gen] 未找到图片URL, 完整响应: ${JSON.stringify(result).substring(0, 500)}`);
+    }
+    return imageUrl;
   } catch (error) {
     const errMsg = error.response?.data?.error?.message || error.message;
     console.error(`Image generation failed [${provider}]:`, errMsg);

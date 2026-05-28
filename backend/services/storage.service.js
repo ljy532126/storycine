@@ -118,7 +118,7 @@ async function upload(input, filename, category) {
 }
 
 async function uploadFromUrl(remoteUrl, filename, category) {
-  const resp = await axios({ url: remoteUrl, method: 'GET', responseType: 'arraybuffer', timeout: 30000 });
+  const resp = await axios({ url: remoteUrl, method: 'GET', responseType: 'arraybuffer', timeout: 120000 });
   return upload(Buffer.from(resp.data), filename, category || "");
 }
 
@@ -131,8 +131,9 @@ async function uploadLocal(input, filename, category) {
   } else if (typeof input === 'string' && fs.existsSync(input)) {
     fs.copyFileSync(input, filepath);
   }
-  console.log(`[storage:local] 已保存: ${filename}`);
-  return `/uploads/${filename}`;
+  const cat = category ? `${category}/` : '';
+  console.log(`[storage:local] 已保存: ${cat}${filename}`);
+  return `/uploads/${cat}${filename}`;
 }
 
 async function uploadToCloud(config, input, filename, category) {

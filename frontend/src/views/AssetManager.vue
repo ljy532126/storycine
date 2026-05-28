@@ -158,6 +158,7 @@
                 <div class="section-label">模型选择</div>
                 <el-select v-model="selectedModel" style="width:100%">
                   <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
+                  <el-option label="gpt-image-2" value="openai_image" />
                 </el-select>
               </div>
               <div class="model-section">
@@ -186,6 +187,7 @@
                 <div class="section-label">模型选择</div>
                 <el-select v-model="selectedModel" style="width:100%">
                   <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
+                  <el-option label="gpt-image-2" value="openai_image" />
                 </el-select>
               </div>
 <div class="model-section"><div class="section-label">画幅比例 📐</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
@@ -208,6 +210,7 @@
               <el-select v-model="selectedModel" style="width:100%">
                 <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
                 <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
+                <el-option label="gpt-image-2" value="openai_image" />
               </el-select>
             </div>
 <div class="model-section"><div class="section-label">画幅比例 📐</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>

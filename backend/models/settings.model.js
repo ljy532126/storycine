@@ -15,6 +15,7 @@ const settingsSchema = new mongoose.Schema({
       apiKey: { type: String, default: '' },
       baseUrl: { type: String, default: '' },
       model: { type: String, default: '' },
+      imageModel: { type: String, default: '' },
     },
     tongyi: {
       apiKey: { type: String, default: '' },
@@ -25,6 +26,7 @@ const settingsSchema = new mongoose.Schema({
       apiKey: { type: String, default: '' },
       baseUrl: { type: String, default: 'https://api.openai.com/v1' },
       model: { type: String, default: 'gpt-4o' },
+      imageModel: { type: String, default: 'gpt-image-2' },
     },
   },
   activeProvider: { type: String, default: '' },

@@ -75,6 +75,7 @@ const appConfig = {
         apiKey: runtimeConfig.openai.apiKey || process.env.OPENAI_API_KEY || '',
         baseUrl: runtimeConfig.openai.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
         model: runtimeConfig.openai.model || process.env.OPENAI_MODEL || 'gpt-4o',
+        imageModel: runtimeConfig.openai.imageModel || process.env.OPENAI_IMAGE_MODEL || '',
       };
     },
   },
@@ -97,6 +98,14 @@ const appConfig = {
         apiKey: d.apiKey || '',
         baseUrl: d.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3',
         model: d.imageModel || 'doubao-seedream-4-5-251128',
+      };
+    },
+    get openai() {
+      const o = appConfig.llm.openai;
+      return {
+        apiKey: o.apiKey || '',
+        baseUrl: o.baseUrl || 'https://api.openai.com/v1',
+        model: o.imageModel || o.model || 'gpt-image-2',
       };
     },
   },
@@ -176,6 +185,7 @@ const appConfig = {
             runtimeConfig[p].apiKey = dbCfg.apiKey || runtimeConfig[p].apiKey;
             runtimeConfig[p].baseUrl = dbCfg.baseUrl || runtimeConfig[p].baseUrl;
             runtimeConfig[p].model = dbCfg.model || runtimeConfig[p].model;
+            if (dbCfg.imageModel) runtimeConfig[p].imageModel = dbCfg.imageModel;
             if (dbCfg.apiKey) loadedCount++;
           }
         });

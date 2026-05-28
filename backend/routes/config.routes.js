@@ -13,13 +13,13 @@ router.get('/llm', (req, res) => {
 // 运行时更新LLM配置（同时持久化到MongoDB）
 router.put('/llm', async (req, res, next) => {
   try {
-    const { provider, apiKey, baseUrl, model } = req.body;
+    const { provider, apiKey, baseUrl, model, imageModel } = req.body;
 
     if (!provider) {
       return res.status(400).json({ message: '缺少provider参数 (deepseek|doubao|tongyi|openai)' });
     }
 
-    appConfig.setLLMConfig(provider, { apiKey, baseUrl, model });
+    appConfig.setLLMConfig(provider, { apiKey, baseUrl, model, imageModel });
 
     // 异步持久化到 MongoDB，不阻塞响应
     appConfig.persistLLMConfig().catch(e => console.error('Persist error:', e));
@@ -46,7 +46,7 @@ router.post('/llm/test', async (req, res) => {
 
     const testUrls = {
       deepseek: { url: `${baseUrl || 'https://api.deepseek.com/v1'}/models`, key: apiKey },
-      openai: { url: req.body.model?.includes('image') ? `${baseUrl || 'https://api.openai.com/v1'}/images/generations` : `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`, key: apiKey, method: 'POST', body: req.body.model?.includes('image') ? { model: req.body.model, prompt: 'test', n: 1, size: '256x256' } : { model: req.body.model || 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 } },
+      openai: { url: req.body.model?.includes('image') || req.body.model?.includes('gpt-image') ? `${baseUrl || 'https://api.openai.com/v1'}/images/generations` : `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`, key: apiKey, method: 'POST', body: req.body.model?.includes('image') || req.body.model?.includes('gpt-image') ? { model: req.body.model, prompt: 'test', n: 1, size: '256x256' } : { model: req.body.model || 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 } },
       tongyi: { url: `${baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'}/models`, key: apiKey },
       doubao: { url: `${baseUrl || 'https://ark.cn-beijing.volces.com/api/v3'}/contents/generations/tasks`, key: apiKey, method: 'POST', body: { model: 'ep-20250501000000-xxxxx', content: [{ type: 'text', text: 'test' }] } },
     };
@@ -97,7 +97,8 @@ router.post('/llm/test', async (req, res) => {
     const msg = error.response?.data?.error?.message || error.message;
     if (status === 401) res.json({ message: 'Unauthorized: API Key 无效或已过期', data: { ok: false } });
     else if (status === 403) res.json({ message: 'Forbidden: 无权限访问该资源', data: { ok: false } });
-    else if (status === 502 || status === 525 || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) res.json({ message: `无法连接 OpenAI 服务器 (${status})，国内网络需配置代理。请在 .env 中设置 HTTPS_PROXY 或使用 API 中转地址`, data: { ok: false } });
+    else if (status === 0 || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ECONNABORTED')) res.json({ message: `无法连接到 ${baseUrl}，请检查 Base URL 格式（需包含 https://）和网络连接`, data: { ok: false } });
+    else if (status === 502 || status === 525) res.json({ message: `服务器代理错误 (${status})，请检查 Base URL 是否正确或稍后重试`, data: { ok: false } });
     else res.json({ message: `连接失败 (${status}): ${msg}`, data: { ok: false } });
   }
 });
