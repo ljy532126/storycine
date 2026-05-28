@@ -667,7 +667,6 @@ function exportScriptText(row) {
     if (s.location) lines.push(`场景：${s.location}`);
     if (s.timeOfDay) lines.push(`时间：${s.timeOfDay}`);
     if (s.atmosphere) lines.push(`氛围：${s.atmosphere}`);
-    if (s.atmosphere) lines.push(`氛围：${s.atmosphere}`);
     if (s.sceneDescription) lines.push(`描述：${s.sceneDescription}`);
     if (s.notes) lines.push(`备注：${s.notes}`);
     if (s.dialogues?.length) {
