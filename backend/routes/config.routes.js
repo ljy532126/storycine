@@ -46,7 +46,7 @@ router.post('/llm/test', async (req, res) => {
 
     const testUrls = {
       deepseek: { url: `${baseUrl || 'https://api.deepseek.com/v1'}/models`, key: apiKey },
-      openai: { url: `${baseUrl || 'https://api.openai.com/v1'}/models`, key: apiKey },
+      openai: { url: `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`, key: apiKey, method: 'POST', body: { model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 } },
       tongyi: { url: `${baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'}/models`, key: apiKey },
       doubao: { url: `${baseUrl || 'https://ark.cn-beijing.volces.com/api/v3'}/contents/generations/tasks`, key: apiKey, method: 'POST', body: { model: 'ep-20250501000000-xxxxx', content: [{ type: 'text', text: 'test' }] } },
     };
@@ -74,14 +74,24 @@ router.post('/llm/test', async (req, res) => {
       if (resp.status === 200 || resp.status === 201) return res.json({ message: '连接成功，API Key 和 Model 均有效', data: { ok: true } });
       if (resp.status === 400) return res.json({ message: `请求格式错误 (400): ${resp.data?.error?.message || ''}，请检查 Model 是否正确`, data: { ok: false } });
       return res.json({ message: `未知状态 ${resp.status}，请检查 Base URL 和 Model`, data: { ok: false } });
+    } else if (cfg.method === 'POST') {
+      const resp = await axios.post(cfg.url, cfg.body || {}, {
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.key}` },
+        timeout: 15000, validateStatus: () => true,
+      });
+      if (resp.status === 401) return res.json({ message: 'API Key 验证失败：密钥无效或已过期', data: { ok: false } });
+      if (resp.status === 403) return res.json({ message: '密钥有效但无访问权限 (403)', data: { ok: false } });
+      if (resp.status === 429) return res.json({ message: '请求过于频繁 (429)，请稍后重试', data: { ok: false } });
+      // 200/400 都说明 API Key 有效（400=参数错误但Auth通过）
+      if (resp.status === 200 || resp.status === 400) return res.json({ message: '连接成功，API Key 有效', data: { ok: true } });
+      return res.json({ message: `未知状态 ${resp.status}`, data: { ok: false } });
     } else {
       await axios.get(cfg.url, {
         headers: { 'Authorization': `Bearer ${cfg.key}` },
         timeout: 10000,
       });
+      res.json({ message: '连接成功', data: { ok: true } });
     }
-
-    res.json({ message: '连接成功', data: { ok: true } });
   } catch (error) {
     const status = error.response?.status || 0;
     const msg = error.response?.data?.error?.message || error.message;
