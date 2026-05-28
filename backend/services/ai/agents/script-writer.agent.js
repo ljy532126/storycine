@@ -21,7 +21,7 @@ async function run(state) {
   }
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.9, maxTokens: 4096, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.9, maxTokens: 100000, responseFormat: 'json' });
     state.script = JSON.parse(res);
     const sceneCount = state.script?.scenes?.length || 0;
     const dialogueCount = (state.script?.scenes || []).reduce((sum, s) => sum + (s.dialogues?.length || 0), 0);

@@ -13,7 +13,7 @@ async function run(state) {
   const userPrompt = prompts.outline.userTemplate(state.creativeBrief, styleInfo);
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 4096, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 100000, responseFormat: 'json' });
     state.outline = JSON.parse(res);
     emitProgress(state, `大纲生成完成：${state.outline?.title || '未命名'}，共 ${state.outline?.episodes?.length || 0} 集`);
   } catch (e) {

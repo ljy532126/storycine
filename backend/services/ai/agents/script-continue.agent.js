@@ -34,7 +34,7 @@ async function run(state) {
   }
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 4096, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 100000, responseFormat: 'json' });
     state.script = JSON.parse(res);
     const sceneCount = state.script?.scenes?.length || 0;
     emitProgress(state, `续写完成：${sceneCount} 场次`);

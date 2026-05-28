@@ -11,7 +11,7 @@ async function run(state) {
   const userPrompt = prompts.scriptValidator.userTemplate(state.script, state.characters);
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.3, maxTokens: 4096, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.3, maxTokens: 100000, responseFormat: 'json' });
     const validationResult = JSON.parse(res);
 
     state.validationErrors = validationResult.errors || [];

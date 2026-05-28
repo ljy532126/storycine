@@ -131,7 +131,7 @@ function sanitizeJSON(text) {
  */
 async function callLLM(systemPrompt, userPrompt, options = {}) {
   const llm = appConfig.getActiveLLM();
-  const { temperature = 0.8, maxTokens = 4096, responseFormat } = options;
+  const { temperature = 0.8, maxTokens = 100000, responseFormat } = options;
 
   if (!llm.apiKey) {
     throw new Error('请先在系统设置中配置 LLM API Key（DeepSeek / 豆包 / 通义 / OpenAI 任选一个）');
