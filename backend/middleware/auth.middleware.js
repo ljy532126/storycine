@@ -1,8 +1,12 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'autodrama_jwt_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = '7d';
+
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET 环境变量未设置！请在 .env 中配置 JWT_SECRET');
+}
 
 /** 生成 JWT Token */
 function generateToken(user) {
@@ -33,4 +37,4 @@ async function adminRequired(req, res, next) {
   });
 }
 
-module.exports = { generateToken, authRequired, adminRequired, JWT_SECRET };
+module.exports = { generateToken, authRequired, adminRequired };

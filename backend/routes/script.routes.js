@@ -6,6 +6,9 @@ const Character = require('../models/character.model');
 const { buildScriptGenerationGraph, buildScriptContinueGraph } = require('../services/ai/langgraph.engine');
 const { parseScriptToStructure, getProjectScriptHistory } = require('../services/script.service');
 const { batchCreateCharacters } = require('../services/asset.service');
+const { authRequired } = require('../middleware/auth.middleware');
+const appConfig = require('../config/app.config');
+router.use(authRequired);
 
 const VALID_TIMES = ['白天', '夜晚', '黄昏', '傍晚', '清晨', '黎明', '正午', '深夜', '雨天', '雪天', '不限'];
 
@@ -59,6 +62,7 @@ function sanitizeScriptData(scriptData) {
 // AI一键生成完整剧本体系（异步，WebSocket推送结果）
 router.post('/ai-generate', async (req, res, next) => {
   try {
+    await appConfig.loadUserConfig(req.user._id);
     const { projectId, tags } = req.body;
     const io = req.app.get('io');
 

@@ -3,6 +3,8 @@ const router = express.Router();
 const Script = require('../models/script.model');
 const Project = require('../models/project.model');
 const Storyboard = require('../models/storyboard.model');
+const { authRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
 
 router.post('/', async (req, res, next) => {
   try {

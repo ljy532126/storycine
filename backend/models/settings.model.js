@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 /**
- * 系统设置 - 持久化LLM密钥等配置，重启不丢失
+ * 系统设置 - 每个用户独立的 LLM/存储配置，持久化重启不丢失
  */
 const settingsSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true, default: 'llm_config' },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   llmProviders: {
     deepseek: {
       apiKey: { type: String, default: '' },
@@ -30,9 +30,7 @@ const settingsSchema = new mongoose.Schema({
     },
   },
   activeProvider: { type: String, default: '' },
-  // AI 生成全局配置
   aiConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
-  // 对象存储配置
   storageConfig: {
     enabled: { type: Boolean, default: false },
     provider: { type: String, default: 'minio', enum: ['aliyun_oss', 'tencent_cos', 'minio'] },
@@ -45,11 +43,12 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取全局设置（单例） */
-settingsSchema.statics.getSettings = async function () {
-  let settings = await this.findOne({ key: 'llm_config' });
+/** 获取指定用户的设置，不存在则自动创建 */
+settingsSchema.statics.getSettings = async function (userId) {
+  if (!userId) throw new Error('getSettings 缺少 userId 参数');
+  let settings = await this.findOne({ userId });
   if (!settings) {
-    settings = await this.create({ key: 'llm_config' });
+    settings = await this.create({ userId });
   }
   return settings;
 };

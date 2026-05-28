@@ -184,13 +184,31 @@ const router = useRouter();
 function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/'); }
 const collapsed = ref(false);
 const mobileMenuOpen = ref(false);
+const userRole = ref('');
+
+// 从 API 验证当前用户角色（不信任 localStorage）
+async function refreshUser() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const res = await fetch('/api/v1/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const data = await res.json();
+      userRole.value = data.data?.role || '';
+      localStorage.setItem('user', JSON.stringify(data.data || {}));
+    }
+  } catch { /* ignore */ }
+}
 
 // === 页面过渡 ===
 const currentUser = computed(() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
 });
 const avatarLetter = computed(() => (currentUser.value.nickname || currentUser.value.username || '?')[0]?.toUpperCase());
-const isAdmin = computed(() => currentUser.value.role === 'admin');
+const isAdmin = computed(() => userRole.value === 'admin');
+
+import { onMounted } from 'vue';
+onMounted(() => refreshUser());
 
 const activeMenu = computed(() => {
   mobileMenuOpen.value = false;

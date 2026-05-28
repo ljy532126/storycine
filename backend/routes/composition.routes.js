@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Composition = require('../models/composition.model');
 const { createComposition, getCompositionProgress } = require('../services/composition.service');
+const { authRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
 
 // 创建合成任务
 router.post('/', async (req, res, next) => {

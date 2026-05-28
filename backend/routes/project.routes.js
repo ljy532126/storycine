@@ -8,6 +8,8 @@ const SceneAsset = require('../models/scene.model');
 const Prop = require('../models/prop.model');
 const Storyboard = require('../models/storyboard.model');
 const Composition = require('../models/composition.model');
+const { authRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
 
 // 创建项目
 router.post('/', async (req, res, next) => {

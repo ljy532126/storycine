@@ -5,6 +5,8 @@ const SceneAsset = require('../models/scene.model');
 const Prop = require('../models/prop.model');
 const Storyboard = require('../models/storyboard.model');
 const Project = require('../models/project.model');
+const { authRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
 
 // 聚合项目中所有图片资源
 router.get('/', async (req, res, next) => {

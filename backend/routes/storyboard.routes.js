@@ -5,6 +5,8 @@ const {
   optimizeShotRhythm,
   autoGenerateStoryboard,
 } = require('../services/storyboard.service');
+const { authRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
 
 // 自动分镜拆解 / 同步
 router.post('/auto-generate', async (req, res, next) => {

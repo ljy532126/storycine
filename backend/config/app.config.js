@@ -1,17 +1,17 @@
 require('dotenv').config();
 
-/** 内存中的运行时配置（优先级: 运行时 > MongoDB > env） */
+/** 内存中的运行时配置（当前活跃用户的 LLM Key，启动时为空，用户访问时按需加载） */
 const runtimeConfig = {
   deepseek: { apiKey: '', baseUrl: '', model: '' },
-  doubao: { apiKey: '', baseUrl: '', model: '' },
+  doubao: { apiKey: '', baseUrl: '', model: '', imageModel: '' },
   tongyi: { apiKey: '', baseUrl: '', model: '' },
-  openai: { apiKey: '', baseUrl: '', model: '' },
+  openai: { apiKey: '', baseUrl: '', model: '', imageModel: '' },
   jimeng: { apiKey: '', baseUrl: '' },
   wan27: { apiKey: '', baseUrl: '' },
 };
 
 let _settingsModel = null;
-let _dbLoaded = false;
+let _loadedUserId = null;  // 当前已加载到 runtimeConfig 的用户 ID
 
 function getSettingsModel() {
   if (!_settingsModel) {
@@ -20,8 +20,35 @@ function getSettingsModel() {
   return _settingsModel;
 }
 
+/** 将用户的 MongoDB 配置加载到运行时内存（后续 getActiveLLM / llm.* 都从该用户配置读取） */
+async function loadUserConfig(userId) {
+  if (!userId) return;
+  const Settings = getSettingsModel();
+  if (!Settings) return;
+  try {
+    const settings = await Settings.getSettings(userId);
+    const providers = ['deepseek', 'doubao', 'tongyi', 'openai'];
+    let loadedCount = 0;
+    providers.forEach(p => {
+      const dbCfg = settings.llmProviders?.[p];
+      if (dbCfg) {
+        // 仅当用户明确保存过的字段才覆盖，否则保留 env 或默认值
+        runtimeConfig[p].apiKey = dbCfg.apiKey || runtimeConfig[p].apiKey;
+        runtimeConfig[p].baseUrl = dbCfg.baseUrl || runtimeConfig[p].baseUrl;
+        runtimeConfig[p].model = dbCfg.model || runtimeConfig[p].model;
+        if (dbCfg.imageModel) runtimeConfig[p].imageModel = dbCfg.imageModel;
+        if (dbCfg.apiKey) loadedCount++;
+      }
+    });
+    _loadedUserId = userId;
+    if (loadedCount > 0) console.log(`[config] 已为用户 ${userId} 加载 ${loadedCount} 个 LLM provider`);
+  } catch (e) {
+    console.error('[config] 加载用户 LLM 配置失败:', e.message);
+  }
+}
+
 /**
- * 应用配置 - env → MongoDB → 运行时覆盖（优先级递增）
+ * 应用配置 - 运行时从当前活跃用户加载
  */
 const appConfig = {
   server: {
@@ -94,24 +121,48 @@ const appConfig = {
     },
     get doubao() {
       const d = appConfig.llm.doubao;
-      return {
-        apiKey: d.apiKey || '',
-        baseUrl: d.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3',
-        model: d.imageModel || 'doubao-seedream-4-5-251128',
-      };
+      return { apiKey: d.apiKey || '', baseUrl: d.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3', model: d.imageModel || 'doubao-seedream-4-5-251128' };
     },
     get openai() {
       const o = appConfig.llm.openai;
-      return {
-        apiKey: o.apiKey || '',
-        baseUrl: o.baseUrl || 'https://api.openai.com/v1',
-        model: o.imageModel || o.model || 'gpt-image-2',
-      };
+      return { apiKey: o.apiKey || '', baseUrl: o.baseUrl || 'https://api.openai.com/v1', model: o.imageModel || o.model || 'gpt-image-2' };
     },
   },
 
+  /** 从 settings 对象获取摘要（用于 config routes） */
+  getLLMConfigSummary(settings) {
+    const mask = (key) => {
+      if (!key || key.length < 8) return key ? '***' : '';
+      return key.substring(0, 4) + '****' + key.substring(key.length - 4);
+    };
+    const active = this.getActiveLLM(settings);
+    const summary = { activeProvider: active.provider, configured: this.hasLLMConfigured(settings) };
+    ['deepseek', 'doubao', 'tongyi', 'openai'].forEach(p => {
+      const s = settings?.llmProviders?.[p] || {};
+      const fallback = this.llm[p];
+      summary[p] = {
+        apiKey: mask(s.apiKey || fallback.apiKey),
+        baseUrl: s.baseUrl || fallback.baseUrl,
+        model: s.model || fallback.model,
+        imageModel: s.imageModel || fallback.imageModel || '',
+      };
+    });
+    return summary;
+  },
+
   /** 获取当前活跃的LLM配置 */
-  getActiveLLM() {
+  getActiveLLM(settings) {
+    const fromSettings = (p) => {
+      const s = settings?.llmProviders?.[p];
+      if (s?.apiKey) return { provider: p, apiKey: s.apiKey, baseUrl: s.baseUrl, model: s.model, imageModel: s.imageModel };
+      return null;
+    };
+    // 优先从 settings 对象读取，fallback 到 runtimeConfig
+    for (const p of ['deepseek', 'doubao', 'tongyi', 'openai']) {
+      const sCfg = fromSettings(p);
+      if (sCfg) return sCfg;
+    }
+    // fallback 到 runtimeConfig
     const deepseek = this.llm.deepseek;
     const doubao = this.llm.doubao;
     const tongyi = this.llm.tongyi;
@@ -122,16 +173,13 @@ const appConfig = {
     return { provider: 'openai', ...openai };
   },
 
-  /** 检查是否已配置任何LLM */
-  hasLLMConfigured() {
-    const active = this.getActiveLLM();
+  hasLLMConfigured(settings) {
+    const active = this.getActiveLLM(settings);
     return !!active.apiKey;
   },
 
-  /**
-   * 运行时更新LLM配置（立即更新内存）
-   */
-  setLLMConfig(provider, config) {
+  /** 运行时更新LLM配置（写入 settings 对象 + runtimeConfig） */
+  setLLMConfig(settings, provider, config) {
     if (!runtimeConfig[provider]) {
       throw new Error(`Unknown provider: ${provider}. Valid: deepseek, doubao, tongyi, openai`);
     }
@@ -139,79 +187,33 @@ const appConfig = {
     if (config.baseUrl !== undefined) runtimeConfig[provider].baseUrl = config.baseUrl;
     if (config.model !== undefined) runtimeConfig[provider].model = config.model;
     if (config.imageModel !== undefined) runtimeConfig[provider].imageModel = config.imageModel;
-  },
 
-  /**
-   * 持久化当前LLM配置到MongoDB
-   */
-  async persistLLMConfig() {
-    const Settings = getSettingsModel();
-    if (!Settings) return;
-    try {
-      const settings = await Settings.getSettings();
-      settings.llmProviders = {
-        deepseek: { ...runtimeConfig.deepseek },
-        doubao: { ...runtimeConfig.doubao },
-        tongyi: { ...runtimeConfig.tongyi },
-        openai: { ...runtimeConfig.openai },
-      };
-      settings.activeProvider = this.getActiveLLM().provider;
-      await settings.save();
-      console.log('[config] LLM settings persisted to MongoDB');
-    } catch (e) {
-      console.error('[config] Failed to persist LLM settings:', e.message);
+    // 同时更新 settings 对象
+    if (settings) {
+      if (!settings.llmProviders) settings.llmProviders = {};
+      if (!settings.llmProviders[provider]) settings.llmProviders[provider] = {};
+      if (config.apiKey !== undefined) settings.llmProviders[provider].apiKey = config.apiKey;
+      if (config.baseUrl !== undefined) settings.llmProviders[provider].baseUrl = config.baseUrl;
+      if (config.model !== undefined) settings.llmProviders[provider].model = config.model;
+      if (config.imageModel !== undefined) settings.llmProviders[provider].imageModel = config.imageModel;
+      settings.markModified('llmProviders');
     }
   },
 
-  /**
-   * 从MongoDB加载LLM配置到内存（启动时调用）
-   */
-  async loadLLMFromDB() {
-    if (_dbLoaded) return;
-    const Settings = getSettingsModel();
-    if (!Settings) return;
+  /** 持久化当前LLM配置到MongoDB */
+  async persistLLMConfig(settings) {
+    if (!settings) return;
     try {
-      const settings = await Settings.getSettings();
-      if (settings && settings.llmProviders) {
-        const providers = ['deepseek', 'doubao', 'tongyi', 'openai'];
-        let loadedCount = 0;
-        providers.forEach(p => {
-          const dbCfg = settings.llmProviders[p];
-          if (dbCfg && dbCfg.apiKey) {
-            // DB中的值覆盖运行时默认值（但env仍为fallback）
-            if (!runtimeConfig[p].apiKey || runtimeConfig[p].apiKey === dbCfg.apiKey) {
-              // DB写入的值优先
-            }
-            runtimeConfig[p].apiKey = dbCfg.apiKey || runtimeConfig[p].apiKey;
-            runtimeConfig[p].baseUrl = dbCfg.baseUrl || runtimeConfig[p].baseUrl;
-            runtimeConfig[p].model = dbCfg.model || runtimeConfig[p].model;
-            if (dbCfg.imageModel) runtimeConfig[p].imageModel = dbCfg.imageModel;
-            if (dbCfg.apiKey) loadedCount++;
-          }
-        });
-        if (loadedCount > 0) {
-          console.log(`[config] Loaded ${loadedCount} LLM provider(s) from MongoDB`);
-        }
-      }
+      const s = await settings.save();
+      console.log('[config] LLM settings 已持久化，userId:', s.userId);
     } catch (e) {
-      console.error('[config] Failed to load LLM settings from DB:', e.message);
+      console.error('[config] 持久化 LLM settings 失败:', e.message);
     }
-    _dbLoaded = true;
   },
 
-  /** 获取当前所有LLM配置（隐藏密钥中间部分） */
-  getLLMConfigSummary() {
-    const mask = (key) => {
-      if (!key || key.length < 8) return key ? '***' : '';
-      return key.substring(0, 4) + '****' + key.substring(key.length - 4);
-    };
-    const providers = ['deepseek', 'doubao', 'tongyi', 'openai'];
-    const summary = { activeProvider: this.getActiveLLM().provider, configured: this.hasLLMConfigured() };
-    providers.forEach(p => {
-      summary[p] = { ...this.llm[p], apiKey: mask(this.llm[p].apiKey) };
-    });
-    return summary;
-  },
+  loadUserConfig,
+  _loadedUserId,
+  _runtimeConfig: runtimeConfig,
 };
 
 module.exports = appConfig;

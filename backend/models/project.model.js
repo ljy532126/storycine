@@ -20,7 +20,7 @@ const projectSchema = new mongoose.Schema({
     artStyleCommands: { type: String, default: '' },
     aiOptimized: { type: Boolean, default: false },
   },
-  userId: { type: String, default: 'default_user' },
+  userId: { type: String, required: true },
   isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 

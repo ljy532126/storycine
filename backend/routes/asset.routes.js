@@ -4,6 +4,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const storageService = require('../services/storage.service');
+const { authRequired } = require('../middleware/auth.middleware');
+const appConfig = require('../config/app.config');
+router.use(authRequired);
 
 /** 读取项目的导演设定，返回 { qualityKeywords, artStyleCommands, atmosphereLighting } */
 async function readDirectorSettings(projectId) {
@@ -559,6 +562,7 @@ ${hasRefImage ? '⚠️ 该角色已上传参考图，必须100%继承参考图�
 // ===== 图片/视频生成 =====
 router.post('/generate-image', async (req, res, next) => {
   try {
+    await appConfig.loadUserConfig(req.user._id);
     const { projectId, assetId, assetType, prompt, model, referenceImages, inputImage } = req.body;
     if (!prompt) return res.status(400).json({ message: '缺少提示词' });
 
@@ -567,7 +571,6 @@ router.post('/generate-image', async (req, res, next) => {
     const resolvedInput = storageService.resolvePublicUrl(inputImage || '');
 
     const { callImageGen, callVideoGen } = require('../utils/llm-client');
-    const appConfig = require('../config/app.config');
 
     // 读取比例：优先请求参数，fallback 项目配置，最后默认 9:16
     let ratio = req.body.ratio || '9:16';

@@ -119,15 +119,40 @@ app.post('/api/v1/analytics/event', async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// 初始化默认管理员账号
+// 初始化默认管理员账号（首次启动生成随机密码）
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 async function initAdmin() {
   try {
     const User = require('./models/user.model');
     const exists = await User.findOne({ username: 'admin' });
-    if (!exists) {
-      await User.create({ username: 'admin', password: await bcrypt.hash('123456', 12), role: 'admin', status: 'active' });
-      console.log('[init] ✅ 默认管理员已创建: admin / 123456');
+    let adminUser = exists;
+    if (!adminUser) {
+      const randomPassword = crypto.randomBytes(8).toString('hex');
+      adminUser = await User.create({ username: 'admin', password: await bcrypt.hash(randomPassword, 12), role: 'admin', status: 'active' });
+      console.log('══════════════════════════════════════════');
+      console.log('  🔐 默认管理员已创建');
+      console.log(`  账号: admin`);
+      console.log(`  密码: ${randomPassword}`);
+      console.log('  ⚠️  请立即登录并修改密码！');
+      console.log('══════════════════════════════════════════');
+    }
+
+    // 迁移旧的全局 settings 到管理员名下（旧版本使用 key: 'llm_config' 的单例模式）
+    const Settings = require('./models/settings.model');
+    const oldSettings = await Settings.findOne({ key: 'llm_config' });
+    if (oldSettings && adminUser) {
+      const adminSettings = await Settings.findOne({ userId: adminUser._id });
+      if (!adminSettings || !adminSettings.llmProviders?.deepseek?.apiKey) {
+        // 将旧数据合并到管理员的 settings
+        const target = adminSettings || await Settings.create({ userId: adminUser._id });
+        target.llmProviders = oldSettings.llmProviders || target.llmProviders;
+        target.storageConfig = oldSettings.storageConfig || target.storageConfig;
+        target.aiConfig = oldSettings.aiConfig || target.aiConfig;
+        await target.save();
+        await Settings.deleteOne({ key: 'llm_config' });
+        console.log('[init] ✅ 已将旧版全局配置迁移到管理员账号');
+      }
     }
   } catch (e) { console.warn('[init] 管理员初始化失败:', e.message); }
 }

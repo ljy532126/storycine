@@ -6,6 +6,8 @@ const mongoose = require('mongoose');
 const Project = require('../models/project.model');
 const Script = require('../models/script.model');
 const Composition = require('../models/composition.model');
+const { authRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
 const Storyboard = require('../models/storyboard.model');
 const Analytics = require('../models/analytics.model');
 

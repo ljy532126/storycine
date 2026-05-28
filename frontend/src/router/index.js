@@ -33,7 +33,7 @@ const routes = [
   { path: '/ai-config', name: 'AIConfig', component: AIConfig, meta: { requiresAuth: true } },
   { path: '/ai-storage', name: 'AIStorageConfig', component: AIStorageConfig, meta: { requiresAuth: true } },
   { path: '/media-library', name: 'MediaLibrary', component: MediaLibrary, meta: { requiresAuth: true } },
-  { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true } },
+  { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
 ];
 
@@ -44,9 +44,17 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
   if (to.meta.requiresAuth && !token) {
     next({ path: '/login', query: { redirect: to.fullPath } });
-  } else {
-    next();
+    return;
   }
+  if (to.meta.requiresAdmin) {
+    let role = '';
+    try { role = JSON.parse(localStorage.getItem('user') || '{}').role || ''; } catch { /* ignore */ }
+    if (role !== 'admin') {
+      next({ path: '/dashboard' });
+      return;
+    }
+  }
+  next();
 });
 
 export default router;

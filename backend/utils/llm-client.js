@@ -2,6 +2,66 @@ const axios = require('axios');
 const appConfig = require('../config/app.config');
 
 /**
+ * 清洗 LLM 返回的 JSON 字符串：
+ * 1. 去掉 markdown 代码块包装 (```json ... ```)
+ * 2. 转义 JSON 字符串值内部的原始控制字符（\n \r \t 等）
+ *    LLM 有时在对话/描述类字段中输出真实换行，JSON.parse 会报 "Bad control character"
+ */
+function sanitizeJSON(text) {
+  if (!text) return text;
+  // 去掉 markdown 代码块
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) text = fenceMatch[1].trim();
+
+  // 统一换行符
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // 去掉 BOM
+  text = text.replace(/^﻿/, '');
+
+  // 如果已经能解析，直接返回
+  try { JSON.parse(text); return text; } catch (_) { /* 需要清洗 */ }
+
+  // 逐字符扫描：仅转义 JSON 字符串值内部的 ASCII 控制字符
+  let result = '';
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const code = ch.charCodeAt(0);
+
+    if (escaped) {
+      result += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\' && inString) {
+      result += ch;
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+      continue;
+    }
+
+    if (inString && code < 0x20) {
+      if (code === 0x0A) result += '\\n';
+      else if (code === 0x09) result += '\\t';
+      else result += '\\u' + ('000' + code.toString(16)).slice(-4);
+    } else {
+      result += ch;
+    }
+  }
+
+  return result;
+}
+
+/**
  * 通用LLM调用封装，支持多provider切换
  * @param {string} systemPrompt - 系统提示词
  * @param {string} userPrompt - 用户提示词
@@ -41,7 +101,14 @@ async function callLLM(systemPrompt, userPrompt, options = {}) {
       timeout: 120000,
     });
 
-    return response.data.choices[0].message.content;
+    let content = response.data.choices[0].message.content;
+
+    // JSON 模式响应清洗：去除 markdown 代码块、转义控制字符
+    if (responseFormat === 'json') {
+      content = sanitizeJSON(content);
+    }
+
+    return content;
   } catch (error) {
     const errMsg = error.response?.data?.error?.message || error.message;
     console.error(`LLM call failed [${llm.provider}]:`, errMsg);
