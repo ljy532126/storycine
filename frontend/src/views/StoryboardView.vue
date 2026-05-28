@@ -15,7 +15,7 @@
           <el-option v-for="s in scripts" :key="s._id" :label="`第${s.episodeNumber}集`" :value="s._id" />
         </el-select>
         <el-button type="primary" style="margin-left:8px" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating">生成故事板</el-button>
-        <el-button type="danger" size="small" style="margin-left:4px" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
+        <el-button type="danger" size="small" style="margin-left:4px;color:#fff;background:#C44545;border-color:#C44545" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
         <el-button size="small" style="margin-left:4px" @click="openExport">导出</el-button>
         <el-button size="small" style="margin-left:4px" @click="showImportDialog = true" :disabled="!currentStoryboard">导入</el-button>
         <el-divider direction="vertical" style="margin:0 8px" />
@@ -27,9 +27,16 @@
       </div>
     </div>
 
+    <!-- 移动端 Tab 导航 -->
+    <div class="sb-mobile-tabs" v-if="currentProjectId && screenWidth < 768">
+      <div :class="['smtab', { active: mobileTab === 'episodes' }]" @click="mobileTab = 'episodes'">📋 剧集</div>
+      <div :class="['smtab', { active: mobileTab === 'shots' }]" @click="mobileTab = 'shots'">🎬 镜头</div>
+      <div :class="['smtab', { active: mobileTab === 'settings' }]" @click="mobileTab = 'settings'">⚙️ 设置</div>
+    </div>
+
     <div class="sb-body" v-if="currentProjectId">
       <!-- ===== 左：剧集列表 ===== -->
-      <div class="sb-left">
+      <div class="sb-left" v-show="screenWidth >= 768 || mobileTab === 'episodes'">
         <div class="panel-title">剧集</div>
         <div class="ep-list">
           <div v-for="ep in scripts" :key="ep._id"
@@ -43,7 +50,7 @@
       </div>
 
       <!-- ===== 中：预览 + 时间线 ===== -->
-      <div class="sb-center">
+      <div class="sb-center" v-show="screenWidth >= 768 || mobileTab === 'shots'">
         <!-- 视频预览区 -->
         <div class="preview-area">
           <div v-if="!currentShot" class="preview-empty">
@@ -140,7 +147,7 @@
       </div>
 
       <!-- ===== 右：绘图/视频面板 ===== -->
-      <div class="sb-right">
+      <div class="sb-right" v-show="screenWidth >= 768 || mobileTab === 'settings'">
         <div class="tab-switch">
           <div :class="['tab-btn', { active: rightTab === 'draw' }]" @click="rightTab = 'draw'">绘图</div>
           <div :class="['tab-btn', { active: rightTab === 'video' }]" @click="rightTab = 'video'">视频</div>
@@ -400,6 +407,9 @@ const videoDuration = ref(5);
 const selectedVideoModel = ref('doubao_video');
 const currentRefImages = ref([]);
 const tlTrack = ref(null);
+const screenWidth = ref(window.innerWidth);
+const mobileTab = ref('shots');
+window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 
 watch(noSubtitles, saveNoSubtitles);
 
@@ -1316,12 +1326,19 @@ async function handleImport() {
 .sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
 .sg-project-pills::-webkit-scrollbar { height: 4px; }
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
+/* 移动端 Tab 导航 */
+.sb-mobile-tabs { display: none; }
 @media (max-width: 768px) {
-  .sb-body { gap: 8px; }
-  .sb-left { max-height: 160px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--gold) transparent; -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%); mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%); }
-  .sb-left::-webkit-scrollbar { width: 3px; }
-  .sb-left::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
-  .sb-right { max-height: 200px; }
+  .sb-mobile-tabs { display: flex; gap: 0; margin-bottom: 8px; background: var(--bg-200); border-radius: 12px; padding: 4px; border: 1px solid var(--bg-300); flex-shrink: 0; }
+  .smtab { flex: 1; text-align: center; padding: 0; border-radius: 10px; font-size: 0.875rem; font-weight: 600; color: var(--text-200); cursor: pointer; height: 44px; display: flex; align-items: center; justify-content: center; }
+  .smtab.active { background: var(--navy); color: var(--gold); }
+
+  .sb-body { flex-direction: column; gap: 0; overflow-y: auto; }
+  .sb-body > div { flex: 1; min-height: 0; }
+  .sb-left { width: 100%; max-height: none; overflow-y: visible; }
+  .sb-center { width: 100%; flex: 1; }
+  .sb-right { width: 100%; max-height: none; }
+
   .tl-track-row { flex-wrap: wrap; gap: 4px; }
 }
 </style>
