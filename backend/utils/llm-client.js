@@ -72,11 +72,9 @@ function sanitizeJSON(text) {
     }
   }
 
-  // 尝试修复截断/不完整的 JSON（常见于 token 限制导致输出被截断）
-  try { JSON.parse(result); return result; } catch (e2) {
-    // 查找最后一个完整的 JSON 结构
-    // 策略：从末尾向前找最后一个完整的对象或数组结束
-    let lastValid = -1;
+  // 修复不完整的 JSON（token 限制截断或 AI 未写完）
+  try { JSON.parse(result); return result; } catch (_e) {
+    // 统计未闭合的括号并补全
     let depth = 0;
     let inStr = false;
     let esc = false;
@@ -87,14 +85,37 @@ function sanitizeJSON(text) {
       if (c === '"') { inStr = !inStr; continue; }
       if (inStr) continue;
       if (c === '{' || c === '[') depth++;
-      if (c === '}' || c === ']') { depth--; if (depth === 0) lastValid = i; }
+      if (c === '}' || c === ']') depth--;
     }
-    if (lastValid > 0 && lastValid < result.length - 1) {
-      result = result.substring(0, lastValid + 1);
-      // 补全缺失的顶层结构
-      const opens = (result.match(/\{/g) || []).length;
-      const closes = (result.match(/\}/g) || []).length;
-      for (let k = closes; k < opens; k++) result += '}';
+    // 如果字符串未闭合，先闭合
+    if (inStr) result += '"';
+    // 补全缺失的闭合括号
+    for (let k = 0; k < depth; k++) result += '}';
+    // 如果补全后仍不合法，尝试截断到最后一个合法位置
+    try { JSON.parse(result); return result; } catch (_e2) {
+      // 从末尾逐字符删除，直到能解析
+      for (let i = result.length - 1; i > 10; i--) {
+        try {
+          const trimmed = result.substring(0, i);
+          // 补全括号
+          let d = 0, s = false, e = false;
+          for (let j = 0; j < trimmed.length; j++) {
+            const c = trimmed[j];
+            if (e) { e = false; continue; }
+            if (c === '\\' && s) { e = true; continue; }
+            if (c === '"') { s = !s; continue; }
+            if (s) continue;
+            if (c === '{' || c === '[') d++;
+            if (c === '}' || c === ']') d--;
+          }
+          let fixed = trimmed;
+          if (s) fixed += '"';
+          for (let k = 0; k < d; k++) fixed += '}';
+          JSON.parse(fixed);
+          console.log(`[sanitizeJSON] 截断修复成功，原始长度 ${result.length} → ${fixed.length}，删除了 ${result.length - i} 字符`);
+          return fixed;
+        } catch (_e3) { /* 继续缩短 */ }
+      }
     }
   }
 
