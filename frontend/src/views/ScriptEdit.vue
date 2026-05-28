@@ -455,9 +455,9 @@ async function handleExport() {
 .sub-style-item.active{background:var(--primary-100);border-color:var(--primary-200);color:var(--primary-200)}
 .ai-hint{margin-top:12px}
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
-/* PC 端剧集横排（2 行网格 + 横向滚动 + 渐变遮罩） */
+/* PC 端剧集列表（2 列纵向排列 + 横向滚动 + 渐变遮罩） */
 .episode-row{
-  position:relative; display:grid; grid-template-rows:repeat(2,1fr); grid-auto-flow:column; grid-auto-columns:max-content;
+  position:relative; display:grid; grid-template-columns:repeat(2,1fr); grid-auto-flow:row; grid-auto-rows:min-content;
   gap:4px 8px; padding:8px 16px; margin-bottom:10px; max-height:72px;
   background:var(--bg-200); border-radius:8px; border:1px solid var(--bg-300);
   overflow-x:auto; overflow-y:hidden; flex-shrink:0;
