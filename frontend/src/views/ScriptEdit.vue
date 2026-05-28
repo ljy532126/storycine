@@ -535,22 +535,24 @@ async function handleExport() {
   .right-panel .panel-title { font-size: 1rem; padding: 8px 0 12px; cursor: pointer; border-bottom: 1px solid var(--bg-300); margin-bottom: 14px; }
   .collapse-toggle { font-size: 0.75rem; }
 
-  /* 设定组：统一间距 */
-  .setting-group { margin-bottom: 16px; }
-  .setting-group > label { font-size: 0.8125rem; margin-bottom: 8px; display: block; font-weight: 600; }
+  /* 设定组：紧凑间距 */
+  .setting-group { margin-bottom: 10px; }
+  .setting-group > label { font-size: 0.75rem; margin-bottom: 4px; display: block; font-weight: 600; }
 
-  /* radio-button 改为 1 列垂直 */
-  .setting-group :deep(.el-radio-group) { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-  .setting-group :deep(.el-radio-button) { width: 100%; }
-  .setting-group :deep(.el-radio-button__inner) { width: 100%; text-align: center; padding: 0; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 0.9375rem; border-radius: 10px !important; border: 1px solid var(--bg-300) !important; }
+  /* radio-button：横向排列，紧凑 */
+  .setting-group :deep(.el-radio-group) { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; width: 100%; }
+  .setting-group :deep(.el-radio-button__inner) { padding: 6px 10px; font-size: 0.75rem; min-height: 32px; border-radius: 6px !important; border: 1px solid var(--bg-300) !important; }
 
-  /* 风格细分：3 列网格 */
-  .sub-style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .sub-style-item { padding: 8px 4px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border-radius: 8px; text-align: center; border: 1px solid var(--bg-300); min-height: 36px; word-break: break-all; }
+  /* 风格细分：3 列紧凑网格 */
+  .sub-style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .sub-style-item { padding: 6px 4px; font-size: 0.6875rem; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-align: center; border: 1px solid var(--bg-300); min-height: 30px; }
   .sub-style-item.active { background: var(--navy); color: var(--gold); border-color: var(--gold); }
 
-  /* 操作按钮全宽 */
-  .setting-group .el-button { width: 100% !important; font-size: 0.875rem; }
+  /* 操作按钮 */
+  .setting-group .el-button { width: 100% !important; font-size: 0.8125rem; min-height: 36px; }
+
+  /* 面板标题紧凑 */
+  .right-panel .panel-title { font-size: 0.9375rem; padding: 6px 0 10px; margin-bottom: 10px; }
 
   /* 剧集标题和按钮 */
   .ep-header { flex-wrap: wrap; gap: 8px; }
