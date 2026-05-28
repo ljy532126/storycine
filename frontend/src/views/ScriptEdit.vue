@@ -19,11 +19,13 @@
 
     <!-- PC 端：剧集横排 -->
     <div class="episode-row-wrap" v-if="currentProjectId && screenWidth >= 768">
-      <span class="er-label">剧集：</span>
+      <div class="er-header">
+        <span class="er-label">剧集：</span>
+        <el-button size="small" text @click="addEpisode" title="新建剧集">+ 新建</el-button>
+        <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
+      </div>
       <div class="episode-row">
         <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
-        <el-button size="small" text @click="addEpisode" title="新建剧集" class="er-add">+ 新建</el-button>
-        <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
       </div>
     </div>
 
@@ -447,6 +449,7 @@ async function handleExport() {
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
 /* PC 端剧集列表（固定高度 + 上下滚动 + 底部渐变遮罩） */
 .episode-row-wrap{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;flex-shrink:0}
+.er-header{display:flex;align-items:center;gap:8px}
 .er-label{font-size:12px;color:var(--text-200);font-weight:600}
 .episode-row{
   position:relative; display:flex; flex-direction:column; flex-wrap:nowrap; flex:1;
