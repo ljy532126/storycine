@@ -28,17 +28,16 @@ async function loadUserConfig(userId) {
   try {
     const settings = await Settings.getSettings(userId);
     const providers = ['deepseek', 'doubao', 'tongyi', 'openai'];
+    const envKeys = { deepseek: 'DEEPSEEK_API_KEY', doubao: 'DOUBAO_API_KEY', tongyi: 'TONGYI_API_KEY', openai: 'OPENAI_API_KEY' };
     let loadedCount = 0;
     providers.forEach(p => {
-      const dbCfg = settings.llmProviders?.[p];
-      if (dbCfg) {
-        // 仅当用户明确保存过的字段才覆盖，否则保留 env 或默认值
-        runtimeConfig[p].apiKey = dbCfg.apiKey || runtimeConfig[p].apiKey;
-        runtimeConfig[p].baseUrl = dbCfg.baseUrl || runtimeConfig[p].baseUrl;
-        runtimeConfig[p].model = dbCfg.model || runtimeConfig[p].model;
-        if (dbCfg.imageModel) runtimeConfig[p].imageModel = dbCfg.imageModel;
-        if (dbCfg.apiKey) loadedCount++;
-      }
+      const dbCfg = settings.llmProviders?.[p] || {};
+      // 用用户保存的值；未保存则清空，不回退到上一个用户的缓存
+      runtimeConfig[p].apiKey = dbCfg.apiKey || process.env[envKeys[p]] || '';
+      runtimeConfig[p].baseUrl = dbCfg.baseUrl || runtimeConfig[p].baseUrl || '';
+      runtimeConfig[p].model = dbCfg.model || runtimeConfig[p].model || '';
+      runtimeConfig[p].imageModel = dbCfg.imageModel || '';
+      if (dbCfg.apiKey) loadedCount++;
     });
     _loadedUserId = userId;
     if (loadedCount > 0) console.log(`[config] 已为用户 ${userId} 加载 ${loadedCount} 个 LLM provider`);
@@ -140,11 +139,12 @@ const appConfig = {
     ['deepseek', 'doubao', 'tongyi', 'openai'].forEach(p => {
       const s = settings?.llmProviders?.[p] || {};
       const fallback = this.llm[p];
+      // apiKey 不使用 runtime 缓存 fallback：用户未保存则显示空，避免泄漏其他用户的 Key
       summary[p] = {
-        apiKey: mask(s.apiKey || fallback.apiKey),
+        apiKey: mask(s.apiKey || ''),
         baseUrl: s.baseUrl || fallback.baseUrl,
         model: s.model || fallback.model,
-        imageModel: s.imageModel || fallback.imageModel || '',
+        imageModel: s.imageModel || '',
       };
     });
     return summary;
@@ -157,12 +157,14 @@ const appConfig = {
       if (s?.apiKey) return { provider: p, apiKey: s.apiKey, baseUrl: s.baseUrl, model: s.model, imageModel: s.imageModel };
       return null;
     };
-    // 优先从 settings 对象读取，fallback 到 runtimeConfig
+    // 优先从 settings 对象读取
     for (const p of ['deepseek', 'doubao', 'tongyi', 'openai']) {
       const sCfg = fromSettings(p);
       if (sCfg) return sCfg;
     }
-    // fallback 到 runtimeConfig
+    // 有 settings 但不包含任何 apiKey → 用户未配置，不泄露 runtime 缓存
+    if (settings) return { provider: null, model: null };
+    // 无 settings → 内部调用，使用 runtimeConfig
     const deepseek = this.llm.deepseek;
     const doubao = this.llm.doubao;
     const tongyi = this.llm.tongyi;
