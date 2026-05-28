@@ -97,6 +97,7 @@ router.post('/llm/test', async (req, res) => {
     const msg = error.response?.data?.error?.message || error.message;
     if (status === 401) res.json({ message: 'Unauthorized: API Key 无效或已过期', data: { ok: false } });
     else if (status === 403) res.json({ message: 'Forbidden: 无权限访问该资源', data: { ok: false } });
+    else if (status === 502 || status === 525 || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) res.json({ message: `无法连接 OpenAI 服务器 (${status})，国内网络需配置代理。请在 .env 中设置 HTTPS_PROXY 或使用 API 中转地址`, data: { ok: false } });
     else res.json({ message: `连接失败 (${status}): ${msg}`, data: { ok: false } });
   }
 });
