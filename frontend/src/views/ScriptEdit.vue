@@ -455,22 +455,22 @@ async function handleExport() {
 .sub-style-item.active{background:var(--primary-100);border-color:var(--primary-200);color:var(--primary-200)}
 .ai-hint{margin-top:12px}
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
-/* PC 端剧集列表（2 列纵向排列 + 横向滚动 + 渐变遮罩） */
+/* PC 端剧集横排（固定高度 + 横向滚动 + 渐变遮罩） */
 .episode-row{
-  position:relative; display:grid; grid-template-columns:repeat(2,1fr); grid-auto-flow:row; grid-auto-rows:min-content;
-  gap:4px 8px; padding:8px 16px; margin-bottom:10px; max-height:72px;
+  position:relative; display:flex; align-items:center; flex-wrap:nowrap;
+  gap:6px; padding:8px 16px; margin-bottom:10px; height:42px;
   background:var(--bg-200); border-radius:8px; border:1px solid var(--bg-300);
   overflow-x:auto; overflow-y:hidden; flex-shrink:0;
   scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
-  -webkit-mask-image:linear-gradient(to right,transparent 0%,black 16px,black calc(100% - 16px),transparent 100%);
-  mask-image:linear-gradient(to right,transparent 0%,black 16px,black calc(100% - 16px),transparent 100%);
+  -webkit-mask-image:linear-gradient(to right,transparent 0%,black 20px,black calc(100% - 20px),transparent 100%);
+  mask-image:linear-gradient(to right,transparent 0%,black 20px,black calc(100% - 20px),transparent 100%);
 }
 .episode-row::-webkit-scrollbar{height:4px}
 .episode-row::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px}
 .episode-row::-webkit-scrollbar-track{background:transparent}
 
-.er-label{display:none}
-.er-chip{padding:4px 12px;border-radius:14px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);white-space:nowrap;transition:all 0.15s;display:flex;align-items:center}
+.er-label{font-size:12px;color:var(--text-200);font-weight:600;flex-shrink:0}
+.er-chip{padding:5px 12px;border-radius:14px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);white-space:nowrap;transition:all 0.15s;flex-shrink:0}
 .er-chip:hover{border-color:var(--gold);color:var(--text-100)}
 .er-chip.active{background:var(--navy);border-color:var(--gold);color:var(--gold);font-weight:700}
 .er-add{flex-shrink:0;font-size:12px;color:var(--gold-dark);white-space:nowrap}
