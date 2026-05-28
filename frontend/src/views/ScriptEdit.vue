@@ -16,18 +16,6 @@
         <el-progress :percentage="Number(Math.min((currentScript.wordCount||0)/2000*100,100).toFixed(2))" :stroke-width="8" style="width:120px;display:inline-block;margin-left:8px" />
       </span>
     </div>
-    <!-- 新手引导条 -->
-    <div class="flow-guide" v-if="currentProjectId">
-      <div class="flow-step" :class="{ done: currentScript?.scenes?.length > 0 }">① 左侧选剧集，编辑分镜</div>
-      <span class="flow-arrow">→</span>
-      <div class="flow-step" :class="{ done: videoConfig.subStyle }">② 右侧选风格（自动配置导演设定）</div>
-      <span class="flow-arrow">→</span>
-      <div class="flow-step" :class="{ done: flowDoneAI }">③ AI 智能拆镜（点一下自动优化参数）</div>
-      <span class="flow-arrow">→</span>
-      <div class="flow-step" :class="{ done: flowDoneExtract }">④ 提取主体（把角色/场景同步到角色小店）</div>
-      <span class="flow-arrow">→</span>
-      <div class="flow-step" :class="{ done: flowDoneSync }">⑤ 同步至故事板（去故事板生图/生视频）</div>
-    </div>
 
     <!-- PC 端：剧集横排 -->
     <div class="episode-row" v-if="currentProjectId && screenWidth >= 768">
