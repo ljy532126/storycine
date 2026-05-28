@@ -797,8 +797,8 @@ function applyQuickTemplate(t) {
 
   /* 按钮全宽 */
   .card-header-row { flex-direction: column; align-items: stretch; }
-  .card-header-btns { flex-direction: column; }
-  .card-header-btns .el-button { width: 100%; min-height: 44px; justify-content: center; }
+  .card-header-btns { display: flex; flex-direction: row; gap: 8px; }
+  .card-header-btns .el-button { flex: 1; min-height: 44px; justify-content: center; }
 
   /* 卡片列表 */
   .script-card-list { gap: 8px; }
