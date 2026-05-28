@@ -150,15 +150,63 @@ cd frontend && npm run dev
 > 前提：服务器需安装 **git**、**docker**、**docker-compose**
 
 ```bash
-# 一行命令部署（首次）
-git clone https://github.com/ljy532126/storycine.git /www/wwwroot/storycine && cd /www/wwwroot/storycine && sh deploy.sh
+# 1. 克隆仓库
+git clone https://github.com/ljy532126/storycine.git /www/wwwroot/storycine
+cd /www/wwwroot/storycine
 
-# 打开浏览器 http://你的服务器IP:3012
+# 2. 配置环境变量（重要！）
+cp backend/.env.example backend/.env
+# 编辑 backend/.env，必须设置 JWT_SECRET 和至少一个 LLM API Key
+
+# 3. 一键构建 + 启动
+sh deploy.sh
+
+# 4. 打开浏览器 http://你的服务器IP:3012
 ```
 
+### 方式三：服务器无法访问 GitHub（国内常见）
+
+> 在本机下载代码后通过 SCP 上传到服务器
+
 ```bash
-# 后续更新（已有代码）
+# === 本机执行（Windows PowerShell / macOS Terminal）===
+
+# 1. 打包代码（排除 node_modules 和 .git）
+cd 项目目录
+tar --exclude=node_modules --exclude=.git --exclude=frontend/node_modules -czf storycine.tar.gz .
+
+# 2. 上传到服务器
+scp storycine.tar.gz root@你的服务器IP:/www/wwwroot/
+
+# === 服务器执行 ===
+cd /www/wwwroot
+mkdir -p storycine && cd storycine
+tar -xzf ../storycine.tar.gz
+
+# 3. 配置环境变量
+cp backend/.env.example backend/.env
+# 编辑 backend/.env：必须设置 JWT_SECRET！
+
+# 4. 构建 + 启动
+sh deploy.sh
+```
+
+### ⚠️ 首次部署必读
+
+1. **JWT_SECRET**：在 `backend/.env` 中设置 `JWT_SECRET=你的随机字符串`（至少 32 位），不设置则服务无法启动
+2. **管理员密码**：首次启动时 Docker 日志会打印随机生成的管理员密码，请立即查看并保存
+   ```bash
+   docker logs storycine-app | grep "密码"
+   ```
+3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包 等 API Key，每个用户独立配置
+
+```bash
+# 后续更新（服务器能访问 GitHub）
 cd /www/wwwroot/storycine && git pull && docker compose up -d --build
+
+# 后续更新（服务器不能访问 GitHub，用 SCP 上传）
+# 本机：tar -czf storycine.tar.gz . && scp storycine.tar.gz root@IP:/www/wwwroot/
+# 服务器：cd /www/wwwroot/storycine && tar -xzf ../storycine.tar.gz && docker compose up -d --build
 ```
 
 > `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。  

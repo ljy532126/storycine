@@ -522,8 +522,8 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 
   /* 页面组件移动端适配 */
   .three-column, .master-detail, .sb-body, .comp-body { flex-direction: column !important; }
-  .left-panel, .sb-left, .left-list { width: 100% !important; max-height: 200px !important; }
-  .right-panel, .sb-right { width: 100% !important; }
+  .left-panel, .sb-left, .left-list { width: 100% !important; max-height: 35vh !important; overflow-y: auto !important; }
+  .right-panel, .sb-right { width: 100% !important; max-height: 35vh !important; overflow-y: auto !important; }
   .el-row { display: block !important; }
   .el-col { max-width: 100% !important; margin-bottom: 12px; }
   .el-table { font-size: 12px !important; }

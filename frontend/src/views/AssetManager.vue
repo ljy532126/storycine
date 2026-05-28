@@ -860,4 +860,8 @@ async function batchGenerateAssets(type) {
 .sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
 .sg-project-pills::-webkit-scrollbar { height: 4px; }
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
+@media (max-width: 768px) {
+  .detail-panel { padding: 12px; }
+  .model-section .el-select { width: 100% !important; }
+}
 </style>

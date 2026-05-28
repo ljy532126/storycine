@@ -19,7 +19,8 @@
     </div>
 
     <!-- 用户表格 -->
-    <el-table :data="users" stripe style="width:100%" v-loading="loading">
+    <div class="um-scroll">
+    <el-table :data="users" stripe style="min-width:700px" v-loading="loading">
       <el-table-column prop="username" label="账号" min-width="120" />
       <el-table-column label="角色" width="100">
         <template #default="{ row }">
@@ -49,6 +50,7 @@
         </template>
       </el-table-column>
     </el-table>
+    </div>
 
     <!-- 分页 -->
     <div class="um-pager" v-if="total > size">
@@ -137,4 +139,8 @@ onMounted(() => fetchUsers());
 .um-toolbar { display: flex; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
 .um-total { margin-left: auto; font-size: 13px; color: var(--text-200); }
 .um-pager { display: flex; justify-content: center; margin-top: 20px; }
+.um-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 768px) {
+  .um-toolbar { flex-direction: column; align-items: flex-start; }
+}
 </style>

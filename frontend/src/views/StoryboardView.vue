@@ -1316,4 +1316,9 @@ async function handleImport() {
 .sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
 .sg-project-pills::-webkit-scrollbar { height: 4px; }
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
+@media (max-width: 768px) {
+  .sb-body { gap: 8px; }
+  .sb-left, .sb-right { max-height: 200px; }
+  .tl-track-row { flex-wrap: wrap; gap: 4px; }
+}
 </style>

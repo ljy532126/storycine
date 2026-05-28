@@ -302,4 +302,7 @@ onMounted(() => { loadImgCfg(); loadStorCfg(); });
 .ac-required { color: #F56C6C; font-weight: 400; }
 .ac-hint { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0; padding: 10px 14px; background: var(--accent-200); border-radius: 6px; font-size: 12px; color: var(--text-100); line-height: 1.6; border: 1px solid var(--accent-100); }
 .ac-hint code { background: var(--bg-100); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+@media (max-width: 768px) {
+  .el-col { margin-bottom: 8px; }
+}
 </style>

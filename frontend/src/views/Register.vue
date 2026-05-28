@@ -103,4 +103,11 @@ onMounted(() => refreshCaptcha());
 .auth-footer { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-200); }
 .auth-footer a { color: var(--gold-dark); font-weight: 600; text-decoration: none; }
 .auth-footer a:hover { color: var(--gold); }
-</style>
+@media (max-width: 768px) {
+  .auth-root { padding: 16px; align-items: flex-start; padding-top: 60px; }
+  .auth-card { width: 100%; max-width: 420px; padding: 28px 20px; }
+  .auth-header { margin-bottom: 24px; }
+  .auth-header h1 { font-size: 20px; }
+  .auth-card h2 { font-size: 18px; margin-bottom: 20px; }
+}
+</style></style>

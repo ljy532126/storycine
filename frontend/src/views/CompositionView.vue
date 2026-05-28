@@ -167,4 +167,8 @@ function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
 .task-meta { display: flex; justify-content: space-between; color: var(--text-200); font-size: 12px; margin-top: 4px; }
 .task-actions { margin-top: 8px; }
 .task-error { color: var(--accent-100); font-size: 12px; margin-top: 4px; }
+@media (max-width: 768px) {
+  .task-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .task-meta { flex-direction: column; gap: 2px; }
+}
 </style>

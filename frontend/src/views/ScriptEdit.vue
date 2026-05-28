@@ -438,4 +438,13 @@ async function handleExport() {
 .sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
 .sg-project-pills::-webkit-scrollbar { height: 4px; }
 .sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
+@media (max-width: 768px) {
+  .ep-header { flex-wrap: wrap; gap: 6px; }
+  .ep-header .el-input { width: 100% !important; }
+  .ep-header .el-button { font-size: 11px; padding: 5px 10px; }
+  .scene-meta-row { gap: 4px; }
+  .scene-meta-row .el-select { width: 100% !important; }
+  .three-column { gap: 8px; }
+  .left-panel, .right-panel { max-height: 180px; }
+}
 </style>

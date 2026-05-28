@@ -141,6 +141,11 @@ onMounted(() => { load(); });
 .ac-card-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: var(--text-100); margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--gold); }
 .ac-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bg-300); }
 .ac-row:last-child { border-bottom: none; }
+@media (max-width: 768px) {
+  .ac-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .ac-card { padding: 14px 12px; }
+}
+</style>
 .ac-label { font-size: 13px; color: var(--text-100); font-weight: 600; }
 .ac-desc { display: block; font-size: 11px; color: var(--text-200); margin-top: 2px; }
 </style>
