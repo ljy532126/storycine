@@ -292,7 +292,7 @@ async function handleAutoStoryboard(){
     const backup=scenes.map(s=>({shotType:s.shotType,composition:s.composition,cameraMovement:s.cameraMovement,lighting:s.lighting,duration:s.duration,soundEffect:s.soundEffect,sceneDescription:s.sceneDescription}));
     diffBackup.value={scenes:scenes,backup:backup};
     const scriptFull=scenes.map((s,i)=>{const dialogs=(s.dialogues||[]).map(d=>`${d.characterName}: ${d.text} ${d.actionHint?'('+d.actionHint+')':''}`).join('\n');const sceneTitle=s.location+(s.atmosphere?'（'+s.atmosphere+'）':'');return `[镜${i+1}] ${s.timeOfDay||''}，${sceneTitle}\n${s.sceneDescription||''}\n对话:${dialogs}`}).join('\n\n');
-    const sysPrompt=`你是资深影视分镜师，为每个分镜推荐镜头参数。规则：景别-表情特写用特写/对话用中近景/多人用中景/环境用全景；构图-对角线/对称/框架式/三分法/中心；运镜-揭示信息推/展示环境摇移/跟踪人物跟；光影-柔光/硬光/逆光/侧光/自然光/暖光/冷光；时长智能估算-纯场景无对话2~4秒/单人单句4~6秒/2-3轮对话6~10秒/多人互动或情绪转折8~12秒/激烈动作3~5秒；音效-环境音/动作音/背景音乐。重要：sceneDescription字段请保留原有分镜描述不要缩短，如果原描述为空才补写简短描述。输出JSON数组：[{"index":0,"shotType":"中景","composition":"三分法","cameraMovement":"静止","lighting":"柔光","duration":5,"soundEffect":"环境音","sceneDescription":"保留原描述或补写"}]`;
+    const sysPrompt=`你是资深影视分镜师，为每个分镜推荐镜头参数。规则：景别-表情特写用特写/对话用中近景/多人用中景/环境用全景；构图-对角线/对称/框架式/三分法/中心；运镜-揭示信息推/展示环境摇移/跟踪人物跟；光影-柔光/硬光/逆光/侧光/自然光/暖光/冷光；时长智能估算-纯场景无对话2~4秒/单人单句4~6秒/2-3轮对话6~10秒/多人互动或情绪转折8~12秒/激烈动作3~5秒；音效-环境音/动作音/背景音乐。【重要】sceneDescription字段严格保留原描述原文不动，禁止缩短、改写、删减。仅当字段完全为空时才补写简短描述。输出JSON数组：[{"index":0,"shotType":"中景","composition":"三分法","cameraMovement":"静止","lighting":"柔光","duration":5,"soundEffect":"环境音","sceneDescription":"保留原描述或补写"}]`;
     const res=await fetch('/api/v1/assets/generate-prompt',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({projectId:currentProjectId.value,assetId:currentProjectId.value,assetType:'storyboard',existingPrompt:`${sysPrompt}\n\n剧本：\n${scriptFull}\n\n为以上${scenes.length}个分镜推荐参数。只输出JSON数组。`})});
     const data=await res.json();const raw=data.data?.prompt||'';const m=raw.match(/\[[\s\S]*\]/);const rec=m?JSON.parse(m[0]):[];
     let filled=0;rec.forEach(r=>{if(scenes[r.index]!==undefined){const s=scenes[r.index];if(r.shotType)s.shotType=r.shotType;if(r.composition)s.composition=r.composition;if(r.cameraMovement)s.cameraMovement=r.cameraMovement;if(r.lighting)s.lighting=r.lighting;if(r.duration)s.duration=r.duration;if(r.soundEffect)s.soundEffect=r.soundEffect;if(r.sceneDescription)s.sceneDescription=r.sceneDescription.replace(/^\[镜\d+\]\s*/,'');filled++}});
@@ -316,11 +316,17 @@ async function handleAutoStoryboard(){
       splitCount++;
     });
     if (splitCount > 0) {
-      // 重新编号
-      newScenes.forEach((s, i) => { s.sceneNumber = i + 1; });
+      // 重新编号 + 按台词数修正时长
+      newScenes.forEach((s, i) => {
+        s.sceneNumber = i + 1;
+        const dc = (s.dialogues || []).length;
+        const chars = (s.dialogues || []).reduce((a, d) => a + (d.text || '').length, 0);
+        if (dc <= 1) s.duration = Math.max(3, Math.min(6, Math.round(chars / 3) + 1));
+        else s.duration = Math.max(4, Math.min(10, Math.round(chars / 2) + 2));
+      });
       currentScript.value.scenes = newScenes;
       charactersStr.value = newScenes.map(s => (s.characters || []).join(', '));
-      ElMessage.success(`已自动拆分 ${splitCount} 个台词过多的分镜`);
+      ElMessage.success(`已自动拆分 ${splitCount} 个台词过多的分镜（已自动修正时长）`);
     }
     const finalScenes = currentScript.value.scenes;
     markDirty();
