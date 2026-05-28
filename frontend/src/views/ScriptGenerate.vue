@@ -96,13 +96,42 @@
             </div>
           </div>
         </template>
-        <div class="script-card-list">
+        <!-- PC 端表格 -->
+        <div v-if="screenWidth >= 768" class="history-scroll">
+          <el-table ref="scriptTableRef" :data="scripts" stripe style="width:100%;min-width:820px" max-height="360" @row-click="openScript" @selection-change="onScriptSelectionChange">
+            <el-table-column type="selection" width="40" />
+            <el-table-column prop="episodeNumber" label="集数" width="70">
+              <template #default="{ row }">第{{ row.episodeNumber }}集</template>
+            </el-table-column>
+            <el-table-column prop="episodeTitle" label="标题" min-width="160">
+              <template #default="{ row }">{{ row.episodeTitle || '未命名' }}</template>
+            </el-table-column>
+            <el-table-column label="来源" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">{{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="wordCount" label="字数" width="70" />
+            <el-table-column label="场次" width="60">
+              <template #default="{ row }">{{ row.scenes?.length || 0 }}</template>
+            </el-table-column>
+            <el-table-column prop="createdAt" label="时间" width="150">
+              <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="140" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" type="primary" link @click.stop="openScript(row)">进片场</el-button>
+                <el-button size="small" type="danger" link @click.stop="handleDeleteScript(row)">移除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <!-- 移动端卡片列表 -->
+        <div v-else class="script-card-list">
           <div v-for="row in scripts" :key="row._id" class="sc-card" @click="mobileDetailScript = row; mobileDetailVisible = true">
             <div class="sc-card-top">
               <span class="sc-ep-num">第{{ row.episodeNumber }}集</span>
-              <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">
-                {{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}
-              </el-tag>
+              <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">{{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}</el-tag>
             </div>
             <div class="sc-title">{{ row.episodeTitle || '未命名' }}</div>
             <div class="sc-meta">
@@ -668,6 +697,8 @@ function applyQuickTemplate(t) {
 .history-fill { margin-top: 14px; flex: 1; display: flex; flex-direction: column; overflow: visible; min-height: 0; }
 .history-fill :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; overflow: visible; }
 
+/* PC 表格滚动容器 */
+.history-scroll { flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
 /* 响应式卡片列表 */
 .script-card-list { display: flex; flex-direction: column; gap: 10px; overflow: visible; }
 .sc-card { background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 10px; padding: 16px; cursor: pointer; transition: border-color 0.15s; overflow: visible; }
