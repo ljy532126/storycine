@@ -67,8 +67,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
+
+const route = useRoute();
 
 const user = reactive({ username: '', nickname: '', avatar: '', role: '', createdAt: '', lastLoginAt: '', lastLoginIp: '' });
 const form = reactive({ nickname: '', avatar: '' });
@@ -146,6 +149,7 @@ async function changePwd() {
 }
 
 onMounted(() => loadUser());
+watch(() => route.path, (p) => { if (p === '/profile') loadUser(); });
 </script>
 
 <style scoped>

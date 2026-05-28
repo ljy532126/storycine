@@ -20,7 +20,7 @@ userSchema.pre('save', async function () {
   if (this.isNew && !this.uid) {
     let uid;
     do {
-      uid = 'US-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+      uid = 'US-' + crypto.randomBytes(8).toString('hex').toUpperCase();
     } while (await this.constructor.findOne({ uid }));
     this.uid = uid;
   }

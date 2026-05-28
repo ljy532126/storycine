@@ -188,7 +188,7 @@ connectDB().then(async () => {
   const usersWithoutUid = await User.find({ uid: { $exists: false } });
   for (const u of usersWithoutUid) {
     let uid;
-    do { uid = 'US-' + crypto.randomBytes(4).toString('hex').toUpperCase(); }
+    do { uid = 'US-' + crypto.randomBytes(8).toString('hex').toUpperCase(); }
     while (await User.findOne({ uid }));
     await User.updateOne({ _id: u._id }, { $set: { uid } });
   }
