@@ -180,9 +180,7 @@ io.on('connection', (socket) => {
 const PORT = process.env.SERVER_PORT || 3012;
 
 connectDB().then(async () => {
-  // 从 MongoDB 恢复上次保存的 LLM 配置
-  const appConfig = require('./config/app.config');
-  await appConfig.loadLLMFromDB();
+  // LLM 配置已改为按用户隔离，在用户访问时按需加载（见 auth middleware + loadUserConfig）
 
   server.listen(PORT, () => {
     console.log('');
