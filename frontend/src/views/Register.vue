@@ -110,4 +110,4 @@ onMounted(() => refreshCaptcha());
   .auth-header h1 { font-size: 20px; }
   .auth-card h2 { font-size: 18px; margin-bottom: 20px; }
 }
-</style></style>
+</style>
