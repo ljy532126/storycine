@@ -410,6 +410,7 @@ async function handleExport() {
       const w = window.open('', '_blank');
       w.document.write(data.html || '');
       w.document.close();
+      setTimeout(() => w.print(), 500);
     }
     ElMessage.success('备份文件已准备就绪~');
   } catch (e) { ElMessage.error('哎呀，导出出错啦，再试一次哦'); }
