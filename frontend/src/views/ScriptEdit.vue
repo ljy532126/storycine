@@ -484,37 +484,54 @@ async function handleExport() {
 /* 移动端 Tab 导航 */
 .mobile-tabs { display: none; }
 @media (max-width: 768px) {
-  .mobile-tabs { display: flex; gap: 4px; margin-bottom: 8px; background: var(--bg-200); border-radius: 10px; padding: 4px; border: 1px solid var(--bg-300); flex-shrink: 0; }
-  .mtab { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--text-200); cursor: pointer; transition: all 0.15s; }
+  html, body { height: 100%; min-height: 100vh; }
+  * { box-sizing: border-box; }
+  .mobile-tabs { display: flex; gap: 0; margin-bottom: 10px; background: var(--bg-200); border-radius: 12px; padding: 4px; border: 1px solid var(--bg-300); flex-shrink: 0; }
+  .mtab { flex: 1; text-align: center; padding: 0; border-radius: 10px; font-size: 0.875rem; font-weight: 600; color: var(--text-200); cursor: pointer; transition: all 0.15s; height: 48px; display: flex; align-items: center; justify-content: center; }
   .mtab.active { background: var(--navy); color: var(--gold); }
   .mtab:hover { color: var(--text-100); }
 
-  .script-edit-root { max-width: 100vw; overflow-x: hidden; display: flex; flex-direction: column; height: calc(100vh - 56px); }
-  .top-bar { flex-wrap: wrap; gap: 8px; }
-  .top-bar .el-button { min-height: 44px; }
-  .word-count { width: 100%; margin-left: 0 !important; justify-content: flex-end; }
+  /* 根容器 */
+  .script-edit-root { max-width: 100vw; overflow-x: hidden; display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding: 0; }
 
-  /* 流程引导 */
-  .flow-guide { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px; padding: 6px 8px; flex-shrink: 0; }
-  .flow-step { font-size: 10px; padding: 3px 8px; }
+  /* 顶部栏：两行布局 */
+  .top-bar { display: flex; flex-direction: column; gap: 8px; padding: 0 12px; flex-shrink: 0; }
+  .top-bar .sg-project-pills { order: 2; width: 100%; }
+  .top-bar .el-button { order: 1; width: 100%; min-height: 48px; font-size: 0.9375rem; font-weight: 700; margin-left: 0 !important; background: var(--navy) !important; border-color: var(--gold) !important; color: var(--gold) !important; border-radius: 10px; }
+  .word-count { order: 3; width: 100%; margin-left: 0 !important; display: flex; align-items: center; gap: 10px; font-size: 0.8125rem; padding: 4px 0; }
+  .word-count :deep(.el-progress) { flex: 1; }
+  .word-count :deep(.el-progress-bar__outer) { height: 8px !important; }
+
+  /* 流程引导：横向滑动 */
+  .flow-guide { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; padding: 8px 12px; flex-shrink: 0; scrollbar-width: none; }
+  .flow-guide::-webkit-scrollbar { display: none; }
+  .flow-step { font-size: 0.6875rem; padding: 6px 12px; white-space: nowrap; border-radius: 20px; text-align: center; flex-shrink: 0; }
+  .flow-step.done { background: rgba(46,125,50,0.15); color: #2E7D32; }
+  .flow-step:not(.done) { background: var(--bg-100); }
   .flow-arrow { display: none; }
 
-  /* 三列：只显示当前 tab */
+  /* 三列 */
   .three-column { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .left-panel { width: 100%; max-height: none; overflow-y: visible; flex: none; }
+  .three-column::-webkit-scrollbar { width: 2px; }
+  .three-column::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 1px; }
+
+  /* 左/中/右面板 */
+  .left-panel { width: 100%; overflow-y: visible; flex: none; padding: 12px; }
   .left-panel :deep(.episode-list) { overflow-y: visible; }
-  .left-panel :deep(.ep-item) { white-space: normal; }
-  .center-panel { width: 100%; min-width: 0; padding: 10px; overflow-y: visible; flex: none; }
-  .right-panel { width: 100%; max-height: none; padding: 10px; overflow-y: visible; flex: none; }
+  .left-panel :deep(.ep-item) { white-space: normal; padding: 10px 12px; font-size: 0.875rem; }
+  .center-panel { width: 100%; min-width: 0; padding: 12px; overflow-y: visible; flex: none; }
+  .right-panel { width: 100%; padding: 12px; overflow-y: visible; flex: none; max-height: none; }
+  .right-panel.collapsed { width: 100%; padding: 12px; }
 
   /* 剧集标题和按钮 */
-  .ep-header { flex-wrap: wrap; gap: 6px; }
+  .ep-header { flex-wrap: wrap; gap: 8px; }
   .ep-header :deep(.title-input) { flex: 1 1 100%; }
-  .ep-header .el-button { font-size: 0.75rem; padding: 6px 10px; min-height: 40px; }
-  .scene-count { font-size: 0.75rem; }
+  .ep-header .el-button { font-size: 0.8125rem; padding: 8px 12px; min-height: 44px; flex: 1; min-width: 0; }
+  .ep-header .el-button + .el-button { margin-left: 0 !important; }
+  .ep-header .scene-count { width: 100%; text-align: right; font-size: 0.75rem; }
 
   /* 分镜卡片 */
-  .scene-meta-row { gap: 4px; }
+  .scene-meta-row { gap: 6px; }
   .meta-item { min-width: 45%; flex: 1 1 45%; }
   .meta-item .el-select,
   .meta-item .el-input,
@@ -528,13 +545,28 @@ async function handleExport() {
   .dialogue-row .el-input:nth-child(3) { width: 100px !important; }
   .colon { display: none; }
 
-  /* 右侧导演设定 */
-  .sub-style-grid { gap: 3px; }
-  .sub-style-item { padding: 4px 10px; font-size: 0.75rem; min-height: 32px; display: flex; align-items: center; }
+  /* 导演设定面板 */
+  .right-panel .panel-title { font-size: 1rem; padding: 8px 0; cursor: pointer; }
+  .collapse-toggle { font-size: 0.75rem; }
 
-  /* 所有交互元素 */
-  :deep(.el-button) { min-height: 40px; }
-  :deep(.el-input__wrapper) { min-height: 40px; }
-  :deep(.el-select__wrapper) { min-height: 40px; }
+  /* 设定内部：radio 改为顶部标签 */
+  .setting-group { margin-bottom: 12px; }
+  .setting-group > label { font-size: 0.8125rem; margin-bottom: 6px; display: block; }
+  .setting-group :deep(.el-radio-group) { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+  .setting-group :deep(.el-radio-button) { flex: 1; min-width: 0; }
+  .setting-group :deep(.el-radio-button__inner) { width: 100%; text-align: center; padding: 10px 8px; font-size: 0.875rem; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; }
+
+  /* 风格细分：2 列网格 */
+  .sub-style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sub-style-item { padding: 0; font-size: 0.875rem; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 8px; text-align: center; }
+  .sub-style-item.active { background: var(--navy); color: var(--gold); border-color: var(--gold); }
+
+  /* 所有交互元素 ≥44px */
+  :deep(.el-button) { min-height: 44px; }
+  :deep(.el-input__wrapper) { min-height: 44px; }
+  :deep(.el-select__wrapper) { min-height: 44px; }
+
+  /* 消除底部空白 */
+  .center-empty { padding: 40px 16px !important; }
 }
 </style>
