@@ -85,62 +85,34 @@
         <el-progress :percentage="stepPercentage" :stroke-width="14" style="margin-top:12px" />
       </el-card>
 
-      <!-- 第三行：创作记录（始终显示，有剧本就展示） -->
+      <!-- 第三行：创作记录（响应式卡片列表） -->
       <el-card v-if="scripts.length > 0" shadow="never" class="history-fill">
         <template #header>
           <div class="card-header-row">
             <span class="card-title">创作记录 ({{ scripts.length }} 集)</span>
-            <div style="display:flex;gap:8px">
-              <el-button type="warning" size="small" @click="showStoryline">📖 故事线总览</el-button>
-              <el-button type="success" size="small" @click="handleContinue" :loading="scriptStore.generating">续写下一集 📖</el-button>
+            <div class="card-header-btns">
+              <el-button type="warning" @click="showStoryline">📖 故事线总览</el-button>
+              <el-button type="success" @click="handleContinue" :loading="scriptStore.generating">续写下一集 📖</el-button>
             </div>
           </div>
         </template>
-        <div v-if="screenWidth >= 768" class="history-scroll">
-        <el-table ref="scriptTableRef" :data="scripts" stripe style="width:100%;min-width:820px" max-height="360" @row-click="openScript" @selection-change="onScriptSelectionChange" class="history-table">
-          <el-table-column type="selection" width="40" />
-          <el-table-column prop="episodeNumber" label="集数" width="70">
-            <template #default="{ row }">第{{ row.episodeNumber }}集</template>
-          </el-table-column>
-          <el-table-column prop="episodeTitle" label="标题" min-width="160">
-            <template #default="{ row }">{{ row.episodeTitle || '未命名' }}</template>
-          </el-table-column>
-          <el-table-column label="来源" width="90">
-            <template #default="{ row }">
-              <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">
-                {{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="wordCount" label="字数" width="70" />
-          <el-table-column label="场次" width="60">
-            <template #default="{ row }">{{ row.scenes?.length || 0 }}</template>
-          </el-table-column>
-          <el-table-column prop="createdAt" label="时间" width="150">
-            <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
-            <template #default="{ row }">
-              <el-button size="small" type="primary" link @click.stop="openScript(row)">进片场</el-button>
-              <el-button size="small" type="danger" link @click.stop="handleDeleteScript(row)">移除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        </div>
-        <!-- 移动端卡片列表 -->
-        <div v-if="screenWidth < 768" class="mobile-script-cards">
-          <div v-for="row in scripts" :key="row._id" class="ms-card" @click="mobileDetailScript = row; mobileDetailVisible = true">
-            <div class="ms-card-top">
-              <span class="ms-ep-num">第{{ row.episodeNumber }}集</span>
+        <div class="script-card-list">
+          <div v-for="row in scripts" :key="row._id" class="sc-card" @click="mobileDetailScript = row; mobileDetailVisible = true">
+            <div class="sc-card-top">
+              <span class="sc-ep-num">第{{ row.episodeNumber }}集</span>
               <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">
                 {{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}
               </el-tag>
             </div>
-            <div class="ms-title">{{ row.episodeTitle || '未命名' }}</div>
-            <div class="ms-meta">
+            <div class="sc-title">{{ row.episodeTitle || '未命名' }}</div>
+            <div class="sc-meta">
               <span>{{ row.wordCount || 0 }} 字</span>
               <span>{{ row.scenes?.length || 0 }} 场次</span>
               <span>{{ formatDate(row.createdAt) }}</span>
+            </div>
+            <div class="sc-actions">
+              <el-button size="small" type="primary" @click.stop="openScript(row)">进片场</el-button>
+              <el-button size="small" type="danger" @click.stop="handleDeleteScript(row)">移除</el-button>
             </div>
           </div>
         </div>
@@ -691,13 +663,23 @@ function applyQuickTemplate(t) {
 .import-link:hover { color: var(--navy) !important; }
 .sg-main { display: flex; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; }
 .card-title { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--text-100); font-size: 15px; letter-spacing: 0.5px; }
-.card-header-row { display: flex; justify-content: space-between; align-items: center; }
-.history-scroll { flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
-.history-table { cursor: pointer; }
-.history-fill { margin-top: 14px; flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
-.history-fill :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.history-table :deep(.el-table__inner-wrapper) { overflow-x: auto; }
-.batch-bar { display: flex; align-items: center; gap: 12px; padding: 10px 0 0; color: var(--text-100); font-size: 13px; border-top: 2px solid var(--gold); margin-top: 8px; }
+.card-header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.card-header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.history-fill { margin-top: 14px; flex: 1; display: flex; flex-direction: column; overflow: visible; min-height: 0; }
+.history-fill :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; overflow: visible; }
+
+/* 响应式卡片列表 */
+.script-card-list { display: flex; flex-direction: column; gap: 10px; overflow: visible; }
+.sc-card { background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 10px; padding: 16px; cursor: pointer; transition: border-color 0.15s; overflow: visible; }
+.sc-card:hover { border-color: var(--gold); }
+.sc-card:active { background: var(--bg-100); }
+.sc-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sc-ep-num { font-weight: 700; color: var(--text-100); font-size: 0.9375rem; font-family: 'Playfair Display', serif; }
+.sc-title { font-size: 1rem; color: var(--text-100); font-weight: 600; margin-bottom: 8px; line-height: 1.4; word-break: break-all; }
+.sc-meta { display: flex; gap: 16px; font-size: 0.8125rem; color: var(--text-200); margin-bottom: 12px; flex-wrap: wrap; }
+.sc-actions { display: flex; gap: 8px; }
+.sc-actions .el-button { flex: 1; }
+.batch-bar { display: flex; align-items: center; gap: 12px; padding: 10px 0 0; color: var(--text-100); font-size: 0.8125rem; border-top: 2px solid var(--gold); margin-top: 8px; flex-wrap: wrap; }
 .tag-card { flex-shrink: 0; border: 1px solid var(--gold) !important; border-radius: 10px !important; }
 .tag-form { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 0; }
 .quick-templates{display:flex;align-items:center;gap:8px;padding:8px 0;flex-wrap:wrap}
@@ -802,19 +784,37 @@ function applyQuickTemplate(t) {
 .ms-scene-time { color: var(--text-200); font-size: 0.75rem; margin-left: auto; }
 
 @media (max-width: 768px) {
-  .sg-root { height: calc(100vh - 56px); }
+  .sg-root { height: auto; min-height: 100vh; overflow-x: hidden; }
+  .sg-main { padding: 0.5rem; overflow-y: visible; overflow-x: hidden; }
   .sg-topbar { flex-wrap: wrap; gap: 8px; }
   .topbar-right { width: 100%; flex-wrap: wrap; flex-direction: column; gap: 8px; }
-  .tag-form { flex-direction: column; }
-  .tag-form .el-form-item { margin-right: 0 !important; width: 100%; }
+
+  /* 标签表单：2×2 网格 */
+  .tag-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tag-form .el-form-item { margin-right: 0 !important; width: 100% !important; }
+  .tag-form .el-form-item:last-child { grid-column: 1 / -1; }
   .tag-form .el-select { width: 100% !important; }
-  .card-header-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .card-header-row .el-button { width: 100%; justify-content: center; }
-  .history-fill { max-height: 40vh; }
-  .log-float-panel { width: calc(100vw - 32px) !important; left: 16px !important; }
-  .log-float-toggle { left: auto !important; right: 16px !important; }
+
+  /* 按钮全宽 */
+  .card-header-row { flex-direction: column; align-items: stretch; }
+  .card-header-btns { flex-direction: column; }
+  .card-header-btns .el-button { width: 100%; min-height: 44px; justify-content: center; }
+
+  /* 卡片列表 */
+  .script-card-list { gap: 8px; }
+  .sc-card { padding: 12px; }
+  .sc-actions .el-button { min-height: 40px; font-size: 0.875rem; }
+
+  /* 日志面板 */
+  .log-float-panel { width: calc(100vw - 16px) !important; left: 8px !important; }
+  .log-float-toggle { left: auto !important; right: 12px !important; bottom: 80px !important; }
+
   .welcome-placeholder { padding: 40px 20px; }
   .welcome-placeholder.full { padding: 60px 20px; }
-  .import-link { font-size: 13px; }
+
+  /* 所有交互 ≥44px */
+  .tag-form .el-button { width: 100%; min-height: 44px; font-size: 0.9375rem; }
+  :deep(.el-input__wrapper) { min-height: 44px; }
+  :deep(.el-select__wrapper) { min-height: 44px; }
 }
 </style>
