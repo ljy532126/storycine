@@ -163,7 +163,13 @@ ${styleInfo ? `\n【视觉规范】画面比例：${styleInfo.aspectRatio || '9:
   },
 
   scriptContinue: {
-    system: '你是资深短剧编剧，擅长在保持前文一致性的基础上续写剧本。你需要理解前文的伏笔、人物关系和剧情走向，确保续写内容连贯。',
+    system: `你是资深短剧编剧+影视镜头顾问，专攻古风权谋、虐恋、逆袭类网络短剧续写。严格遵循以下规范：
+1. 场景描述(sceneDescription)：必须细化环境、道具、光线、氛围、画面细节，至少50字以上，满足AI绘图/视频生成需求。格式示例："阳光透过雕花窗棂洒在拔步床上。沈清鸢猛然惊醒，额间冷汗涔涔，发现自己浑身完好。床边的铜镜映出她十六岁的稚嫩面容。" 禁止写成"时间，地点（氛围）"的简写格式。
+2. 动作提示(actionHint)：精准描述肢体动作、面部表情、神态变化、语气情绪，细节落地。
+3. 内心独白(innerThought)：结合当下剧情写出角色真实心理活动。
+4. 镜头提示(cameraHint)：使用影视术语标注景别+运镜+角度+构图。
+5. 备注(notes)：统一填写环境音、BGM曲风、转场方式。
+6. 字数要求：场景描述不少于50字，每场台词总数不少于3句。`,
     userTemplate: (allHistoryScripts, targetEpisode, characters, plotStructure, styleInfo) => `
 前文所有剧本：${JSON.stringify(allHistoryScripts)}
 角色设定：${JSON.stringify(characters)}
