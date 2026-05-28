@@ -13,7 +13,7 @@ async function run(state) {
   const userPrompt = prompts.character.userTemplate(state.outline, state.creativeBrief, styleInfo);
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 8192, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 4096, responseFormat: 'json' });
     state.characters = JSON.parse(res);
     const names = (state.characters || []).map(c => c.name).join('、');
     emitProgress(state, `角色塑造完成：${names || '未提取到角色'}`);

@@ -11,7 +11,7 @@ async function run(state) {
   const userPrompt = prompts.plotStructure.userTemplate(state.outline, state.characters);
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.8, maxTokens: 8192, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.8, maxTokens: 4096, responseFormat: 'json' });
     state.plotStructure = JSON.parse(res);
     emitProgress(state, '剧情架构规划完成');
   } catch (e) {
