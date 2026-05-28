@@ -15,6 +15,7 @@ router.use(authRequired);
 router.post('/', async (req, res, next) => {
   try {
     const project = await Project.create({
+      userId: req.user._id,
       name: req.body.name,
       description: req.body.description || '',
       scriptSource: req.body.scriptSource || 'none',
@@ -27,7 +28,9 @@ router.post('/', async (req, res, next) => {
 // 获取所有项目
 router.get('/', async (req, res, next) => {
   try {
-    const projects = await Project.find({ isDeleted: false }).sort({ createdAt: -1 });
+    const filter = { isDeleted: false };
+    if (req.user.role !== 'admin') filter.userId = req.user._id;
+    const projects = await Project.find(filter).sort({ createdAt: -1 });
     res.json({ data: projects });
   } catch (error) { next(error); }
 });
