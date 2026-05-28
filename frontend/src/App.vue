@@ -1,12 +1,12 @@
 <template>
   <div id="app-container">
-    <!-- 移动端汉堡菜单按钮 -->
-    <div class="mobile-nav-bar" @click="mobileMenuOpen = !mobileMenuOpen">
+    <!-- 移动端汉堡菜单按钮（仅后台页面，Landing/Login/Register 有自己的导航） -->
+    <div v-if="!['Landing','Login','Register'].includes($route.name)" class="mobile-nav-bar" @click="mobileMenuOpen = !mobileMenuOpen">
       <span class="mobile-logo">StoryCine</span>
       <el-icon :size="22"><component :is="mobileMenuOpen ? Close : MenuIcon" /></el-icon>
     </div>
     <!-- 移动端遮罩 -->
-    <div v-if="mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false"></div>
+    <div v-if="!['Landing','Login','Register'].includes($route.name) && mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false"></div>
     <el-container>
       <el-aside v-if="!['Landing','Login','Register'].includes($route.name)" :width="collapsed ? '64px' : '220px'" :class="['app-sidebar', { 'mobile-open': mobileMenuOpen }]">
         <div class="logo">
