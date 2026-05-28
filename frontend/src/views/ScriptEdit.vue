@@ -331,7 +331,7 @@ async function handleAutoStoryboard(){
     const finalScenes = currentScript.value.scenes;
     markDirty();
     // 2. 构建前后对比数据（使用拆分后的分镜）
-    const diffResult=finalScenes.map((s,i)=>{const b=backup[i];const changes=[];const fields=[{key:'shotType',label:'景别'},{key:'composition',label:'构图'},{key:'cameraMovement',label:'运镜'},{key:'lighting',label:'光影'},{key:'duration',label:'时长'},{key:'soundEffect',label:'音效'},{key:'sceneDescription',label:'描述'}];fields.forEach(f=>{if(b[f.key]!==s[f.key]&&(s[f.key]||b[f.key]))changes.push({field:f.key,label:f.label,old:b[f.key]||'(空)',new:s[f.key]||'(空)'});});return {shotNumber:s.sceneNumber,changes};});
+    const diffResult=finalScenes.map((s,i)=>{const b=backup[i];if(!b)return {shotNumber:s.sceneNumber,changes:[]};const changes=[];const fields=[{key:'shotType',label:'景别'},{key:'composition',label:'构图'},{key:'cameraMovement',label:'运镜'},{key:'lighting',label:'光影'},{key:'duration',label:'时长'},{key:'soundEffect',label:'音效'},{key:'sceneDescription',label:'描述'}];fields.forEach(f=>{if(b[f.key]!==s[f.key]&&(s[f.key]||b[f.key]))changes.push({field:f.key,label:f.label,old:b[f.key]||'(空)',new:s[f.key]||'(空)'});});return {shotNumber:s.sceneNumber,changes};});
     let totalChanges=0;diffResult.forEach(d=>totalChanges+=d.changes.length);
     diffShots.value=diffResult;diffChanges.value=totalChanges;
     console.log('[AI拆镜] 变化数:', totalChanges, 'filled:', filled);if(totalChanges>0){showStoryboardDiff.value=true;}else{ElMessage.success('所有分镜参数已是最优，无需调整 ✨');}
