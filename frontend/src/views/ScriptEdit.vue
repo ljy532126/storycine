@@ -386,8 +386,9 @@ async function handleExport() {
   const fmt = exportFormat.value;
   showExportDialog.value = false;
   try {
+    const token = localStorage.getItem('token');
     const res = await fetch('/api/v1/export', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         projectId: currentProjectId.value,
         episodeIds: exportEpisodes.value,
@@ -395,18 +396,19 @@ async function handleExport() {
         format: fmt,
       }),
     });
-    const data = await res.json();
+    const result = await res.json();
+    const data = result.data || result;
+    if (!res.ok) { ElMessage.error(data.message || '导出失败'); return; }
     const ext = fmt === 'csv' ? 'csv' : fmt === 'markdown' ? 'md' : fmt === 'word' ? 'doc' : 'html';
     if (fmt === 'csv' || fmt === 'markdown' || fmt === 'word') {
-      const blob = new Blob([data.content], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([data.content || ''], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `${data.filename || 'export'}.${ext}`;
       a.click(); URL.revokeObjectURL(url);
     } else {
-      // PDF: 在新窗口中打开 HTML，让用户手动打印
       const w = window.open('', '_blank');
-      w.document.write(data.html);
+      w.document.write(data.html || '');
       w.document.close();
     }
     ElMessage.success('备份文件已准备就绪~');
