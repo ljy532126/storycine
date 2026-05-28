@@ -446,8 +446,8 @@ async function handleExport() {
 .ai-hint{margin-top:12px}
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
 /* PC 端剧集列表（固定高度 + 上下滚动 + 底部渐变遮罩） */
-.episode-row-wrap{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;flex-shrink:0}
-.er-label{font-size:12px;color:var(--text-200);font-weight:600;flex-shrink:0;padding-top:10px}
+.episode-row-wrap{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;flex-shrink:0}
+.er-label{font-size:12px;color:var(--text-200);font-weight:600}
 .episode-row{
   position:relative; display:flex; flex-direction:column; flex-wrap:nowrap; flex:1;
   gap:4px; padding:8px 12px; max-height:96px;
