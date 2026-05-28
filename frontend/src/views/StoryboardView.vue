@@ -189,7 +189,10 @@
             <el-input v-model="currentVideoPrompt" type="textarea" :rows="4" placeholder="输入视频生成提示词..." size="small" @change="saveCurrentVideoPrompt" />
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
               <span class="char-count">{{ (currentVideoPrompt || '').length }} / 5000</span>
-              <el-button size="small" type="primary" link @click="generateVideoPromptForShot" :loading="genningVideoPrompt">AI 生成</el-button>
+              <div style="display:flex;gap:4px">
+                <el-button size="small" type="primary" link @click="generateVideoPromptForShot" :loading="genningVideoPrompt">AI 生成</el-button>
+                <el-button size="small" type="warning" link @click="generateTimedStoryboard" :loading="genningTimedSB">AI 智能分镜时长</el-button>
+              </div>
             </div>
           </div>
           <div class="right-section">
@@ -381,6 +384,7 @@ const genningImage = ref(false);
 const genningVideo = ref(false);
 const genningPrompt = ref(false);
 const genningVideoPrompt = ref(false);
+const genningTimedSB = ref(false);
 const batchGenning = ref(false);
 const batchGenningVideo = ref(false);
 const noSubtitles = ref(getStoredNoSubtitles());
@@ -876,6 +880,41 @@ async function generateVideoPromptForShot() {
       ElMessage.success('视频提示词已生成（含台词节奏）');
     }
   } catch (e) { ElMessage.error('生成失败: ' + (e.message || '')); }
+  finally { genningVideoPrompt.value = false; }
+}
+async function generateTimedStoryboard() {
+  if (!currentVideoPrompt.value) { ElMessage.warning('请先生成或填写视频提示词'); return; }
+  genningTimedSB.value = true;
+  try {
+    const totalDuration = videoDuration.value;
+    const sysPrompt = `你是短视频分镜导演。将一段视频提示词拆分为带时间轴的多镜头分镜脚本。
+
+规则：
+1. 总时长固定为${totalDuration}秒。
+2. 根据内容复杂度自动合理分配秒数，动作/对话各分配足够时间。
+3. 每个镜头的秒数不固定，根据动作和台词量智能判断（通常2-6秒一个镜头）。
+4. 每个镜头标注时间区间、景别、运镜、画面内容。
+5. 包含所有台词，分配台词到对应镜头。
+6. 结尾加上约束：无字幕，面部不变形，人体结构正常。
+7. 直接输出最终文本，不要JSON，不要多余解释。类似格式：
+  ${totalDuration}秒竖屏9:16，超写实电影级摄影，无字幕。
+
+  镜头1（0-X秒）：[景别]，[画面内容]。人物动作。运镜方式。
+  镜头2（X-Y秒）：...
+  ...`;
+    const res = await fetch('/api/v1/assets/generate-prompt', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: currentProjectId.value, assetType: 'storyboard', existingPrompt: sysPrompt + '\n\n待拆分内容：\n' + currentVideoPrompt.value })
+    });
+    const data = await res.json();
+    if (!res.ok) { ElMessage.error(data.message || 'AI分镜失败'); return; }
+    if (data.data?.prompt) {
+      currentVideoPrompt.value = data.data.prompt;
+      saveCurrentVideoPrompt();
+      ElMessage.success('已生成智能时间轴分镜！');
+    }
+  } catch (e) { ElMessage.error('分镜失败: ' + (e.message || '')); }
+  finally { genningTimedSB.value = false; }
 }
 async function generateImageForShot() {
   if (!currentShot.value || !currentShotPrompt.value) { ElMessage.warning('请先填写提示词'); return; }
