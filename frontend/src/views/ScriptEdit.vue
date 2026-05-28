@@ -449,8 +449,8 @@ async function handleExport() {
 .panel-title:hover .collapse-toggle{color:var(--gold)}
 .setting-group{margin-bottom:14px}
 .setting-group>label{color:var(--text-200);font-size:12px;display:block;margin-bottom:4px;font-weight:bold}
-.sub-style-grid{display:flex;flex-wrap:wrap;gap:4px}
-.sub-style-item{padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);transition:all 0.15s}
+.sub-style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.sub-style-item{padding:5px 6px;border-radius:6px;font-size:11px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);transition:all 0.15s;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sub-style-item:hover{border-color:var(--primary-200);color:var(--primary-200)}
 .sub-style-item.active{background:var(--primary-100);border-color:var(--primary-200);color:var(--primary-200)}
 .ai-hint{margin-top:12px}
@@ -544,9 +544,9 @@ async function handleExport() {
   .setting-group :deep(.el-radio-button) { width: 100%; }
   .setting-group :deep(.el-radio-button__inner) { width: 100%; text-align: center; padding: 0; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 0.9375rem; border-radius: 10px !important; border: 1px solid var(--bg-300) !important; }
 
-  /* 风格细分：1 列垂直 */
-  .sub-style-grid { display: flex; flex-direction: column; gap: 10px; }
-  .sub-style-item { width: 100%; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 0.9375rem; border-radius: 10px; text-align: center; padding: 0; border: 1px solid var(--bg-300); }
+  /* 风格细分：3 列网格 */
+  .sub-style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .sub-style-item { padding: 8px 4px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border-radius: 8px; text-align: center; border: 1px solid var(--bg-300); min-height: 36px; word-break: break-all; }
   .sub-style-item.active { background: var(--navy); color: var(--gold); border-color: var(--gold); }
 
   /* 操作按钮全宽 */
