@@ -16,17 +16,14 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // 自动生成唯一短ID：US-XXXXXXXX
-userSchema.pre('validate', async function (next) {
+userSchema.pre('save', async function () {
   if (this.isNew && !this.uid) {
     let uid;
-    let exists;
     do {
       uid = 'US-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-      exists = await mongoose.model('User').findOne({ uid });
-    } while (exists);
+    } while (await this.constructor.findOne({ uid }));
     this.uid = uid;
   }
-  next();
 });
 
 module.exports = mongoose.model('User', userSchema);

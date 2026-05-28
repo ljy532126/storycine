@@ -182,6 +182,18 @@ const PORT = process.env.SERVER_PORT || 3012;
 connectDB().then(async () => {
   // LLM 配置已改为按用户隔离，在用户访问时按需加载（见 auth middleware + loadUserConfig）
 
+  // 给没有 UID 的老用户补上
+  const User = require('./models/user.model');
+  const crypto = require('crypto');
+  const usersWithoutUid = await User.find({ uid: { $exists: false } });
+  for (const u of usersWithoutUid) {
+    let uid;
+    do { uid = 'US-' + crypto.randomBytes(4).toString('hex').toUpperCase(); }
+    while (await User.findOne({ uid }));
+    await User.updateOne({ _id: u._id }, { $set: { uid } });
+  }
+  if (usersWithoutUid.length > 0) console.log(`[init] 已为 ${usersWithoutUid.length} 个老用户生成 UID`);
+
   server.listen(PORT, () => {
     console.log('');
     console.log('  \\x1b[33m  ____  _                    ____ _            \\x1b[0m');
