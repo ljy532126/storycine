@@ -96,7 +96,8 @@
             </div>
           </div>
         </template>
-        <el-table v-if="screenWidth >= 768" ref="scriptTableRef" :data="scripts" stripe style="width:100%;min-width:700px" max-height="360" @row-click="openScript" @selection-change="onScriptSelectionChange" class="history-table">
+        <div v-if="screenWidth >= 768" class="history-scroll">
+        <el-table ref="scriptTableRef" :data="scripts" stripe style="width:100%;min-width:820px" max-height="360" @row-click="openScript" @selection-change="onScriptSelectionChange" class="history-table">
           <el-table-column type="selection" width="40" />
           <el-table-column prop="episodeNumber" label="集数" width="70">
             <template #default="{ row }">第{{ row.episodeNumber }}集</template>
@@ -125,6 +126,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
         <!-- 移动端卡片列表 -->
         <div v-if="screenWidth < 768" class="mobile-script-cards">
           <div v-for="row in scripts" :key="row._id" class="ms-card" @click="mobileDetailScript = row; mobileDetailVisible = true">
@@ -690,11 +692,10 @@ function applyQuickTemplate(t) {
 .sg-main { display: flex; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; }
 .card-title { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--text-100); font-size: 15px; letter-spacing: 0.5px; }
 .card-header-row { display: flex; justify-content: space-between; align-items: center; }
+.history-scroll { flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
 .history-table { cursor: pointer; }
 .history-fill { margin-top: 14px; flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .history-fill :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.history-table { overflow-x: auto; }
-.history-table :deep(.el-table__body-wrapper) { overflow-x: auto; }
 .history-table :deep(.el-table__inner-wrapper) { overflow-x: auto; }
 .batch-bar { display: flex; align-items: center; gap: 12px; padding: 10px 0 0; color: var(--text-100); font-size: 13px; border-top: 2px solid var(--gold); margin-top: 8px; }
 .tag-card { flex-shrink: 0; border: 1px solid var(--gold) !important; border-radius: 10px !important; }
