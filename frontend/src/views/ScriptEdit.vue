@@ -72,16 +72,22 @@
             </div>
             <div class="scene-desc-row"><label>分镜描述 ✍️ <span style="font-size:10px;color:var(--text-200);font-weight:400">（只写画面内容，不用写运镜/景别，那些有专门参数）</span></label><el-input v-model="scene.sceneDescription" type="textarea" :rows="3" placeholder="写清4要素：①谁在画面 ②做什么动作 ③什么环境 ④什么情绪。运镜/景别/光影用上方参数设置，不要写进描述里。例：林晓站在落地窗前，夕阳勾勒出轮廓，办公室空无一人，她低头看手机嘴角微扬" @change="markDirty" /></div>
             <div class="dialogues-block">
-              <div v-for="(d,di) in scene.dialogues" :key="di" class="dialogue-row">
-                <div class="dr-top">
-                  <el-input v-model="d.characterName" size="small" placeholder="角色" class="dr-role" @change="markDirty" />
-                  <el-input v-model="d.text" size="small" placeholder="对话内容" class="dr-text" @change="markDirty" />
-                  <el-input v-model="d.actionHint" size="small" placeholder="动作/表情" class="dr-action" @change="markDirty" />
-                  <el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" class="dr-camera" @change="markDirty" />
-                  <el-button size="small" text type="danger" class="dr-del" @click="removeDialogue(scene,di)">×</el-button>
+              <div class="dr-table">
+                <div class="dr-thead">
+                  <span class="dr-th dr-th-role">角色</span>
+                  <span class="dr-th dr-th-text">对话内容</span>
+                  <span class="dr-th dr-th-action">动作/表情</span>
+                  <span class="dr-th dr-th-camera">镜头提示</span>
+                  <span class="dr-th dr-th-inner">内心独白</span>
+                  <span class="dr-th dr-th-op"></span>
                 </div>
-                <div class="dr-bottom">
-                  <el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" />
+                <div v-for="(d,di) in scene.dialogues" :key="di" class="dr-tr">
+                  <div class="dr-td dr-td-role"><el-input v-model="d.characterName" size="small" placeholder="角色" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-text"><el-input v-model="d.text" size="small" placeholder="对话内容" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-action"><el-input v-model="d.actionHint" size="small" placeholder="动作/表情" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-camera"><el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-inner"><el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" /></div>
+                  <div class="dr-td dr-td-op"><el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button></div>
                 </div>
               </div>
               <el-button size="small" text type="primary" @click="addDialogue(scene)" style="margin-top:4px">+ 加句台词</el-button>
@@ -441,15 +447,23 @@ async function handleExport() {
 .scene-desc-row{margin-bottom:8px}
 .scene-desc-row label{color:var(--text-100);font-size:11px;display:block;margin-bottom:4px}
 .dialogues-block{padding-left:8px}
-.dialogue-row{display:flex;flex-direction:column;gap:3px;margin-bottom:6px;padding:8px;background:var(--bg-100);border-radius:6px}
-.dr-top{display:flex;gap:6px;align-items:center}
-.dr-role{width:80px;flex-shrink:0}
-.dr-text{flex:1;min-width:0}
-.dr-action{width:110px;flex-shrink:0}
-.dr-camera{width:110px;flex-shrink:0}
-.dr-del{flex-shrink:0}
-.dr-bottom{display:flex}
-.dr-bottom .el-input{flex:1}
+.dr-table{display:flex;flex-direction:column;border:1px solid var(--bg-300);border-radius:8px;overflow:hidden}
+.dr-thead{display:flex;background:var(--navy);color:var(--gold);font-size:12px;font-weight:700;padding:8px 10px;gap:6px}
+.dr-th-role{width:90px;flex-shrink:0}
+.dr-th-text{flex:1;min-width:0}
+.dr-th-action{width:120px;flex-shrink:0}
+.dr-th-camera{width:120px;flex-shrink:0}
+.dr-th-inner{width:140px;flex-shrink:0}
+.dr-th-op{width:30px;flex-shrink:0;text-align:center}
+.dr-tr{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--bg-300);align-items:center}
+.dr-tr:last-child{border-bottom:none}
+.dr-tr:nth-child(even){background:var(--bg-100)}
+.dr-td-role{width:90px;flex-shrink:0}
+.dr-td-text{flex:1;min-width:0}
+.dr-td-action{width:120px;flex-shrink:0}
+.dr-td-camera{width:120px;flex-shrink:0}
+.dr-td-inner{width:140px;flex-shrink:0}
+.dr-td-op{width:30px;flex-shrink:0;text-align:center}
 .right-panel{width:250px;flex-shrink:0;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:12px;overflow-y:auto;transition:width 0.25s}
 .right-panel.collapsed{width:40px;padding:12px 8px;overflow:hidden}
 .right-panel.collapsed .right-panel-body{display:none}
@@ -579,11 +593,8 @@ async function handleExport() {
   .meta-item .el-input,
   .meta-item .el-input-number { width: 100% !important; }
 
-  /* 对话行：移动端两行 */
-  .dr-top { flex-wrap: wrap; gap: 4px; }
-  .dr-role { width: 65px !important; }
-  .dr-text { flex: 1 1 120px !important; min-width: 0; }
-  .dr-action, .dr-camera { width: 90px !important; }
+  /* 对话表格：移动端横向滚动 */
+  .dr-table { overflow-x: auto; min-width: 600px; }
 
   /* 所有交互元素 ≥44px */
   :deep(.el-button) { min-height: 44px; }
