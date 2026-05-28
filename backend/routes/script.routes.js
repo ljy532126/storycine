@@ -127,7 +127,17 @@ router.post('/ai-generate', async (req, res, next) => {
       });
     }).catch((err) => {
       console.error('Script generation error:', err);
-      io.to(`project-${projectId}`).emit('script-generation-error', { error: err.message });
+      let msg = err.message || '未知错误';
+      if (msg.includes('API key not configured') || msg.includes('not configured')) {
+        msg = '请先在系统设置中配置 LLM API Key（DeepSeek / 豆包 / OpenAI 任选一个）';
+      } else if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
+        msg = 'AI 服务连接超时，请检查 Base URL 和网络连接';
+      } else if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized')) {
+        msg = 'API Key 无效或无权限，请检查系统设置中的密钥配置';
+      } else if (msg.includes('429') || msg.includes('频率') || msg.includes('rate')) {
+        msg = 'API 调用频率限制，请稍后重试';
+      }
+      io.to(`project-${projectId}`).emit('script-generation-error', { error: msg });
     });
   } catch (error) { next(error); }
 });
@@ -188,7 +198,12 @@ router.post('/continue', async (req, res, next) => {
       io.to(`project-${projectId}`).emit('script-continue-complete', { status: 'completed', data: script });
     }).catch((err) => {
       console.error('Script continue error:', err);
-      io.to(`project-${projectId}`).emit('script-continue-error', { error: err.message });
+      let msg = err.message || '未知错误';
+      if (msg.includes('API key not configured') || msg.includes('not configured')) msg = '请先在系统设置中配置 LLM API Key';
+      else if (msg.includes('timeout') || msg.includes('ETIMEDOUT')) msg = 'AI 服务连接超时，请检查 Base URL 和网络连接';
+      else if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized')) msg = 'API Key 无效或无权限，请检查系统设置中的密钥配置';
+      else if (msg.includes('429') || msg.includes('rate')) msg = 'API 调用频率限制，请稍后重试';
+      io.to(`project-${projectId}`).emit('script-continue-error', { error: msg });
     });
   } catch (error) { next(error); }
 });

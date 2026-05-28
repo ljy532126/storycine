@@ -448,6 +448,7 @@ onMounted(async () => {
     socket.onScriptGenerationError((data) => {
       scriptStore.setGenerationError();
       addLog('创作失败: ' + data.error, 'error');
+      ElMessage.error(data.error || '生成失败');
     });
   }
 });
@@ -544,7 +545,7 @@ async function handleGenerate() {
     scriptStore.setGenerationError();
     addLog('创作失败: ' + data.error, 'error');
     progressMessages[currentStep.value] = '失败: ' + data.error;
-    ElMessage.error('生成失败');
+    ElMessage.error(data.error || '生成失败');
   });
 
   try {
