@@ -455,13 +455,25 @@ async function handleExport() {
 .sub-style-item.active{background:var(--primary-100);border-color:var(--primary-200);color:var(--primary-200)}
 .ai-hint{margin-top:12px}
 .flow-guide{display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:var(--accent-200);border-radius:8px;border:1px solid var(--accent-100);font-size:12px;color:var(--text-200);flex-wrap:wrap}
-/* PC 端剧集横排 */
-.episode-row{display:flex;align-items:center;gap:6px;padding:8px 12px;margin-bottom:10px;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);overflow-x:auto;flex-shrink:0;flex-wrap:wrap}
-.er-label{font-size:12px;color:var(--text-200);font-weight:600;flex-shrink:0}
-.er-chip{padding:5px 12px;border-radius:14px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);white-space:nowrap;transition:all 0.15s}
+/* PC 端剧集横排（2 行网格 + 横向滚动 + 渐变遮罩） */
+.episode-row{
+  position:relative; display:grid; grid-template-rows:repeat(2,1fr); grid-auto-flow:column; grid-auto-columns:max-content;
+  gap:4px 8px; padding:8px 16px; margin-bottom:10px; max-height:72px;
+  background:var(--bg-200); border-radius:8px; border:1px solid var(--bg-300);
+  overflow-x:auto; overflow-y:hidden; flex-shrink:0;
+  scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
+  -webkit-mask-image:linear-gradient(to right,transparent 0%,black 16px,black calc(100% - 16px),transparent 100%);
+  mask-image:linear-gradient(to right,transparent 0%,black 16px,black calc(100% - 16px),transparent 100%);
+}
+.episode-row::-webkit-scrollbar{height:4px}
+.episode-row::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px}
+.episode-row::-webkit-scrollbar-track{background:transparent}
+
+.er-label{display:none}
+.er-chip{padding:4px 12px;border-radius:14px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-200);white-space:nowrap;transition:all 0.15s;display:flex;align-items:center}
 .er-chip:hover{border-color:var(--gold);color:var(--text-100)}
 .er-chip.active{background:var(--navy);border-color:var(--gold);color:var(--gold);font-weight:700}
-.er-add{flex-shrink:0;font-size:12px;color:var(--gold-dark)}
+.er-add{flex-shrink:0;font-size:12px;color:var(--gold-dark);white-space:nowrap}
 .flow-step{padding:4px 10px;border-radius:12px;background:var(--bg-200);white-space:nowrap}
 .flow-step.done{background:#E8F5E9;color:#2E7D32;font-weight:600}
 .flow-arrow{color:var(--gold-dark);font-weight:700}
