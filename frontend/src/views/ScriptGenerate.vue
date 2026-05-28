@@ -657,8 +657,9 @@ async function handleImport() {
 
 function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
 function exportScriptText(row) {
+  if (!row || !row.scenes) { ElMessage.warning('该剧集暂无剧本内容'); return; }
   const lines = [];
-  lines.push(`第${row.episodeNumber}集：${row.episodeTitle || '未命名'}`);
+  lines.push(`第${row.episodeNumber || '?'}集：${row.episodeTitle || '未命名'}`);
   lines.push('');
   if (row.summary) { lines.push(`【剧情摘要】${row.summary}`); lines.push(''); }
   const scenes = row.scenes || [];
