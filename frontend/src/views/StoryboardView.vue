@@ -493,6 +493,10 @@ async function handleAutoGenerate() {
 
     currentStoryboard.value = data.data ? JSON.parse(JSON.stringify(data.data)) : { shots };
     currentStoryboard.value.shots = currentStoryboard.value.shots || shots;
+    // 同步到 store 缓存，切换剧集后能恢复
+    const idx = storyboardStore.storyboards.findIndex(s => s.scriptId === currentScriptId.value);
+    if (idx >= 0) storyboardStore.storyboards[idx] = JSON.parse(JSON.stringify(currentStoryboard.value));
+    else storyboardStore.storyboards.push(JSON.parse(JSON.stringify(currentStoryboard.value)));
     // 保留当前选中的分镜（按镜号匹配）
     const prevShotNum = currentShot.value?.shotNumber;
     const matched = currentStoryboard.value.shots.find(s => s.shotNumber === prevShotNum);
