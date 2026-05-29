@@ -29,10 +29,17 @@ async function logLogin(username, ip, ua, success, message, userId) {
 router.get('/captcha', captchaLimiter, (req, res) => {
   const captcha = svgCaptcha.create({ size: 4, noise: 3, ignoreChars: '0o1il', color: true, background: '#FBF7F0' });
   const captchaId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  captchaStore.set(captchaId, { text: captcha.text.toLowerCase(), expires: Date.now() + 300000 }); // 5分钟有效
-  // 清理过期
+  captchaStore.set(captchaId, { text: captcha.text.toLowerCase(), expires: Date.now() + 300000 });
   for (const [k, v] of captchaStore) { if (v.expires < Date.now()) captchaStore.delete(k); }
   res.json({ data: { captchaId, svg: captcha.data } });
+});
+
+// ===== 滑块验证码 =====
+router.get('/captcha/slider', captchaLimiter, (req, res) => {
+  const token = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  captchaStore.set(token, { text: 'verified', expires: Date.now() + 300000 });
+  for (const [k, v] of captchaStore) { if (v.expires < Date.now()) captchaStore.delete(k); }
+  res.json({ data: { captchaId: token, captchaText: 'verified' } });
 });
 
 // ===== 注册 =====
