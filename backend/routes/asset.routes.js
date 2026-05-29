@@ -668,6 +668,9 @@ router.post('/generate-image', async (req, res, next) => {
     let imageUrl = remoteUrl;
     const catMap = { character: 'characters', scene: 'scenes', prop: 'props' };
     const category = catMap[assetType] || 'storyboard';
+    // 按用户 ID 分目录：autodrama/uploads/US-XXXX/characters/...
+    const userDir = (req.user?.uid || req.user?._id?.toString()?.substring(0,8) || 'anonymous');
+    const userCategory = path.posix.join(userDir, category);
     const filename = `gen-${Date.now()}-${Math.random().toString(36).slice(2,8)}.png`;
 
     if (remoteUrl && !remoteUrl.startsWith('/uploads/')) {
@@ -686,10 +689,10 @@ router.post('/generate-image', async (req, res, next) => {
             buf = Buffer.from(remoteUrl, 'base64');
           }
           const finalFilename = filename.replace('.png', `.${ext}`);
-          imageUrl = await storageService.upload(buf, finalFilename, category);
+          imageUrl = await storageService.upload(buf, finalFilename, userCategory);
           console.log(`[generate-image] base64 存储完成 (${(buf.length/1024).toFixed(1)}KB): ${imageUrl}`);
         } else {
-          imageUrl = await storageService.uploadFromUrl(remoteUrl, filename, category);
+          imageUrl = await storageService.uploadFromUrl(remoteUrl, filename, userCategory);
           const mode = imageUrl.startsWith('https://') || imageUrl.startsWith('http://') ? '云端 ☁️' : '本地 💾';
           console.log(`[generate-image] 存储完成 [${mode}]: ${remoteUrl.substring(0,40)}... → ${imageUrl}`);
         }
