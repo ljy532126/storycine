@@ -198,7 +198,7 @@ sh deploy.sh
    ```bash
    docker logs storycine-app | grep "密码"
    ```
-   默认账号：`admin`，密码示例：`384729`
+   默认账号：`admin`，密码：`storycine`
 3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包 等 API Key，每个用户独立配置
 
 ### 🔑 忘记管理员密码怎么办
@@ -221,7 +221,7 @@ docker logs storycine-app | grep "密码"
 ```bash
 docker exec -it storycine-mongodb mongosh -u admin -p admin123 --authenticationDatabase admin
 use storycine
-db.users.updateOne({ username: "admin" }, { $set: { password: "$2a$12$..." } })
+db.users.updateOne({ username: "storycine" }, { $set: { password: ... } })
 ```
 注意：密码需用 bcrypt 加密，推荐用方法一。
 
@@ -236,11 +236,6 @@ cd /www/wwwroot/storycine && git pull && docker compose up -d --build
 
 > `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。  
 > Dockerfile 已配置国内 npm 镜像 (`npmmirror.com`)，国内构建速度更快。
-
-### 默认管理员
-
-首次启动自动创建：**admin / 
-
 
 ## 🏗️ 项目结构
 

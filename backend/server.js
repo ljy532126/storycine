@@ -129,21 +129,23 @@ async function initAdmin() {
     let adminUser = exists;
     const RESET_ADMIN = process.env.RESET_ADMIN_PWD === 'true';
     if (!adminUser || RESET_ADMIN) {
-      const randomPassword = String(Math.floor(100000 + Math.random() * 900000)); // 6位纯数字
-      const hashed = await bcrypt.hash(randomPassword, 12);
+      const defaultPassword = RESET_ADMIN ? String(Math.floor(100000 + Math.random() * 900000)) : 'storycine';
+      const hashed = await bcrypt.hash(defaultPassword, 12);
       if (adminUser && RESET_ADMIN) {
         adminUser.password = hashed;
         await adminUser.save();
         console.log('══════════════════════════════════════════');
-        console.log('  🔄 管理员密码已重置');
+        console.log('  🔄 Admin password reset');
+        console.log(`  Username: admin`);
+        console.log(`  New password: ${defaultPassword}`);
       } else {
         adminUser = await User.create({ username: 'admin', password: hashed, role: 'admin', status: 'active' });
         console.log('══════════════════════════════════════════');
-        console.log('  🔐 默认管理员已创建');
+        console.log('  🔐 Default admin created');
+        console.log(`  Username: admin`);
+        console.log(`  Password: ${defaultPassword}`);
       }
-      console.log(`  账号: admin`);
-      console.log(`  密码: ${randomPassword}`);
-      console.log('  ⚠️  请立即登录并修改密码！');
+      console.log('  ⚠️  Please change password after login!');
       console.log('══════════════════════════════════════════');
     }
 
