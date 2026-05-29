@@ -248,7 +248,7 @@ const migrating = ref(false);
 const migrateResult = ref('');
 const endpoints = reactive({ total: 0, routes: [], recent: [], health: 100 });
 const endpointsLoading = ref(false);
-async function fetchEndpoints() { endpointsLoading.value = true; try { const r = await fetch('/api/v1/monitor/endpoints'); const d = await r.json(); Object.assign(endpoints, d.data); } catch {} finally { endpointsLoading.value = false; } }
+async function fetchEndpoints() { endpointsLoading.value = true; try { const r = await fetch('/api/v1/monitor/endpoints', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }); const d = await r.json(); Object.assign(endpoints, d.data); } catch {} finally { endpointsLoading.value = false; } }
 function timeAgo(t) { if (!t) return ''; const s = Math.floor((Date.now() - new Date(t).getTime()) / 1000); if (s < 60) return s + '秒前'; if (s < 3600) return Math.floor(s / 60) + '分钟前'; return Math.floor(s / 3600) + '小时前'; }
 
 function formatChange(change) {
@@ -258,7 +258,7 @@ function formatChange(change) {
 }
 
 // ===== API 调用 =====
-const API = (path) => fetch(`/api/v1/statistics${path}`).then(r => r.json());
+const API = (path) => fetch(`/api/v1/statistics${path}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json());
 
 async function fetchOverview() {
   try {
@@ -373,7 +373,7 @@ async function migrateImages() {
   migrating.value = true;
   migrateResult.value = '';
   try {
-    const res = await fetch('/api/v1/assets/migrate-images', { method: 'POST' });
+    const res = await fetch('/api/v1/assets/migrate-images', { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
     const data = await res.json();
     migrateResult.value = data.message;
     ElMessage.success(data.message);
