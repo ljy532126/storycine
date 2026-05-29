@@ -12,3 +12,5 @@ backend/uploads/
 backend/.env
 .claude/
 promo/storycine.tar.gz
+storycine.tar.gz
+promo/
