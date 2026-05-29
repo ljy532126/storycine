@@ -234,6 +234,11 @@ const seedreamModels = ['doubao-seedream-4-5-251128', 'doubao-seedream-4-0-25082
 const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instruct'];
 
 onMounted(() => { refreshStatus(); });
+// keep-alive 后切换用户需要刷新
+import { watch } from 'vue';
+import { useRoute } from 'vue-router';
+const route = useRoute();
+watch(() => route.path, (p) => { if (p === '/settings') refreshStatus(); });
 
 async function refreshStatus() {
   loading.value = true;
