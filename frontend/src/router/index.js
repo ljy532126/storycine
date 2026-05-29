@@ -1,21 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Landing from '../views/Landing.vue';
-import Login from '../views/Login.vue';
-import Register from '../views/Register.vue';
-import Dashboard from '../views/Dashboard.vue';
-import ProjectList from '../views/ProjectList.vue';
-import ScriptGenerate from '../views/ScriptGenerate.vue';
-import ScriptEdit from '../views/ScriptEdit.vue';
-import AssetManager from '../views/AssetManager.vue';
-import StoryboardView from '../views/StoryboardView.vue';
-import CompositionView from '../views/CompositionView.vue';
-import Settings from '../views/Settings.vue';
-import Statistics from '../views/Statistics.vue';
-import AIConfig from '../views/AIConfig.vue';
-import AIStorageConfig from '../views/AIStorageConfig.vue';
-import MediaLibrary from '../views/MediaLibrary.vue';
-import UserManagement from '../views/UserManagement.vue';
-import Profile from '../views/Profile.vue';
+
+// 路由懒加载：每个页面独立 chunk，按需加载，大幅减少首屏体积
+const Landing = () => import('../views/Landing.vue');
+const Login = () => import('../views/Login.vue');
+const Register = () => import('../views/Register.vue');
+const Dashboard = () => import('../views/Dashboard.vue');
+const ProjectList = () => import('../views/ProjectList.vue');
+const ScriptGenerate = () => import('../views/ScriptGenerate.vue');
+const ScriptEdit = () => import('../views/ScriptEdit.vue');
+const AssetManager = () => import('../views/AssetManager.vue');
+const StoryboardView = () => import('../views/StoryboardView.vue');
+const CompositionView = () => import('../views/CompositionView.vue');
+const Settings = () => import('../views/Settings.vue');
+const Statistics = () => import('../views/Statistics.vue');
+const AIConfig = () => import('../views/AIConfig.vue');
+const AIStorageConfig = () => import('../views/AIStorageConfig.vue');
+const MediaLibrary = () => import('../views/MediaLibrary.vue');
+const UserManagement = () => import('../views/UserManagement.vue');
+const Profile = () => import('../views/Profile.vue');
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },

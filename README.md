@@ -239,11 +239,8 @@ cd /www/wwwroot/storycine && git pull && docker compose up -d --build
 
 ### 默认管理员
 
-首次启动自动创建：**admin / 123456**
+首次启动自动创建：**admin / 
 
-### 默认管理员
-
-首次启动自动创建：**admin / 123456**
 
 ## 🏗️ 项目结构
 
