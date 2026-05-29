@@ -218,8 +218,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+const route = useRoute();
 
 // ===== 响应式数据 =====
 const statTab = ref('overview');
@@ -455,6 +457,7 @@ function drawTrendChart() {
 }
 
 // ===== 生命周期 =====
+watch(() => route.path, (p) => { if (p === '/statistics') refreshAll(); });
 onMounted(async () => {
   await refreshAll();
   trackEvent('page_view');
