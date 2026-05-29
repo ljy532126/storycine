@@ -194,11 +194,36 @@ sh deploy.sh
 ### ⚠️ 首次部署必读
 
 1. **JWT_SECRET**：在 `backend/.env` 中设置 `JWT_SECRET=你的随机字符串`（至少 32 位），不设置则服务无法启动
-2. **管理员密码**：首次启动时 Docker 日志会打印随机生成的管理员密码，请立即查看并保存
+2. **管理员密码**：首次启动时 Docker 日志会打印随机生成的 **6 位纯数字** 管理员密码，请立即查看并保存
    ```bash
    docker logs storycine-app | grep "密码"
    ```
+   默认账号：`admin`，密码示例：`384729`
 3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包 等 API Key，每个用户独立配置
+
+### 🔑 忘记管理员密码怎么办
+
+**方法一：通过环境变量重置（推荐）**
+在 `docker-compose.yml` 的 `app` 服务 `environment` 中添加一行，然后重建容器：
+```yaml
+- RESET_ADMIN_PWD=true
+```
+```bash
+docker compose up -d --build
+```
+查看新密码：
+```bash
+docker logs storycine-app | grep "密码"
+```
+重置完成后**删除 `RESET_ADMIN_PWD=true` 这行**，否则每次启动都会重置密码。
+
+**方法二：进入 MongoDB 直接修改**
+```bash
+docker exec -it storycine-mongodb mongosh -u admin -p admin123 --authenticationDatabase admin
+use storycine
+db.users.updateOne({ username: "admin" }, { $set: { password: "$2a$12$..." } })
+```
+注意：密码需用 bcrypt 加密，推荐用方法一。
 
 ```bash
 # 后续更新（服务器能访问 GitHub）
