@@ -746,7 +746,7 @@ router.get('/video-task/:taskId', async (req, res, next) => {
       const filename = `video-${Date.now()}-${Math.random().toString(36).slice(2,8)}.mp4`;
       console.log(`[video-task] 下载视频: ${videoUrl.substring(0, 80)}...`);
       const resp = await axios({ url: videoUrl, method: 'GET', responseType: 'arraybuffer', timeout: 120000 });
-      const storedUrl = await storageService.upload(Buffer.from(resp.data), filename, 'videos');
+      const storedUrl = await storageService.upload(Buffer.from(resp.data), filename, (req.user?.uid || 'anonymous') + '/videos');
       console.log(`[video-task] 已存储: ${storedUrl}`);
       return res.json({ data: { status: 'completed', videoUrl: storedUrl } });
     }
@@ -774,7 +774,7 @@ router.post('/video-tasks/recover', async (req, res, next) => {
           const filename = `video-${Date.now()}-${Math.random().toString(36).slice(2,8)}.mp4`;
           console.log(`[video-recover] 下载视频: ${result.videoUrl.substring(0, 80)}...`);
           const resp = await axios({ url: result.videoUrl, method: 'GET', responseType: 'arraybuffer', timeout: 120000 });
-          const storedUrl = await storageService.upload(Buffer.from(resp.data), filename, 'videos');
+          const storedUrl = await storageService.upload(Buffer.from(resp.data), filename, (req.user?.uid || 'anonymous') + '/videos');
           results.push({ taskId, status: 'completed', videoUrl: storedUrl });
         } else {
           results.push({ taskId, status: result.status });
