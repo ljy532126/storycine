@@ -127,11 +127,20 @@ async function initAdmin() {
     const User = require('./models/user.model');
     const exists = await User.findOne({ username: 'admin' });
     let adminUser = exists;
-    if (!adminUser) {
-      const randomPassword = crypto.randomBytes(8).toString('hex');
-      adminUser = await User.create({ username: 'admin', password: await bcrypt.hash(randomPassword, 12), role: 'admin', status: 'active' });
-      console.log('══════════════════════════════════════════');
-      console.log('  🔐 默认管理员已创建');
+    const RESET_ADMIN = process.env.RESET_ADMIN_PWD === 'true';
+    if (!adminUser || RESET_ADMIN) {
+      const randomPassword = String(Math.floor(100000 + Math.random() * 900000)); // 6位纯数字
+      const hashed = await bcrypt.hash(randomPassword, 12);
+      if (adminUser && RESET_ADMIN) {
+        adminUser.password = hashed;
+        await adminUser.save();
+        console.log('══════════════════════════════════════════');
+        console.log('  🔄 管理员密码已重置');
+      } else {
+        adminUser = await User.create({ username: 'admin', password: hashed, role: 'admin', status: 'active' });
+        console.log('══════════════════════════════════════════');
+        console.log('  🔐 默认管理员已创建');
+      }
       console.log(`  账号: admin`);
       console.log(`  密码: ${randomPassword}`);
       console.log('  ⚠️  请立即登录并修改密码！');
