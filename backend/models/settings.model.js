@@ -43,30 +43,30 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取指定用户的设置，不存在则自动创建（带竞态兜底） */
+/** 获取指定用户的设置，不存在则自动创建 */
 settingsSchema.statics.getSettings = async function (userId) {
   if (!userId) throw new Error('getSettings 缺少 userId 参数');
+  let doc;
   try {
-    return await this.findOneAndUpdate(
+    doc = await this.findOneAndUpdate(
       { userId },
       { $setOnInsert: { userId } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
   } catch (e) {
     if (e.code !== 11000) throw e;
+    doc = await this.findOne({ userId });
+    if (!doc) {
+      doc = await this.findOneAndUpdate(
+        { userId },
+        { $setOnInsert: { userId } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
   }
-  // 极端并发下 upsert 触发了 E11000，等另一个请求创完再拿
-  for (let i = 0; i < 5; i++) {
-    await new Promise(r => setTimeout(r, 50 * (i + 1)));
-    const doc = await this.findOne({ userId });
-    if (doc) return doc;
-  }
-  // 最终兜底：再试一次 upsert（此时应该没有竞态了）
-  return await this.findOneAndUpdate(
-    { userId },
-    { $setOnInsert: { userId } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  // Mongoose upsert 返回的文档可能 isNew=true，强制标记为已存在，确保 save() 走 UPDATE 而非 INSERT
+  if (doc && doc.isNew) doc.isNew = false;
+  return doc;
 };
 
 module.exports = mongoose.model('Settings', settingsSchema);

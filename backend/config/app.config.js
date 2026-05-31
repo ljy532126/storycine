@@ -203,12 +203,17 @@ const appConfig = {
     }
   },
 
-  /** 持久化当前LLM配置到MongoDB */
+  /** 持久化当前LLM配置到MongoDB（使用 updateOne 避免 save() 的 isNew 竞态） */
   async persistLLMConfig(settings) {
     if (!settings) return;
     try {
-      const s = await settings.save();
-      console.log('[config] LLM settings 已持久化，userId:', s.userId);
+      const Settings = getSettingsModel();
+      if (!Settings) { console.error('[config] Settings model not available'); return; }
+      await Settings.updateOne(
+        { userId: settings.userId },
+        { $set: { llmProviders: settings.llmProviders } }
+      );
+      console.log('[config] LLM settings 已持久化，userId:', settings.userId);
     } catch (e) {
       console.error('[config] 持久化 LLM settings 失败:', e.message);
     }
