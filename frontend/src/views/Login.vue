@@ -120,7 +120,7 @@ async function handleLogin() {
     const res = await fetch('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     if (!res.ok) {
-      if (res.status === 400 && data.message.includes('输错')) { needCaptcha.value = true; initCaptcha(); }
+      if (res.status === 400 && (data.message.includes('输错') || data.message.includes('验证码'))) { needCaptcha.value = true; initCaptcha(); }
       ElMessage.error(data.message || '登录失败');
       return;
     }
