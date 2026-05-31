@@ -199,7 +199,6 @@ const appConfig = {
       if (config.baseUrl !== undefined) p.baseUrl = config.baseUrl;
       if (config.model !== undefined) p.model = config.model;
       if (config.imageModel !== undefined) p.imageModel = config.imageModel;
-      settings.markModified('llmProviders');
     }
   },
 

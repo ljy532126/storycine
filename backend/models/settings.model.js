@@ -40,16 +40,17 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取用户的 settings 文档（不存在则用原生 upsert 创建，绝不 touch Mongoose .create/.save） */
+/** 获取用户 settings（原生 driver 读写，绕过 Mongoose 的 isNew/schema 干扰） */
 settingsSchema.statics.getSettings = async function (userId) {
   if (!userId) throw new Error('getSettings 缺少 userId 参数');
 
-  // 直接查，有就返回
-  let doc = await this.findOne({ userId }).lean();
+  const coll = this.collection;
+
+  // 用原生 driver 查
+  let doc = await coll.findOne({ userId });
   if (doc) return doc;
 
-  // 用 MongoDB 原生 driver 做 upsert，完全绕过 Mongoose 的 isNew/E11000
-  const coll = this.collection;
+  // 不存在：原生 upsert
   try {
     await coll.updateOne(
       { userId },
@@ -60,19 +61,19 @@ settingsSchema.statics.getSettings = async function (userId) {
     if (e.code !== 11000) throw e;
   }
 
-  // upsert 完成后一定能查到
-  doc = await this.findOne({ userId });
-  if (!doc) {
-    // 极端情况：等一会儿再查
-    await new Promise(r => setTimeout(r, 200));
-    doc = await this.findOne({ userId });
+  // 循环等文档就绪
+  for (let i = 0; i < 10; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    doc = await coll.findOne({ userId });
+    if (doc) return doc;
   }
-  return doc;
+
+  throw new Error('无法创建用户 settings 文档');
 };
 
-/** 原子更新 settings，永不使用 .save()，杜绝 isNew INSERT 问题 */
+/** 原子更新 settings（原生 driver） */
 settingsSchema.statics.updateSettings = async function (userId, updates) {
-  await this.updateOne({ userId }, { $set: updates });
+  await this.collection.updateOne({ userId }, { $set: updates });
 };
 
 module.exports = mongoose.model('Settings', settingsSchema);
