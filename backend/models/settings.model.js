@@ -40,40 +40,50 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取用户 settings（原生 driver 读写，绕过 Mongoose 的 isNew/schema 干扰） */
+// 按 userId 串行化创建，彻底消除竞态
+const _creating = new Map();
+
 settingsSchema.statics.getSettings = async function (userId) {
   if (!userId) throw new Error('getSettings 缺少 userId 参数');
 
-  const coll = this.collection;
+  let doc = await this.findOne({ userId });
+  if (doc) { doc.isNew = false; return doc; }
 
-  // 用原生 driver 查
-  let doc = await coll.findOne({ userId });
-  if (doc) return doc;
+  const key = userId.toString();
 
-  // 不存在：原生 upsert
+  // 只有一个请求负责 create，其他排队拿结果
+  if (_creating.has(key)) {
+    await _creating.get(key);
+    doc = await this.findOne({ userId });
+    if (doc) { doc.isNew = false; return doc; }
+  }
+
+  let resolve;
+  _creating.set(key, new Promise(r => { resolve = r; }));
+
   try {
-    await coll.updateOne(
-      { userId },
-      { $setOnInsert: { userId, createdAt: new Date(), updatedAt: new Date() } },
-      { upsert: true }
-    );
-  } catch (e) {
-    if (e.code !== 11000) throw e;
-  }
+    doc = await this.findOne({ userId });
+    if (doc) { doc.isNew = false; return doc; }
 
-  // 循环等文档就绪
-  for (let i = 0; i < 10; i++) {
-    await new Promise(r => setTimeout(r, 100));
-    doc = await coll.findOne({ userId });
-    if (doc) return doc;
-  }
+    try {
+      doc = await this.create({ userId });
+    } catch (e) {
+      if (e.code !== 11000) throw e;
+      doc = await this.findOne({ userId });
+    }
 
-  throw new Error('无法创建用户 settings 文档');
+    if (!doc) throw new Error('无法创建用户 settings');
+    doc.isNew = false;
+    return doc;
+  } finally {
+    resolve();
+    _creating.delete(key);
+  }
 };
 
-/** 原子更新 settings（原生 driver） */
+/** 原子更新 settings */
 settingsSchema.statics.updateSettings = async function (userId, updates) {
-  await this.collection.updateOne({ userId }, { $set: updates });
+  await this.updateOne({ userId }, { $set: updates });
 };
 
 module.exports = mongoose.model('Settings', settingsSchema);
