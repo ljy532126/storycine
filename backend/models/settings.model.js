@@ -53,12 +53,20 @@ settingsSchema.statics.getSettings = async function (userId) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
   } catch (e) {
-    // 极端并行场景下 upsert 仍可能抛 E11000，兜底直接查已有文档
-    if (e.code === 11000) {
-      return await this.findOne({ userId });
-    }
-    throw e;
+    if (e.code !== 11000) throw e;
   }
+  // 极端并发下 upsert 触发了 E11000，等另一个请求创完再拿
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 50 * (i + 1)));
+    const doc = await this.findOne({ userId });
+    if (doc) return doc;
+  }
+  // 最终兜底：再试一次 upsert（此时应该没有竞态了）
+  return await this.findOneAndUpdate(
+    { userId },
+    { $setOnInsert: { userId } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
 };
 
 module.exports = mongoose.model('Settings', settingsSchema);
