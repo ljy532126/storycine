@@ -1,8 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * 系统设置 - 每个用户独立的 LLM/存储配置，持久化重启不丢失
- */
 const settingsSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   llmProviders: {
@@ -43,30 +40,31 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取指定用户的设置，不存在则自动创建 */
+/** 获取用户的 settings 文档（纯查询，不存在则创建后返回） */
 settingsSchema.statics.getSettings = async function (userId) {
-  if (!userId) throw new Error('getSettings 缺少 userId 参数');
-  let doc;
+  let doc = await this.findOne({ userId });
+  if (doc) return doc;
+
   try {
-    doc = await this.findOneAndUpdate(
-      { userId },
-      { $setOnInsert: { userId } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    doc = await this.create({ userId });
+    return doc;
   } catch (e) {
-    if (e.code !== 11000) throw e;
-    doc = await this.findOne({ userId });
-    if (!doc) {
-      doc = await this.findOneAndUpdate(
-        { userId },
-        { $setOnInsert: { userId } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+    // 并发创建会触发 E11000，另一个请求已创建，直接查
+    if (e.code === 11000) {
+      doc = await this.findOne({ userId });
+      if (doc) return doc;
+      // 极端情况：重试 create
+      try { return await this.create({ userId }); } catch (_) {
+        return await this.findOne({ userId });
+      }
     }
+    throw e;
   }
-  // Mongoose upsert 返回的文档可能 isNew=true，强制标记为已存在，确保 save() 走 UPDATE 而非 INSERT
-  if (doc && doc.isNew) doc.isNew = false;
-  return doc;
+};
+
+/** 原子更新 settings，永不使用 .save()，杜绝 isNew INSERT 问题 */
+settingsSchema.statics.updateSettings = async function (userId, updates) {
+  await this.updateOne({ userId }, { $set: updates });
 };
 
 module.exports = mongoose.model('Settings', settingsSchema);

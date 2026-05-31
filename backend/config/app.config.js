@@ -181,7 +181,7 @@ const appConfig = {
     return !!active.apiKey;
   },
 
-  /** 运行时更新LLM配置（写入 settings 对象 + runtimeConfig） */
+  /** 运行时更新LLM配置（同步到 runtimeConfig + settings 对象） */
   setLLMConfig(settings, provider, config) {
     if (!runtimeConfig[provider]) {
       throw new Error(`Unknown provider: ${provider}. Valid: deepseek, doubao, tongyi, openai`);
@@ -191,31 +191,15 @@ const appConfig = {
     if (config.model !== undefined) runtimeConfig[provider].model = config.model;
     if (config.imageModel !== undefined) runtimeConfig[provider].imageModel = config.imageModel;
 
-    // 同时更新 settings 对象
     if (settings) {
       if (!settings.llmProviders) settings.llmProviders = {};
       if (!settings.llmProviders[provider]) settings.llmProviders[provider] = {};
-      if (config.apiKey !== undefined) settings.llmProviders[provider].apiKey = config.apiKey;
-      if (config.baseUrl !== undefined) settings.llmProviders[provider].baseUrl = config.baseUrl;
-      if (config.model !== undefined) settings.llmProviders[provider].model = config.model;
-      if (config.imageModel !== undefined) settings.llmProviders[provider].imageModel = config.imageModel;
+      const p = settings.llmProviders[provider];
+      if (config.apiKey !== undefined) p.apiKey = config.apiKey;
+      if (config.baseUrl !== undefined) p.baseUrl = config.baseUrl;
+      if (config.model !== undefined) p.model = config.model;
+      if (config.imageModel !== undefined) p.imageModel = config.imageModel;
       settings.markModified('llmProviders');
-    }
-  },
-
-  /** 持久化当前LLM配置到MongoDB（使用 updateOne 避免 save() 的 isNew 竞态） */
-  async persistLLMConfig(settings) {
-    if (!settings) return;
-    try {
-      const Settings = getSettingsModel();
-      if (!Settings) { console.error('[config] Settings model not available'); return; }
-      await Settings.updateOne(
-        { userId: settings.userId },
-        { $set: { llmProviders: settings.llmProviders } }
-      );
-      console.log('[config] LLM settings 已持久化，userId:', settings.userId);
-    } catch (e) {
-      console.error('[config] 持久化 LLM settings 失败:', e.message);
     }
   },
 

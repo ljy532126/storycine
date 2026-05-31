@@ -156,11 +156,12 @@ async function initAdmin() {
       const adminSettings = await Settings.getSettings(adminUser._id);
       if (!adminSettings || !adminSettings.llmProviders?.deepseek?.apiKey) {
         // 将旧数据合并到管理员的 settings
-        const target = adminSettings || await Settings.create({ userId: adminUser._id });
-        target.llmProviders = oldSettings.llmProviders || target.llmProviders;
-        target.storageConfig = oldSettings.storageConfig || target.storageConfig;
-        target.aiConfig = oldSettings.aiConfig || target.aiConfig;
-        await target.save();
+        const target = adminSettings;
+        await Settings.updateSettings(adminUser._id, {
+          llmProviders: oldSettings.llmProviders || target.llmProviders,
+          storageConfig: oldSettings.storageConfig || target.storageConfig,
+          aiConfig: oldSettings.aiConfig || target.aiConfig,
+        });
         await Settings.deleteOne({ key: 'llm_config' });
         console.log('[init] ✅ 已将旧版全局配置迁移到管理员账号');
       }
