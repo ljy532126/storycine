@@ -40,48 +40,14 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-// 按 userId 串行化创建，彻底消除竞态
-const _creating = new Map();
-
 settingsSchema.statics.getSettings = async function (userId) {
-  if (!userId) throw new Error('getSettings 缺少 userId 参数');
-
   let doc = await this.findOne({ userId });
-  if (doc) { doc.isNew = false; return doc; }
-
-  const key = userId.toString();
-
-  // 只有一个请求负责 create，其他排队拿结果
-  if (_creating.has(key)) {
-    await _creating.get(key);
-    doc = await this.findOne({ userId });
-    if (doc) { doc.isNew = false; return doc; }
+  if (!doc) {
+    try { doc = await this.create({ userId }); } catch (e) { doc = await this.findOne({ userId }); }
   }
-
-  let resolve;
-  _creating.set(key, new Promise(r => { resolve = r; }));
-
-  try {
-    doc = await this.findOne({ userId });
-    if (doc) { doc.isNew = false; return doc; }
-
-    try {
-      doc = await this.create({ userId });
-    } catch (e) {
-      if (e.code !== 11000) throw e;
-      doc = await this.findOne({ userId });
-    }
-
-    if (!doc) throw new Error('无法创建用户 settings');
-    doc.isNew = false;
-    return doc;
-  } finally {
-    resolve();
-    _creating.delete(key);
-  }
+  return doc;
 };
 
-/** 原子更新 settings */
 settingsSchema.statics.updateSettings = async function (userId, updates) {
   await this.updateOne({ userId }, { $set: updates });
 };

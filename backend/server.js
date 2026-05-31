@@ -149,23 +149,25 @@ async function initAdmin() {
       console.log('══════════════════════════════════════════');
     }
 
-    // 迁移旧的全局 settings 到管理员名下（旧版本使用 key: 'llm_config' 的单例模式）
+    // 确保 admin 的 settings 文档存在
     const Settings = require('./models/settings.model');
-    const oldSettings = await Settings.findOne({ key: 'llm_config' });
-    if (oldSettings && adminUser) {
-      const adminSettings = await Settings.getSettings(adminUser._id);
-      if (!adminSettings || !adminSettings.llmProviders?.deepseek?.apiKey) {
-        // 将旧数据合并到管理员的 settings
-        const target = adminSettings;
-        await Settings.updateSettings(adminUser._id, {
-          llmProviders: oldSettings.llmProviders || target.llmProviders,
-          storageConfig: oldSettings.storageConfig || target.storageConfig,
-          aiConfig: oldSettings.aiConfig || target.aiConfig,
-        });
-        await Settings.deleteOne({ key: 'llm_config' });
-        console.log('[init] ✅ 已将旧版全局配置迁移到管理员账号');
-      }
+    const s = await Settings.findOne({ userId: adminUser._id });
+    if (!s) { await Settings.create({ userId: adminUser._id }); console.log('[init] ✅ 已为 admin 创建 settings'); }
+
+  // 迁移旧的全局 settings 到管理员名下（旧版本使用 key: 'llm_config' 的单例模式）
+  const Settings = require('./models/settings.model');
+  const oldSettings = await Settings.findOne({ key: 'llm_config' });
+  if (oldSettings && adminUser) {
+    if (!adminSettings.llmProviders?.deepseek?.apiKey) {
+      await Settings.updateSettings(adminUser._id, {
+        llmProviders: oldSettings.llmProviders,
+        storageConfig: oldSettings.storageConfig,
+        aiConfig: oldSettings.aiConfig,
+      });
+      await Settings.deleteOne({ key: 'llm_config' });
+      console.log('[init] ✅ 已将旧版全局配置迁移到管理员账号');
     }
+  }
   } catch (e) { console.warn('[init] 管理员初始化失败:', e.message); }
 }
 initAdmin();

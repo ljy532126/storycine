@@ -67,6 +67,10 @@ router.post('/register', registerLimiter, async (req, res) => {
     const hashed = await bcrypt.hash(password, 12);
     const user = await User.create({ username, password: hashed, lastLoginIp: ip });
 
+    // 注册时同步创建 settings 文档，避免后续 getSettings 竞态
+    const Settings = require('../models/settings.model');
+    await Settings.create({ userId: user._id });
+
     await logLogin(username, ip, ua, true, '注册成功', user._id);
     const token = generateToken(user);
     res.status(201).json({ message: '注册成功', data: { token, user: { id: user._id, uid: user.uid, username, role: user.role } } });
