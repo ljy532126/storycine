@@ -570,6 +570,9 @@ async function handleGenerate() {
   scriptStore.flowType = 'generate';
   logCollapsed.value = false;
   generationResult.value = null;
+  currentStep.value = 0;
+  Object.keys(progressMessages).forEach(k => delete progressMessages[k]);
+  logLines.length = 0;
   addLog('提交创作任务，AI 开始写剧本...', 'info');
   socket.offAll();
 
