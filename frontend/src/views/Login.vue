@@ -17,8 +17,8 @@
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" prefix-icon="Lock" />
         </el-form-item>
 
-        <!-- 验证码（输错2次后显示） -->
-        <el-form-item v-if="needCaptcha" label="验证码" prop="captchaText">
+        <!-- 验证码 -->
+        <el-form-item label="验证码" prop="captchaText">
           <div v-if="!sliderPassed" class="slider-wrap" @mousedown="sliderStart" @mousemove="sliderMove" @mouseup="sliderEnd" @mouseleave="sliderEnd" @touchstart="sliderStart" @touchmove="sliderMove" @touchend="sliderEnd">
             <div class="slider-track">
               <div class="slider-fill" :style="{width: sliderPercent + '%'}"></div>
@@ -48,14 +48,14 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
 const router = useRouter();
 const loading = ref(false);
 const rememberMe = ref(false);
-const needCaptcha = ref(false);
+const needCaptcha = ref(true);
 const formRef = ref(null);
 const form = reactive({ username: '', password: '', captchaText: '', captchaId: '' });
 // 滑块验证
@@ -110,18 +110,19 @@ async function refreshCaptcha() {
   } catch (e) {}
 }
 
+onMounted(() => { initCaptcha(); });
+
 async function handleLogin() {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
   loading.value = true;
   try {
-    const body = { username: form.username, password: form.password };
-    if (needCaptcha.value) Object.assign(body, { captchaId: form.captchaId, captchaText: form.captchaText });
+    const body = { username: form.username, password: form.password, captchaId: form.captchaId, captchaText: form.captchaText };
     const res = await fetch('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     if (!res.ok) {
-      if (res.status === 400 && (data.message.includes('输错') || data.message.includes('验证码'))) { needCaptcha.value = true; initCaptcha(); }
       ElMessage.error(data.message || '登录失败');
+      initCaptcha();
       return;
     }
     localStorage.setItem('token', data.data.token);
