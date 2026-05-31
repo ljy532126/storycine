@@ -41,7 +41,7 @@ function sanitizeScriptData(scriptData) {
       actionHint: (d.actionHint || '').substring(0, 500),
       innerThought: (d.innerThought || '').substring(0, 1000),
       cameraHint: (d.cameraHint || '').substring(0, 200),
-    }));
+    })).filter(d => d.text && d.characterName);
     // 清洗场景（保留已知字段 + 透传未知字段，确保枚举字段合法）
     return {
       ...scene,
