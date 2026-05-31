@@ -67,18 +67,40 @@ function sanitizeJSON(text) {
       if (code === 0x0A) result += '\\n';
       else if (code === 0x09) result += '\\t';
       else result += '\\u' + ('000' + code.toString(16)).slice(-4);
+    } else if (!inString && code < 0x20) {
+      // 字符串外的控制字符直接删除（JSON 不允许）
+      continue;
     } else {
       result += ch;
     }
   }
 
+  // ★ 安全网（提前执行）：兜底替换所有残留的原始控制字符，防止扫描器状态追踪遗漏
+  //   必须放在 JSON.parse 之前，否则补括号/截断逻辑可能提前 return 绕过此安全网
+  result = result.replace(/[\x00-\x1F]/g, (ch) => {
+    if (ch === '\n') return '\\n';
+    if (ch === '\t') return '\\t';
+    if (ch === '\r') return '\\r';
+    return '\\u' + ('000' + ch.charCodeAt(0).toString(16)).slice(-4);
+  });
+
   // 修复未加引号的 JSON 值：如 "age": 未知 → "age": "未知"
-  result = result.replace(/"\s*:\s*(?!\s*[\[{"\d\-])([^,\]\}\s][^,\]\}]*)/g, (match, val) => {
+  // 使用保守匹配：仅处理 colons 后跟中文字符/字母（非标准 JSON 值）的情况
+  result = result.replace(/"\s*:\s+(?!\s*(true|false|null|[\[{"\d\-]))([^,\]\}\n\r]{1,200}?)(\s*[,\]\}])/g, (match, kw, val, end) => {
     const trimmed = val.trim();
-    if (trimmed === 'true' || trimmed === 'false' || trimmed === 'null' || trimmed === '') return match;
     if (/^\d+\.?\d*$/.test(trimmed)) return match;
-    // 把未加引号的值包上引号，同时转义内容中的双引号
-    return match.replace(trimmed, '"' + trimmed.replace(/"/g, '\\"') + '"');
+    if (/[一-鿿]/.test(trimmed) || !/^"[^"]*"$/.test(trimmed)) {
+      return match.replace(val, '"' + trimmed.replace(/"/g, '\\"').replace(/[\x00-\x1F]/g, c => c === '\n' ? '\\n' : c === '\t' ? '\\t' : c === '\r' ? '\\r' : '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4)) + '"');
+    }
+    return match;
+  });
+
+  // 最终安全网：确保所有处理完成后不再残留控制字符
+  result = result.replace(/[\x00-\x1F]/g, (ch) => {
+    if (ch === '\n') return '\\n';
+    if (ch === '\t') return '\\t';
+    if (ch === '\r') return '\\r';
+    return '\\u' + ('000' + ch.charCodeAt(0).toString(16)).slice(-4);
   });
 
   // 修复不完整的 JSON（token 限制截断或 AI 未写完）
