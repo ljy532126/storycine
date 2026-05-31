@@ -10,7 +10,7 @@ const { authRequired } = require('../middleware/auth.middleware');
 router.use(authRequired);
 
 // 获取当前LLM配置摘要（密钥脱敏，仅当前用户）
-router.get('/llm', async (req, res) => {
+router.get('/llm', async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     res.json({ data: appConfig.getLLMConfigSummary(settings) });
@@ -91,7 +91,7 @@ router.post('/llm/test', async (req, res) => {
 });
 
 // 检查当前用户是否配置了可用LLM
-router.get('/llm/status', async (req, res) => {
+router.get('/llm/status', async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const configured = appConfig.hasLLMConfigured(settings);

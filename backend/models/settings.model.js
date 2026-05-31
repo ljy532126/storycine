@@ -43,13 +43,14 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取指定用户的设置，不存在则自动创建 */
+/** 获取指定用户的设置，不存在则原子性创建（避免并行请求竞态） */
 settingsSchema.statics.getSettings = async function (userId) {
   if (!userId) throw new Error('getSettings 缺少 userId 参数');
-  let settings = await this.findOne({ userId });
-  if (!settings) {
-    settings = await this.create({ userId });
-  }
+  const settings = await this.findOneAndUpdate(
+    { userId },
+    { $setOnInsert: { userId } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
   return settings;
 };
 
