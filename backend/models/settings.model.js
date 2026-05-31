@@ -40,34 +40,34 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取用户的 settings 文档（不存在则创建，保证绝不返回 null） */
+/** 获取用户的 settings 文档（不存在则用原生 upsert 创建，绝不 touch Mongoose .create/.save） */
 settingsSchema.statics.getSettings = async function (userId) {
-  let doc = await this.findOne({ userId });
+  if (!userId) throw new Error('getSettings 缺少 userId 参数');
+
+  // 直接查，有就返回
+  let doc = await this.findOne({ userId }).lean();
   if (doc) return doc;
 
+  // 用 MongoDB 原生 driver 做 upsert，完全绕过 Mongoose 的 isNew/E11000
+  const coll = this.collection;
   try {
-    return await this.create({ userId });
+    await coll.updateOne(
+      { userId },
+      { $setOnInsert: { userId, createdAt: new Date(), updatedAt: new Date() } },
+      { upsert: true }
+    );
   } catch (e) {
     if (e.code !== 11000) throw e;
   }
 
-  // 并发 E11000，循环等到另一个请求创建完毕
-  for (let i = 0; i < 10; i++) {
-    await new Promise(r => setTimeout(r, 100));
+  // upsert 完成后一定能查到
+  doc = await this.findOne({ userId });
+  if (!doc) {
+    // 极端情况：等一会儿再查
+    await new Promise(r => setTimeout(r, 200));
     doc = await this.findOne({ userId });
-    if (doc) return doc;
   }
-
-  // 最终兜底，同样要 catch E11000
-  try {
-    return await this.create({ userId });
-  } catch (e) {
-    if (e.code === 11000) {
-      doc = await this.findOne({ userId });
-      if (doc) return doc;
-    }
-    throw e;
-  }
+  return doc;
 };
 
 /** 原子更新 settings，永不使用 .save()，杜绝 isNew INSERT 问题 */
