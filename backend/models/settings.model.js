@@ -40,26 +40,26 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-/** 获取用户的 settings 文档（纯查询，不存在则创建后返回） */
+/** 获取用户的 settings 文档（不存在则创建，保证绝不返回 null） */
 settingsSchema.statics.getSettings = async function (userId) {
   let doc = await this.findOne({ userId });
   if (doc) return doc;
 
   try {
-    doc = await this.create({ userId });
-    return doc;
+    return await this.create({ userId });
   } catch (e) {
-    // 并发创建会触发 E11000，另一个请求已创建，直接查
-    if (e.code === 11000) {
-      doc = await this.findOne({ userId });
-      if (doc) return doc;
-      // 极端情况：重试 create
-      try { return await this.create({ userId }); } catch (_) {
-        return await this.findOne({ userId });
-      }
-    }
-    throw e;
+    if (e.code !== 11000) throw e;
   }
+
+  // 并发 E11000，循环等到另一个请求创建完毕
+  for (let i = 0; i < 10; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    doc = await this.findOne({ userId });
+    if (doc) return doc;
+  }
+
+  // 最终兜底
+  return await this.create({ userId });
 };
 
 /** 原子更新 settings，永不使用 .save()，杜绝 isNew INSERT 问题 */
