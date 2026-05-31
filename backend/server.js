@@ -122,6 +122,7 @@ app.post('/api/v1/analytics/event', async (req, res) => {
 // 初始化默认管理员账号（首次启动生成随机密码）
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+
 async function initAdmin() {
   try {
     const User = require('./models/user.model');
@@ -136,29 +137,29 @@ async function initAdmin() {
         await adminUser.save();
         console.log('══════════════════════════════════════════');
         console.log('  🔄 Admin password reset');
-        console.log(`  Username: admin`);
-        console.log(`  New password: ${defaultPassword}`);
+        console.log('  Username: admin');
+        console.log('  New password: ' + defaultPassword);
       } else {
         adminUser = await User.create({ username: 'admin', password: hashed, role: 'admin', status: 'active' });
         console.log('══════════════════════════════════════════');
         console.log('  🔐 Default admin created');
-        console.log(`  Username: admin`);
-        console.log(`  Password: ${defaultPassword}`);
+        console.log('  Username: admin');
+        console.log('  Password: ' + defaultPassword);
       }
       console.log('  ⚠️  Please change password after login!');
       console.log('══════════════════════════════════════════');
     }
 
-    // 确保 admin 的 settings 文档存在
+    // 确保 admin 有 settings + 迁移旧全局配置
     const Settings = require('./models/settings.model');
-    const s = await Settings.findOne({ userId: adminUser._id });
-    if (!s) { await Settings.create({ userId: adminUser._id }); console.log('[init] ✅ 已为 admin 创建 settings'); }
+    const adminSettings = await Settings.findOne({ userId: adminUser._id });
+    if (!adminSettings) {
+      await Settings.create({ userId: adminUser._id });
+      console.log('[init] ✅ 已为 admin 创建 settings');
+    }
 
-  // 迁移旧的全局 settings 到管理员名下（旧版本使用 key: 'llm_config' 的单例模式）
-  const Settings = require('./models/settings.model');
-  const oldSettings = await Settings.findOne({ key: 'llm_config' });
-  if (oldSettings && adminUser) {
-    if (!adminSettings.llmProviders?.deepseek?.apiKey) {
+    const oldSettings = await Settings.findOne({ key: 'llm_config' });
+    if (oldSettings && !adminSettings?.llmProviders?.deepseek?.apiKey) {
       await Settings.updateSettings(adminUser._id, {
         llmProviders: oldSettings.llmProviders,
         storageConfig: oldSettings.storageConfig,
@@ -167,10 +168,9 @@ async function initAdmin() {
       await Settings.deleteOne({ key: 'llm_config' });
       console.log('[init] ✅ 已将旧版全局配置迁移到管理员账号');
     }
-  }
   } catch (e) { console.warn('[init] 管理员初始化失败:', e.message); }
 }
-initAdmin();
+
 
 app.use(errorHandler);
 
