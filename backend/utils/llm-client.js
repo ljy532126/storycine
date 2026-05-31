@@ -72,6 +72,15 @@ function sanitizeJSON(text) {
     }
   }
 
+  // 修复未加引号的 JSON 值：如 "age": 未知 → "age": "未知"
+  result = result.replace(/"\s*:\s*(?!\s*[\[{"\d\-])([^,\]\}\s][^,\]\}]*)/g, (match, val) => {
+    const trimmed = val.trim();
+    if (trimmed === 'true' || trimmed === 'false' || trimmed === 'null' || trimmed === '') return match;
+    if (/^\d+\.?\d*$/.test(trimmed)) return match;
+    // 把未加引号的值包上引号，同时转义内容中的双引号
+    return match.replace(trimmed, '"' + trimmed.replace(/"/g, '\\"') + '"');
+  });
+
   // 修复不完整的 JSON（token 限制截断或 AI 未写完）
   try { JSON.parse(result); return result; } catch (_e) {
     // 统计未闭合的括号并补全
