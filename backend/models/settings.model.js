@@ -58,8 +58,16 @@ settingsSchema.statics.getSettings = async function (userId) {
     if (doc) return doc;
   }
 
-  // 最终兜底
-  return await this.create({ userId });
+  // 最终兜底，同样要 catch E11000
+  try {
+    return await this.create({ userId });
+  } catch (e) {
+    if (e.code === 11000) {
+      doc = await this.findOne({ userId });
+      if (doc) return doc;
+    }
+    throw e;
+  }
 };
 
 /** 原子更新 settings，永不使用 .save()，杜绝 isNew INSERT 问题 */
