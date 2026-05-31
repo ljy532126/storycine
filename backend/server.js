@@ -153,7 +153,7 @@ async function initAdmin() {
     const Settings = require('./models/settings.model');
     const oldSettings = await Settings.findOne({ key: 'llm_config' });
     if (oldSettings && adminUser) {
-      const adminSettings = await Settings.findOne({ userId: adminUser._id });
+      const adminSettings = await Settings.getSettings(adminUser._id);
       if (!adminSettings || !adminSettings.llmProviders?.deepseek?.apiKey) {
         // 将旧数据合并到管理员的 settings
         const target = adminSettings || await Settings.create({ userId: adminUser._id });

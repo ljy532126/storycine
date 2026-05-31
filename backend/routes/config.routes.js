@@ -38,7 +38,7 @@ router.put('/llm', async (req, res, next) => {
 });
 
 // 测试 API Key 连通性
-router.post('/llm/test', async (req, res) => {
+router.post('/llm/test', async (req, res, next) => {
   try {
     const { provider, apiKey, baseUrl } = req.body;
     if (!provider || !apiKey) return res.status(400).json({ message: '缺少 provider 或 apiKey' });
