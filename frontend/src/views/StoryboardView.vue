@@ -1098,11 +1098,9 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
         ElMessage.success('视频生成完成，可在预览区播放 🎉');
         window.__addNotification?.('视频生成完成', 'success', '🎥');
       } else if (d.status === 'running' || d.status === 'queued' || d.status === 'processing') {
-        // 显示真实已用时间
-        let startTime = Date.now();
-        try { const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}'); startTime = tasks[taskId]?.startTime || Date.now(); } catch {}
-        videoPollProgress.value = Math.floor((Date.now() - startTime) / 1000);
-      } else if (d.status === 'failed' || d.status === 'expired' || d.status === 'cancelled') {
+        const elapsed = d.createdAt ? Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 1000) : 0;
+        videoPollProgress.value = elapsed || Math.floor((Date.now() - startTime) / 1000);
+      } else if (d.status === 'failed' || d.status === 'expired' || d.status === 'cancelled' || d.status === 'error') {
         clearInterval(videoPollTimer); videoPollingShot.value = null; videoPollingScript.value = null;
         try {
           const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');

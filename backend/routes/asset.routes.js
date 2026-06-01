@@ -732,7 +732,9 @@ router.get('/video-task/:taskId', async (req, res, next) => {
 
     // 任务还在进行中
     if ((status === 'running' || status === 'pending' || status === 'queued' || status === 'processing') && !videoUrl) {
-      return res.json({ data: { status: 'processing', progress: result.progress || 0 } });
+      const createdAt = result.created_at ? new Date(result.created_at * 1000).toISOString() : null;
+      // Seedance API 不返回剩余时间，用 created_at + 典型耗时(120s)估算
+      return res.json({ data: { status: 'processing', createdAt, estimatedDuration: 120 } });
     }
 
     // 失败
