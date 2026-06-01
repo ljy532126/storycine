@@ -1109,13 +1109,13 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
         const elapsed = d.createdAt ? Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 1000) : videoPollProgress.value + 5;
         videoPollProgress.value = elapsed;
       } else if (d.status === 'failed' || d.status === 'expired' || d.status === 'cancelled' || d.status === 'error') {
-        clearInterval(videoPollTimer); videoPollingShot.value = null; videoPollingScript.value = null; videoPollStatus.value = ''; videoPollTaskId.value = '';
+        clearInterval(videoPollTimer); videoPollingShot.value = null; videoPollingScript.value = null; videoPollStatus.value = d.status; videoPollTaskId.value = '';
         try {
           const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
           delete tasks[taskId];
           localStorage.setItem('ad_video_tasks', JSON.stringify(tasks));
         } catch {}
-        ElMessage.error(d.message || '视频生成失败');
+        ElMessage.error(d.message || ('任务状态: ' + d.status + '，Seedance 未返回具体错误原因'));
       }
     } catch (e) { /* 继续轮询 */ }
   }, 5000);

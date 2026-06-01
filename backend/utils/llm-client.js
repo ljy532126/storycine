@@ -390,7 +390,8 @@ async function callVideoTaskQuery(taskId, options = {}) {
     // Seedance API 返回格式: { status: "succeeded", content: { video_url: "https://..." } }
     const status = data.status || '';
     const videoUrl = data.content?.video_url || data.video_url || '';
-    console.log(`[video-query] 任务 ${taskId}: status=${status}, hasVideo=${!!videoUrl}${videoUrl ? ', url=' + videoUrl.substring(0, 60) + '...' : ''}`);
+    const errorMsg = data.error?.message || '';
+    console.log(`[video-query] 任务 ${taskId}: status=${status}, hasVideo=${!!videoUrl}${errorMsg ? ', error=' + errorMsg : ''}`);
     return { status, videoUrl, created_at: data.created_at, raw: data };
   } catch (err) {
     const msg = err.response?.data?.error?.message || err.message;

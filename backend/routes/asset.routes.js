@@ -731,14 +731,16 @@ router.get('/video-task/:taskId', async (req, res, next) => {
     const { status, videoUrl } = result;
 
     // 任务还在进行中 — 透传 Seedance 真实状态
-    if ((status === 'running' || status === 'running' || status === 'pending' || status === 'queued' || status === 'processing' || status === 'submitted') && !videoUrl) {
+    if ((status === 'running' || status === 'pending' || status === 'queued' || status === 'processing' || status === 'submitted') && !videoUrl) {
       const createdAt = result.created_at ? new Date(result.created_at * 1000).toISOString() : null;
       return res.json({ data: { status, createdAt, taskId } });
     }
 
-    // 失败
-    if (status === 'failed' || status === 'error' || status === 'expired' || status === 'cancelled') {
-      return res.json({ data: { status, taskId, message: result.raw?.error?.message || '视频生成失败' } });
+    // 失败 — 透传 Seedance 原始错误消息
+    if ((status === 'failed' || status === 'error' || status === 'expired' || status === 'cancelled') && !videoUrl) {
+      let errMsg = (result.raw && (result.raw.error && result.raw.error.message || result.raw.message)) || '';
+      if (!errMsg && result.raw && result.raw.data && result.raw.data.error) errMsg = result.raw.data.error.message || '';
+      return res.json({ data: { status, taskId, message: errMsg || `任务${status}：Seedance 未返回具体原因` } });
     }
 
     // 成功 — 下载视频并上传到对象存储
