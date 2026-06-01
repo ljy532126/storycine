@@ -65,12 +65,13 @@
                 style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px"
                 @loadedmetadata="console.log('[视频] 已加载:', currentShot.renderedVideo)">
               </video>
-              <!-- 视频生成中（仅当前分镜，跨页面不丢失） -->
+              <!-- 视频生成中 / 等待中 -->
               <div v-else-if="videoPollingShot === currentShot?.shotNumber && videoPollingScript === currentScriptId" class="preview-empty">
-                <span style="font-size:48px">⏳</span>
-                <p>视频生成中... 已等待 {{ videoPollProgress }} 秒</p>
-                <p style="font-size:11px;color:var(--text-200)">Seedance 视频通常需要 1~3 分钟</p>
-                <el-progress :percentage="Number(Math.min(videoPollProgress / 1.8, 99).toFixed(2))" style="width:200px;margin-top:8px" :stroke-width="6" />
+                <span style="font-size:48px">{{ videoPollStatus === 'queued' ? '📋' : videoPollStatus === 'running' ? '🎬' : '⏳' }}</span>
+                <p><strong>{{ statusLabel(videoPollStatus) }}</strong></p>
+                <p style="font-size:11px;color:var(--text-200);word-break:break-all">任务ID: {{ videoPollTaskId }}</p>
+                <p style="font-size:11px;color:var(--text-200)">已等待 {{ videoPollProgress }} 秒 · 通常 1~3 分钟</p>
+                <el-progress :percentage="Number(Math.min(videoPollProgress / 1.8, 99).toFixed(2))" style="width:200px;margin-top:4px" :stroke-width="6" />
               </div>
               <!-- 图片预览 -->
               <img v-else-if="currentShot.renderedImage" :src="currentShot.renderedImage" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in" @click="openImgViewer(currentShot.renderedImage)" />
@@ -971,10 +972,16 @@ if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
 const videoPollingShot = ref(null);
 const videoPollingScript = ref(null);
 const videoPollProgress = ref(0);
+const videoPollStatus = ref('');
+const videoPollTaskId = ref('');
 const recoverTaskId = ref('');
 const recovering = ref(false);
 let videoPollTimer = null;
 function isTaskId(url) { return url && /^cgt-/.test(url); }
+function statusLabel(s) {
+  const m = { queued: '排队中', submitted: '已提交', running: '生成中', processing: '处理中', succeeded: '已完成', failed: '失败', cancelled: '已取消', expired: '已过期' };
+  return m[s] || s || '处理中';
+}
 
 async function recoverVideo() {
   const tid = recoverTaskId.value.trim();
@@ -1063,7 +1070,7 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
   const sbId = sbIdOverride || currentStoryboard.value?._id;
   const scriptId = scriptIdOverride || currentScriptId.value;
   videoPollingShot.value = shotNum; videoPollingScript.value = scriptId;
-  videoPollProgress.value = 0;
+  videoPollProgress.value = 0; videoPollStatus.value = 'queued'; videoPollTaskId.value = taskId;
   clearInterval(videoPollTimer);
 
   videoPollTimer = setInterval(async () => {
@@ -1074,7 +1081,7 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
       const d = json.data;
       if ((d.status === 'completed' || d.status === 'succeeded') && d.videoUrl) {
         clearInterval(videoPollTimer);
-        videoPollingShot.value = null; videoPollingScript.value = null;
+        videoPollingShot.value = null; videoPollingScript.value = null; videoPollStatus.value = ''; videoPollTaskId.value = '';
         try {
           const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
           delete tasks[taskId];
@@ -1097,11 +1104,12 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
         }
         ElMessage.success('视频生成完成，可在预览区播放 🎉');
         window.__addNotification?.('视频生成完成', 'success', '🎥');
-      } else if (d.status === 'running' || d.status === 'queued' || d.status === 'processing') {
-        const elapsed = d.createdAt ? Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 1000) : 0;
-        videoPollProgress.value = elapsed || Math.floor((Date.now() - startTime) / 1000);
+      } else if (d.status === 'running' || d.status === 'queued' || d.status === 'processing' || d.status === 'submitted' || d.status === 'pending') {
+        videoPollStatus.value = d.status;
+        const elapsed = d.createdAt ? Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 1000) : videoPollProgress.value + 5;
+        videoPollProgress.value = elapsed;
       } else if (d.status === 'failed' || d.status === 'expired' || d.status === 'cancelled' || d.status === 'error') {
-        clearInterval(videoPollTimer); videoPollingShot.value = null; videoPollingScript.value = null;
+        clearInterval(videoPollTimer); videoPollingShot.value = null; videoPollingScript.value = null; videoPollStatus.value = ''; videoPollTaskId.value = '';
         try {
           const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
           delete tasks[taskId];

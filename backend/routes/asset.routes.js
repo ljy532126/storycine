@@ -730,16 +730,15 @@ router.get('/video-task/:taskId', async (req, res, next) => {
     const result = await callVideoTaskQuery(taskId, { provider });
     const { status, videoUrl } = result;
 
-    // 任务还在进行中
-    if ((status === 'running' || status === 'pending' || status === 'queued' || status === 'processing') && !videoUrl) {
+    // 任务还在进行中 — 透传 Seedance 真实状态
+    if ((status === 'running' || status === 'running' || status === 'pending' || status === 'queued' || status === 'processing' || status === 'submitted') && !videoUrl) {
       const createdAt = result.created_at ? new Date(result.created_at * 1000).toISOString() : null;
-      // Seedance API 不返回剩余时间，用 created_at + 典型耗时(120s)估算
-      return res.json({ data: { status: 'processing', createdAt, estimatedDuration: 120 } });
+      return res.json({ data: { status, createdAt, taskId } });
     }
 
     // 失败
-    if (status === 'failed' || status === 'error') {
-      return res.json({ data: { status: 'failed', message: result.raw?.error?.message || '视频生成失败' } });
+    if (status === 'failed' || status === 'error' || status === 'expired' || status === 'cancelled') {
+      return res.json({ data: { status, taskId, message: result.raw?.error?.message || '视频生成失败' } });
     }
 
     // 成功 — 下载视频并上传到对象存储
