@@ -43,7 +43,7 @@ const prompts = {
   outline: {
     system: '你是资深编剧，擅长根据创作纲要构建精彩的故事大纲。你需要设计具有张力的开场、层层递进的情节发展和高潮。',
     userTemplate: (creativeBrief, styleInfo) => `
-创作纲要：${JSON.stringify(creativeBrief, null, 2)}
+创作纲要：${JSON.stringify(creativeBrief)}
 ${styleInfo ? `\n【视觉风格要求】\n画面比例：${styleInfo.aspectRatio || '9:16'}\n视觉风格：${styleInfo.visualStyle || '写实'} ${styleInfo.subStyle || ''}\n画风指令：${styleInfo.artStyle || ''}\n氛围光影：${styleInfo.atmosphere || ''}\n\n请确保故事场景和情节适合该视觉风格的表现。` : ''}
 
 请输出JSON格式的故事大纲：

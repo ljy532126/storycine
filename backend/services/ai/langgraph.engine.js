@@ -48,9 +48,15 @@ function buildScriptGenerationGraph() {
   graph.addEdge('plot_architect', 'script_writer');
   graph.addEdge('script_writer', 'script_validator');
 
-  graph.addConditionalEdges('script_validator', (state) => {
-    if (state.validationErrors.length === 0 || state.validationPassed) return '__end__';
-    if (state.retryCount < 3) return 'script_writer';
+  graph.addConditionalEdges('script_validator', async (state) => {
+    if (state.validationPassed && state.validationErrors.length === 0) return '__end__';
+    if (state.retryCount < 3) {
+      // 重试前退避，避免连续打 LLM
+      const delay = 2000 * (state.retryCount + 1);
+      console.log(`[langgraph] 校验未通过，${delay/1000}s 后重试 (${state.retryCount + 1}/3)`);
+      await new Promise(r => setTimeout(r, delay));
+      return 'script_writer';
+    }
     return '__end__';
   });
 

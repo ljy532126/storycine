@@ -11,7 +11,7 @@ async function run(state) {
   const userPrompt = prompts.scriptValidator.userTemplate(state.script, state.characters);
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.3, maxTokens: 100000, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.3, maxTokens: 4000, responseFormat: 'json' });
     const validationResult = JSON.parse(res);
 
     state.validationErrors = validationResult.errors || [];
@@ -30,9 +30,8 @@ async function run(state) {
     }
   } catch (e) {
     emitProgress(state, '校验失败: ' + e.message, 'error');
-    // 校验失败不应阻断流程
-    state.validationErrors = [];
-    state.validationPassed = true;
+    state.validationErrors = [{ type: 'system', location: 'validator', description: e.message, suggestion: '检查 LLM 连接或重试' }];
+    state.validationPassed = false;
   }
   return state;
 }

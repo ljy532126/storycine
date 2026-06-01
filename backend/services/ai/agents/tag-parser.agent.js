@@ -11,7 +11,7 @@ async function run(state) {
   const userPrompt = prompts.tagParser.userTemplate(state.userTags);
 
   try {
-    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.8, responseFormat: 'json' });
+    const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.8, maxTokens: 2000, responseFormat: 'json' });
     state.creativeBrief = JSON.parse(res);
     emitProgress(state, '标签解析完成，已生成创作纲要');
   } catch (e) {
