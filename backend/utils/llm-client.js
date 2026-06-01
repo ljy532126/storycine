@@ -394,6 +394,12 @@ async function callVideoTaskQuery(taskId, options = {}) {
     return { status, videoUrl, created_at: data.created_at, raw: data };
   } catch (err) {
     const msg = err.response?.data?.error?.message || err.message;
+    const statusCode = err.response?.status || 0;
+    // 404 说明任务不存在或已过期，返回 failed 让前端停止轮询
+    if (statusCode === 404 || msg.includes('not found') || msg.includes('not exist')) {
+      console.log(`[video-query] 任务 ${taskId} 不存在或已过期`);
+      return { status: 'failed' };
+    }
     console.error(`[video-query] 查询失败:`, msg);
     throw new Error(`视频任务查询失败: ${msg}`);
   }
