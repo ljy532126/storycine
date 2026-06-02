@@ -386,9 +386,17 @@ function formatError(err, config) {
 
 function resolvePublicUrl(pathOrUrl) {
   if (!pathOrUrl) return '';
-  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) return pathOrUrl;
-  if (!pathOrUrl.startsWith('/uploads/')) return pathOrUrl;
+  // 已经是公网可访问的 URL，直接返回
+  if ((pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) &&
+      !pathOrUrl.includes('localhost') && !pathOrUrl.includes('127.0.0.1') && !pathOrUrl.includes('0.0.0.0') && !pathOrUrl.includes('[::1]')) {
+    return pathOrUrl;
+  }
   const base = getBaseUrl().replace(/\/+$/, '');
+  // localhost 地址或相对路径，重写为公网地址
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    const urlObj = new URL(pathOrUrl);
+    return `${base}${urlObj.pathname}`;
+  }
   return `${base}${pathOrUrl}`;
 }
 
