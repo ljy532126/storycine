@@ -159,12 +159,30 @@ async function initAdmin() {
       console.log('══════════════════════════════════════════');
     }
 
-    // 确保 admin 有 settings + 迁移旧全局配置
+    // 确保 admin 有 settings + 迁移旧全局配置 + 从 .env 种子 API Key
     const Settings = require('./models/settings.model');
     const adminSettings = await Settings.findOne({ userId: adminUser._id });
     if (!adminSettings) {
       await Settings.create({ userId: adminUser._id });
       console.log('[init] ✅ 已为 admin 创建 settings');
+    }
+
+    // 如果 admin 的 settings 里还没填过任何 API Key，从 .env 自动种子一份
+    const currentProviders = adminSettings?.llmProviders || {};
+    const hasAnyKey = ['deepseek','doubao','tongyi','openai'].some(p => currentProviders[p]?.apiKey);
+    if (!hasAnyKey) {
+      const envMap = {
+        deepseek: { apiKey: process.env.DEEPSEEK_API_KEY || '', baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1', model: process.env.DEEPSEEK_MODEL || 'deepseek-v4-pro' },
+        doubao: { apiKey: process.env.DOUBAO_API_KEY || '', baseUrl: process.env.DOUBAO_BASE_URL || '', model: process.env.DOUBAO_MODEL || '' },
+        tongyi: { apiKey: process.env.TONGYI_API_KEY || '', baseUrl: process.env.TONGYI_BASE_URL || '', model: process.env.TONGYI_MODEL || '' },
+        openai: { apiKey: process.env.OPENAI_API_KEY || '', baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1', model: process.env.OPENAI_MODEL || 'gpt-4o' },
+      };
+      const seed = {};
+      Object.entries(envMap).forEach(([p, cfg]) => { if (cfg.apiKey) seed[p] = cfg; });
+      if (Object.keys(seed).length > 0) {
+        await Settings.updateSettings(adminUser._id, { llmProviders: { ...currentProviders, ...seed } });
+        console.log(`[init] ✅ 已从 .env 为 admin 种子 ${Object.keys(seed).length} 个 API Key`);
+      }
     }
 
     const oldSettings = await Settings.findOne({ key: 'llm_config' });
