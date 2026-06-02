@@ -16,6 +16,7 @@ const compositionRoutes = require('./routes/composition.routes');
 const configRoutes = require('./routes/config.routes');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: process.env.CORS_ORIGIN || 'http://localhost:3012', methods: ['GET', 'POST'] }
@@ -36,8 +37,6 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 1000 }));
 app.use('/uploads', express.static('uploads'));
-
-app.set('trust proxy', 1);
 
 // 生产环境：单端口部署，后端直接托管前端静态文件
 const path = require('path');
