@@ -398,7 +398,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onActivated, onUnmounted } from 'vue';
+import { ref, reactive, watch, computed, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { QuestionFilled } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
