@@ -686,6 +686,7 @@ async function handleContinue() {
 }
 
 async function handleImport() {
+  if (!currentProjectId.value) return ElMessage.warning('请先在上方选择一个片场');
   if (!importContent.value.trim()) return;
   importing.value = true;
   try {
@@ -703,6 +704,7 @@ async function handleImport() {
 }
 
 async function handleStoryToScript() {
+  if (!currentProjectId.value) return ElMessage.warning('请先在上方选择一个片场');
   if (!importContent.value.trim()) return;
   importing.value = true;
   try {
