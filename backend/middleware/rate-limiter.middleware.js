@@ -10,7 +10,11 @@ function createAILimiter(maxPerHour, msg) {
     standardHeaders: true,
     legacyHeaders: false,
     validate: { xForwardedForHeader: false },
-    keyGenerator: (req) => req.user?._id?.toString() || req.ip,
+    keyGenerator: (req, res) => {
+      if (req.user?._id) return req.user._id.toString();
+      // 使用 rate-limit 内置的 ipKeyGenerator 处理 IPv6
+      return rateLimit.ipKeyGenerator(req, res);
+    },
     message: { message: msg || `请求过于频繁，请稍后再试` },
   });
 }
