@@ -99,8 +99,10 @@ function synthesizeViaSSE(apiKey, resourceId, body) {
             }
             // 351 TTSSentenceEnd — subtitle timestamps
             if (json.sentence?.words) subtitles.push(...json.sentence.words);
-            // 153/error codes — log for debugging
-            if (json.code && json.code !== 0) console.warn('[tts] 服务端返回:', json.code, json.message || '');
+            // 153/error codes — reject with actual message
+            if (json.code && json.code !== 0 && json.code !== 20000000) {
+              if (!resolved) { resolved = true; reject(new Error(json.message || '火山服务端错误 (code=' + json.code + ')')); return; }
+            }
           } catch { /* ignore non-JSON lines */ }
         }
       });

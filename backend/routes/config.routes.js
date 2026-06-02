@@ -269,29 +269,21 @@ function maskSecret(secret) {
 
 // ===== TTS 配音配置 =====
 
-// 内置火山 TTS 2.0 音色列表（定期从火山控制台同步更新）
+// 内置火山 TTS 2.0 音色列表（仅 seed-tts-2.0 兼容）
 const TTS_VOICE_LIST = [
   // 女声
-  { id: 'zh_female_vv_uranus_bigtts', name: '女声-温柔知性', gender: '女', age: '青年' },
-  { id: 'zh_female_xiaohe_uranus_bigtts', name: '女声-活泼小荷', gender: '女', age: '少女' },
-  { id: 'zh_female_tianmei_tob', name: '女声-甜妹', gender: '女', age: '青年' },
-  { id: 'zh_female_qingxinnvsheng_moon_bigtts', name: '女声-清新女生', gender: '女', age: '青年' },
-  { id: 'zh_female_shuangkuaidashi_tob', name: '女声-双快大师', gender: '女', age: '中年' },
-  { id: 'zh_female_shuangkuaisisi_moon_bigtts', name: '女声-双快丝丝', gender: '女', age: '青年' },
-  { id: 'zh_female_popo_mars_bigtts', name: '女声-婆婆', gender: '女', age: '老年' },
-  { id: 'zh_female_shuangkuaidashi_moon_bigtts', name: '女声-双快大师moon', gender: '女', age: '中年' },
+  { id: 'zh_female_vv_uranus_bigtts', name: '女声-温柔知性', gender: '女' },
+  { id: 'zh_female_xiaohe_uranus_bigtts', name: '女声-活泼小荷', gender: '女' },
+  { id: 'zh_female_qingxinnvsheng_moon_bigtts', name: '女声-清新女生', gender: '女' },
+  { id: 'zh_female_shuangkuaisisi_moon_bigtts', name: '女声-双快丝丝', gender: '女' },
+  { id: 'zh_female_shuangkuaidashi_moon_bigtts', name: '女声-双快大师', gender: '女' },
+  { id: 'zh_female_popo_mars_bigtts', name: '女声-婆婆', gender: '女' },
   // 男声
-  { id: 'zh_male_qingse_tob', name: '男声-清色', gender: '男', age: '青年' },
-  { id: 'zh_male_bvlazysheep', name: '男声-懒羊羊', gender: '男', age: '青年' },
-  { id: 'zh_male_ahu_conversation_wvae_bigtts', name: '男声-阿虎', gender: '男', age: '中年' },
-  { id: 'zh_male_xiaotian_moon_bigtts', name: '男声-小田', gender: '男', age: '青年' },
-  { id: 'zh_male_suyuan_moon_bigtts', name: '男声-溯源', gender: '男', age: '中年' },
+  { id: 'zh_male_xiaotian_moon_bigtts', name: '男声-小田', gender: '男' },
+  { id: 'zh_male_suyuan_moon_bigtts', name: '男声-溯源', gender: '男' },
+  { id: 'zh_male_ahu_conversation_wvae_bigtts', name: '男声-阿虎', gender: '男' },
   // 多语种
-  { id: 'multi_female_maomao_conversation_wvae_bigtts', name: '多语种-Diana', gender: '女', age: '青年' },
-  // 角色/方言
-  { id: 'zh_female_vv_uranus_bigtts', name: '方言-东北话(vv)', gender: '女', age: '青年' },
-  { id: 'zh_female_xiaohe_uranus_bigtts', name: '方言-陕西话(xiaohe)', gender: '女', age: '少女' },
-  { id: 'zh_female_vv_uranus_bigtts', name: '方言-四川话(vv)', gender: '女', age: '青年' },
+  { id: 'multi_female_maomao_conversation_wvae_bigtts', name: '多语种-Diana', gender: '女' },
 ];
 
 router.get('/tts/voices', (req, res) => {
