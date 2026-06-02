@@ -1193,11 +1193,11 @@ const showTTSDialog = ref(false);
 const ttsTargetShot = ref(null);
 const synthingShot = ref(null);
 const ttsBatchRunning = ref(false);
-const ttsParams = reactive({ speaker: 'zh_female_qingxinnvsheng_tob', speechRate: 0, loudnessRate: 0 });
+const ttsParams = reactive({ speaker: 'zh_female_vv_uranus_bigtts', speechRate: 0, loudnessRate: 0 });
 
 function openTTSDialog(shot) {
   ttsTargetShot.value = shot;
-  ttsParams.speaker = 'zh_female_qingxinnvsheng_tob';
+  ttsParams.speaker = 'zh_female_vv_uranus_bigtts';
   ttsParams.speechRate = 0;
   ttsParams.loudnessRate = 0;
   showTTSDialog.value = true;

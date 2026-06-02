@@ -341,7 +341,7 @@ const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instru
 
 // ===== TTS 配音配置 =====
 const ttsForm = reactive({
-  apiKey: '', resourceId: 'seed-tts-2.0', defaultSpeaker: 'zh_female_qingxinnvsheng_tob',
+  apiKey: '', resourceId: 'seed-tts-2.0', defaultSpeaker: 'zh_female_vv_uranus_bigtts',
   customVoiceId: '', format: 'mp3', sampleRate: 24000, speechRate: 0, loudnessRate: 0,
   enableSubtitle: true, disableMarkdownFilter: true, useCache: true, explicitLanguage: 'zh-cn',
 });

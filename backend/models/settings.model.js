@@ -30,7 +30,7 @@ const settingsSchema = new mongoose.Schema({
   ttsConfig: {
     apiKey: { type: String, default: '' },
     resourceId: { type: String, default: 'seed-tts-2.0' },
-    defaultSpeaker: { type: String, default: 'zh_female_qingxinnvsheng_tob' },
+    defaultSpeaker: { type: String, default: 'zh_female_vv_uranus_bigtts' },
     customVoiceId: { type: String, default: '' },
     format: { type: String, default: 'mp3' },
     sampleRate: { type: Number, default: 24000 },

@@ -84,38 +84,43 @@ function synthesizeViaSSE(apiKey, resourceId, body) {
       let buffer = '';
       resp.data.on('data', (chunk) => {
         buffer += chunk.toString('utf-8');
-        // SSE 格式: "data:..." 行
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 不完整的行留到下次
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data:')) {
-            const payload = line.substring(5).trim();
-            if (!payload) continue;
-            if (payload.startsWith('{')) {
-              // JSON: 可能是字幕时间戳或错误
-              try {
-                const json = JSON.parse(payload);
-                if (json.subtitles) subtitles = json.subtitles;
-                if (json.error) console.warn('[tts] SSE 错误:', json.error);
-              } catch {}
-            } else {
-              // base64 编码的二进制音频块
-              try {
-                audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]);
-              } catch { /* 非 base64，可能是其他文本 */ }
+          if (!line.startsWith('data:')) continue;
+          const payload = line.substring(5).trim();
+          if (!payload) continue;
+          try {
+            const json = JSON.parse(payload);
+            // event 352 (TTSResponse): 音频数据在 json.data 里，base64 编码
+            if (json.data && typeof json.data === 'string' && json.data.length > 100) {
+              try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(json.data, 'base64')]); } catch {}
             }
+            // event 351 (TTSSentenceEnd): 可能含字幕
+            if (json.sentence?.words) subtitles.push(...json.sentence.words);
+            // event 153 (SessionFailed): 错误
+            if (json.code === 55000000 || json.code === 45000000) {
+              console.warn('[tts] SSE 服务端错误:', json.code, json.message);
+            }
+          } catch {
+            // 非 JSON 的 data 行（例如纯 base64），直接追加
+            try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]); } catch {}
           }
         }
       });
 
       resp.data.on('end', () => {
         clearTimeout(timer);
-        // 处理剩余 buffer
         if (buffer.trim().startsWith('data:')) {
           const payload = buffer.trim().substring(5).trim();
-          if (payload && !payload.startsWith('{')) {
-            try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]); } catch {}
+          if (payload) {
+            try {
+              const json = JSON.parse(payload);
+              if (json.data && typeof json.data === 'string') {
+                try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(json.data, 'base64')]); } catch {}
+              }
+            } catch { try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]); } catch {} }
           }
         }
         if (!resolved) {
@@ -153,10 +158,16 @@ async function synthesizeSpeech(userId, params) {
   if (!apiKey) throw Object.assign(new Error('请先在系统设置中配置火山 TTS API Key'), { statusCode: 400 });
 
   const resourceId = params.resourceId || ttsCfg.resourceId || 'seed-tts-2.0';
-  const speaker = params.speaker || ttsCfg.defaultSpeaker || 'zh_female_qingxinnvsheng_tob';
+  const speaker = params.speaker || ttsCfg.defaultSpeaker || 'zh_female_vv_uranus_bigtts';
   const format = params.format || ttsCfg.format || 'mp3';
 
+  const addObj = {};
+  if (params.disableMarkdownFilter !== undefined ? params.disableMarkdownFilter : ttsCfg.disableMarkdownFilter !== false) addObj.disable_markdown_filter = true;
+  if (params.useCache !== undefined ? params.useCache : ttsCfg.useCache !== false) addObj.use_cache = true;
+  if (params.explicitLanguage || ttsCfg.explicitLanguage) addObj.explicit_language = params.explicitLanguage || ttsCfg.explicitLanguage || 'zh-cn';
+
   const body = {
+    user: { uid: userId?.toString() || 'storycine' },
     req_params: {
       text: params.text,
       speaker,
@@ -167,11 +178,7 @@ async function synthesizeSpeech(userId, params) {
         loudness_rate: params.loudnessRate ?? ttsCfg.loudnessRate ?? 0,
         enable_subtitle: params.enableSubtitle !== undefined ? params.enableSubtitle : ttsCfg.enableSubtitle !== false,
       },
-      additions: {
-        disable_markdown_filter: params.disableMarkdownFilter !== undefined ? params.disableMarkdownFilter : ttsCfg.disableMarkdownFilter !== false,
-        use_cache: params.useCache !== undefined ? params.useCache : ttsCfg.useCache !== false,
-        explicit_language: params.explicitLanguage || ttsCfg.explicitLanguage || 'zh-cn',
-      },
+      additions: JSON.stringify(addObj),
     },
   };
 
