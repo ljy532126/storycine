@@ -141,13 +141,15 @@ function synthesizeViaWS(headers, params) {
 /** 单次语音合成：鉴权 → WS 代理 → 落盘 → 写入 DB */
 async function synthesizeSpeech(userId, params) {
   const ttsCfg = await getTTSConfig(userId);
-  const apiKey = params.apiKey || ttsCfg.apiKey;
+  const apiKey = (params.apiKey || ttsCfg.apiKey || '').trim();
   if (!apiKey) throw Object.assign(new Error('请先在系统设置中配置火山 TTS API Key'), { statusCode: 400 });
 
   const resourceId = params.resourceId || ttsCfg.resourceId || 'seed-tts-2.0';
   const headers = { 'X-Api-Key': apiKey, 'X-Api-Resource-Id': resourceId };
   const connectId = crypto.randomUUID();
   headers['X-Api-Connect-Id'] = connectId;
+
+  console.log(`[tts] 鉴权: apiKey=${apiKey.substring(0,8)}..., resourceId=${resourceId}`);
 
   const synthParams = {
     userId,
