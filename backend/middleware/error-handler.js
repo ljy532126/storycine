@@ -27,8 +27,10 @@ function errorHandler(err, req, res, _next) {
   }
 
   const statusCode = err.statusCode || 500;
+  // 客户端错误（4xx）返回实际消息帮助用户排查；服务端错误（5xx）仅在生产环境隐藏细节
+  const showDetail = isDev || statusCode < 500;
   res.status(statusCode).json({
-    message: isDev ? err.message : '服务器内部错误',
+    message: showDetail ? err.message : '服务器内部错误，请稍后重试',
   });
 }
 

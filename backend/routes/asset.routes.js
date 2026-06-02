@@ -710,8 +710,9 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
         : undefined;
 
       // 合并前端传来的参考图列表 + 主图(inputImage)，去重
+      // 只有用户明确选了参考图时才把主图也加入，避免无意中触发 Seedance 人脸审核
       const refs = [...resolvedRefs];
-      if (resolvedInput && !refs.includes(resolvedInput)) refs.push(resolvedInput);
+      if (resolvedInput && resolvedRefs.length > 0 && !refs.includes(resolvedInput)) refs.push(resolvedInput);
       console.log(`[video-gen] 参考图数量: ${refs.length}`, refs.map((u, i) => `[${i + 1}] ${u.substring(0, 100)}`));
 
       // 生图风格化开关开启时，注入解锁提示词（解除参考图上的遮挡物，恢复完整五官）

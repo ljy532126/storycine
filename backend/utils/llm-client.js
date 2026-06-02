@@ -359,10 +359,14 @@ async function callVideoGen(prompt, options = {}) {
     const isModeration = moderationKeywords.some(k => msg.toLowerCase().includes(k.toLowerCase()));
 
     if (isFaceRejection) {
-      throw new Error(`Seedance 检测到写实人脸。已自动在提示词中声明参考图来自 Seedream 4.0（AI生成非真人），如仍被拦截请尝试：① 换用侧面/背影角度的人物图 ② 降低图片写实度（加滤镜或风格化处理）③ 使用纯场景图+文字描述人物。原始错误: ${msg}`);
+      const err = new Error('角色图片人脸写实度过高，Seedance 视频生成被拦截。建议：① 生成角色图时选侧面/背影角度 ② 换一个不那么写实的风格重新生成角色图 ③ 不选参考角色，纯靠文字描述生成视频');
+      err.statusCode = 400;
+      throw err;
     }
     if (isModeration) {
-      throw new Error(`Seedance 内容审核未通过。可能是图片/提示词触发了安全策略，请更换图片或调整提示词后重试。原始错误: ${msg}`);
+      const err = new Error('Seedance 内容审核未通过，可能是图片/提示词触发了安全策略');
+      err.statusCode = 400;
+      throw err;
     }
     throw new Error(`视频生成失败 (HTTP ${status}): ${msg}`);
   }
