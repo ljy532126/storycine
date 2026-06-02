@@ -182,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref,reactive,computed,onMounted,nextTick,watch } from 'vue';
+import { ref,reactive,computed,onMounted,onActivated,nextTick,watch } from 'vue';
 import { useRoute,useRouter } from 'vue-router';
 
 const screenWidth = ref(window.innerWidth);
@@ -252,6 +252,18 @@ window.__triggerSave=handleSave;
   const qProjectId=route.query.projectId;
   if(qProjectId){currentProjectId.value=qProjectId;onProjectChange(qProjectId)}
   else{const restored=await projectStore.restoreLastProject();if(restored){currentProjectId.value=restored._id;onProjectChange(restored._id)}}
+});
+// keep-alive 缓存激活时：同步从片场列表或剧本工坊带入的项目
+onActivated(() => {
+  const storeProject = projectStore.currentProject;
+  const qProjectId = route.query.projectId;
+  if (qProjectId && qProjectId !== currentProjectId.value) {
+    currentProjectId.value = qProjectId;
+    onProjectChange(qProjectId);
+  } else if (storeProject && storeProject._id !== currentProjectId.value) {
+    currentProjectId.value = storeProject._id;
+    onProjectChange(storeProject._id);
+  }
 });
 // keep-alive 缓存后，每次进入页面重新拉取剧集列表
 watch(() => route.path, (p) => {

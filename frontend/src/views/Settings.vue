@@ -91,6 +91,69 @@
                   <el-button @click="testConnection('doubao')" :loading="testing === 'doubao'" :type="testResults['doubao'] === true ? 'success' : testResults['doubao'] === false ? 'danger' : ''">{{ testBtnLabel('doubao') }}</el-button>
                 </div>
               </el-form>
+
+              <!-- Seedance 用量 -->
+              <el-divider />
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-weight:600;font-size:14px">Seedance 2.0 用量</span>
+                <el-button size="small" @click="fetchUsage" :loading="usageLoading">刷新</el-button>
+              </div>
+              <el-alert type="warning" :closable="false" show-icon style="margin-bottom:12px">
+                <template #title>
+                  火山引擎规则：视频生成后 <b>24 小时内</b>需下载，超时链接自动失效。已下载的视频可在 <router-link to="/media-library" style="color:#E6A23C;text-decoration:underline">素材库 → 视频</router-link> 中查看。
+                </template>
+              </el-alert>
+              <div v-if="usageError" style="color:#E17373;margin-bottom:8px">{{ usageError }}</div>
+              <div v-if="usage" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+                <div style="background:#f5f7fa;border-radius:8px;padding:12px 16px;min-width:100px">
+                  <div style="font-size:12px;color:#909399">总 Token</div>
+                  <div style="font-size:20px;font-weight:700;color:#303133">{{ (usage.totalTokens / 1000).toFixed(0) }}K</div>
+                </div>
+                <div style="background:#f5f7fa;border-radius:8px;padding:12px 16px;min-width:100px">
+                  <div style="font-size:12px;color:#909399">成功/总任务</div>
+                  <div style="font-size:20px;font-weight:700;color:#67C23A">{{ usage.succeededCount }}<span style="font-size:14px;color:#909399">/{{ usage.totalTasks }}</span></div>
+                </div>
+                <div style="background:#f5f7fa;border-radius:8px;padding:12px 16px;min-width:100px">
+                  <div style="font-size:12px;color:#909399">预估费用</div>
+                  <div style="font-size:20px;font-weight:700;color:#E6A23C">~{{ usage.estimatedCost }}</div>
+                </div>
+                <div v-for="(v, k) in usage.byResolution" :key="k" style="background:#f5f7fa;border-radius:8px;padding:12px 16px">
+                  <div style="font-size:12px;color:#909399">{{ k }}</div>
+                  <div style="font-size:18px;font-weight:700;color:#303133">{{ (v.tokens/1000).toFixed(0) }}K<span style="font-size:12px;color:#909399;font-weight:400"> / {{ v.tasks }}个</span></div>
+                </div>
+              </div>
+
+              <!-- 任务明细列表 -->
+              <div v-if="usage && usage.tasks" style="font-size:12px">
+                <div style="font-weight:600;margin-bottom:6px;font-size:13px">全部任务明细</div>
+                <!-- 表头 -->
+                <div style="display:flex;align-items:center;padding:4px 8px;background:#f0f2f5;border-radius:4px;gap:4px;font-size:11px;color:#909399;font-weight:600">
+                  <span style="flex-shrink:0;width:44px;text-align:center">状态</span>
+                  <span style="flex:1;min-width:0">任务ID</span>
+                  <span style="flex-shrink:0;width:36px;text-align:center">画质</span>
+                  <span style="flex-shrink:0;width:40px;text-align:center">时长</span>
+                  <span style="flex-shrink:0;width:46px;text-align:right">Token</span>
+                  <span style="flex-shrink:0;width:36px;text-align:right">费用</span>
+                  <span style="flex-shrink:0;width:74px;text-align:right">提交时间</span>
+                  <span style="flex-shrink:0;width:20px" title="在线播放">▶</span>
+                  <span style="flex-shrink:0;width:20px" title="下载到素材库">⬇</span>
+                </div>
+                <div v-for="t in usage.tasks" :key="t.id" style="display:flex;align-items:center;padding:6px 8px;border-bottom:1px solid #ebeef5;gap:4px">
+                  <el-tag :type="t.status==='succeeded'?'success':t.status==='failed'?'danger':'warning'" size="small" style="flex-shrink:0;width:44px;text-align:center;font-size:11px">{{ t.status==='succeeded'?'成功':t.status==='failed'?'失败':t.status }}</el-tag>
+                  <span style="flex:1;color:#606266;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:11px" :title="t.id">{{ t.id }}</span>
+                  <span style="color:#909399;flex-shrink:0;width:36px;text-align:center;font-size:11px">{{ t.resolution||'-' }}</span>
+                  <span style="color:#909399;flex-shrink:0;width:40px;text-align:center;font-size:11px">{{ t.duration }}s</span>
+                  <span style="color:#303133;font-weight:600;flex-shrink:0;width:46px;text-align:right;font-size:11px">{{ (t.tokens/1000).toFixed(0) }}K</span>
+                  <span style="color:#E6A23C;flex-shrink:0;width:36px;text-align:right;font-size:11px">¥{{ t.cost }}</span>
+                  <span style="color:#909399;flex-shrink:0;width:74px;text-align:right;font-size:10px">{{ t.createdAt ? t.createdAt.slice(5,16).replace('T',' ') : '' }}</span>
+                  <a v-if="t.videoUrl && !t.expired" :href="`/api/v1/config/llm/video-proxy?url=${encodeURIComponent(t.videoUrl)}`" target="_blank" style="flex-shrink:0;width:20px;text-align:center;color:#409EFF;text-decoration:none;font-size:12px" title="在线播放">▶</a>
+                  <span v-else-if="t.status==='succeeded' && t.expired" style="flex-shrink:0;width:20px;text-align:center;font-size:10px;color:#C0C4CC" title="TOS链接已过期（超24小时）">⏰</span>
+                  <span v-else style="flex-shrink:0;width:20px"></span>
+                  <el-button v-if="t.status==='succeeded' && !t.expired && t.videoUrl" size="small" type="primary" text @click="downloadVideo(t)" :loading="t._downloading" style="flex-shrink:0;width:20px;min-width:20px;padding:0;font-size:13px" title="下载到素材库（24小时内有效）">⬇</el-button>
+                  <span v-else-if="t.status==='succeeded' && t.expired" style="flex-shrink:0;width:20px;text-align:center;font-size:10px;color:#C0C4CC" title="TOS链接已过期，无法下载">⏰</span>
+                  <span v-else style="flex-shrink:0;width:20px"></span>
+                </div>
+              </div>
             </el-tab-pane>
             <el-tab-pane label="通义 (Tongyi)" name="tongyi">
               <el-form label-position="top">
@@ -256,6 +319,41 @@ async function saveConfig(provider) {
 
 // ===== 生图设置 =====
 const imgCfg = reactive({ noTextWatermark: true, imageQuality: '8K', imageStyle: '超写实', videoDuration: 15, videoResolution: '2K', noRealPerson: true, characterRatio: '16:9', characterStyleMode: false });
+
+// ===== Seedance 用量 =====
+const usage = ref(null);
+const usageLoading = ref(false);
+const usageError = ref('');
+async function fetchUsage() {
+  usageLoading.value = true; usageError.value = '';
+  try {
+    const r = await fetch('/api/v1/config/llm/usage', { headers: tokenHdr() });
+    const d = await r.json();
+    if (d.data?.error) { usageError.value = d.data.error; usage.value = null; }
+    else { usage.value = d.data; }
+  } catch (e) { usageError.value = e.message || '查询失败'; }
+  finally { usageLoading.value = false; }
+}
+
+async function downloadVideo(task) {
+  task._downloading = true;
+  try {
+    const r = await fetch('/api/v1/config/llm/download-video', {
+      method: 'POST', headers: tokenHdr(),
+      body: JSON.stringify({ taskId: task.id, uid: '' }),
+    });
+    const d = await r.json();
+    if (d.data?.ok) {
+      ElMessage.success(d.data.updatedShot
+        ? `已下载到素材库（关联镜头${d.data.updatedShot.shotNumber}）`
+        : '已下载到素材库');
+      fetchUsage(); // 刷新
+    } else {
+      ElMessage.error(d.data?.message || d.message || '下载失败');
+    }
+  } catch (e) { ElMessage.error('下载失败: ' + (e.message || '')); }
+  finally { task._downloading = false; }
+}
 window.__aiConfig = imgCfg;
 const tokenHdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` });
 async function loadImgCfg() { try { const r = await fetch('/api/v1/config/all', { headers: tokenHdr() }); const d = await r.json(); if (d.data?.aiConfig) Object.assign(imgCfg, d.data.aiConfig); window.__aiConfig = imgCfg; } catch {} }

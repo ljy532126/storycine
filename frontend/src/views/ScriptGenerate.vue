@@ -285,15 +285,41 @@
     </el-dialog>
 
     <!-- 导入剧本弹窗 -->
-    <el-dialog v-model="showImportDialog" title="导入外部剧本 📥" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
+    <el-dialog v-model="showImportDialog" :title="importMode === 'format' ? '导入外部剧本 📥' : '导入故事，AI转剧本 ✨'" :width="screenWidth < 768 ? '94%' : '700px'" destroy-on-close>
       <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
-        <template #title>把剧本粘贴进来，AI 会自动帮你识别场次、时间、地点、人物和台词，一键结构化！</template>
+        <template #title v-if="importMode === 'format'">把剧本粘贴进来，AI 会自动帮你识别场次、时间、地点、人物和台词，一键结构化！</template>
+        <template #title v-else>把你的故事/小说片段粘贴进来，AI 会把它改编成标准剧本格式，保持原故事的方向和味道。</template>
       </el-alert>
-      <el-input v-model="importContent" type="textarea" :rows="14" placeholder="场次：1&#10;时间：白天&#10;地点：咖啡厅&#10;人物：张三, 李四&#10;氛围：温馨&#10;&#10;张三：你好，好久不见。&#10;（张三微笑）&#10;&#10;李四：是你..." />
+
+      <!-- 模式切换 -->
+      <div style="margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;border:1px solid var(--bg-300);border-radius:6px;overflow:hidden">
+          <span :class="['tab-switch', { active: importMode === 'format' }]" @click="importMode = 'format'">📋 格式导入</span>
+          <span :class="['tab-switch', { active: importMode === 'story' }]" @click="importMode = 'story'">📖 故事转剧本</span>
+        </div>
+        <el-input v-model="importTitle" placeholder="剧集标题（选填）" size="small" style="width:200px" clearable />
+      </div>
+
+      <template v-if="importMode === 'format'">
+        <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+          <span style="font-size:12px;color:var(--text-200)">格式参考：</span>
+          <el-button size="small" plain @click="fillExample" :disabled="!!importContent">📋 填入示例</el-button>
+        </div>
+        <el-input v-model="importContent" type="textarea" :rows="14" placeholder="场次：1&#10;时间：白天&#10;地点：咖啡厅&#10;人物：张三, 李四&#10;氛围：温馨&#10;&#10;张三：你好，好久不见。&#10;（张三微笑）&#10;&#10;李四：是你..." />
+      </template>
+      <template v-else>
+        <el-input v-model="importContent" type="textarea" :rows="16" placeholder="把故事粘贴在这里...&#10;&#10;比如：&#10;&#10;林悦是个普通的上班族，每天挤地铁、加班、吃外卖。直到那天，她在公司楼下遇到了一个西装革履的男人。他递过来一张名片——「星辰集团 CEO · 顾言深」。她以为这是一场美丽的邂逅，没想到这只是他精心策划的复仇开端..." />
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <span style="font-size:12px;color:var(--text-200)">AI 会根据故事方向生成对应剧本</span>
+        </div>
+      </template>
       <template #footer>
         <el-button @click="showImportDialog = false">下次再说叭</el-button>
-        <el-button type="primary" @click="handleImport" :loading="importing" :disabled="!importContent">
+        <el-button v-if="importMode === 'format'" type="primary" @click="handleImport" :loading="importing" :disabled="!importContent">
           {{ importing ? '解析中...' : '一键导入结构化' }}
+        </el-button>
+        <el-button v-else type="primary" @click="handleStoryToScript" :loading="importing" :disabled="!importContent">
+          {{ importing ? 'AI正在改编剧本...' : '✨ AI 转写剧本' }}
         </el-button>
       </template>
     </el-dialog>
@@ -301,13 +327,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onActivated, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useSocket } from '../components/useSocket';
-import { scriptAPI } from '../api';
+import api, { scriptAPI } from '../api';
 
 const router = useRouter();
 const projectStore = useProjectStore();
@@ -316,6 +342,8 @@ const socket = useSocket();
 
 const currentProjectId = ref('');
 const importContent = ref('');
+const importTitle = ref('');
+const importMode = ref('format'); // 'format' | 'story'
 const showImportDialog = ref(false);
 const showStorylineDialog = ref(false);
 const logCollapsed = ref(true);
@@ -511,6 +539,16 @@ onMounted(async () => {
   }
 });
 
+// keep-alive 缓存激活时：同步从片场列表点击进入的项目
+onActivated(() => {
+  const storeProject = projectStore.currentProject;
+  if (storeProject && storeProject._id !== currentProjectId.value) {
+    currentProjectId.value = storeProject._id;
+    loadScripts(storeProject._id);
+    socket.joinProject(storeProject._id);
+  }
+});
+
 // 监听项目列表变化：如果当前选中的项目被删除了，清空状态
 watch(() => projectStore.projects, (newList) => {
   if (currentProjectId.value && !newList.find(p => p._id === currentProjectId.value)) {
@@ -594,8 +632,7 @@ async function handleGenerate() {
     loadScripts(currentProjectId.value);
     // 自动生成封面海报
     console.log('[封面] 剧本完成，自动生成海报... projectId=' + currentProjectId.value);
-    fetch(`/api/v1/projects/${currentProjectId.value}/generate-cover`, { method: 'POST' })
-      .then(r => r.json())
+    api.post(`/projects/${currentProjectId.value}/generate-cover`)
       .then(d => console.log('[封面] 海报生成结果:', d.data?.coverImage ? '成功 ' + d.data.coverImage.substring(0, 50) + '...' : '失败', d))
       .catch(e => console.error('[封面] 海报生成请求失败:', e));
     setTimeout(() => { logCollapsed.value = true; }, 1500);
@@ -652,16 +689,68 @@ async function handleImport() {
   if (!importContent.value.trim()) return;
   importing.value = true;
   try {
-    const res = await scriptStore.importScript(currentProjectId.value, importContent.value, 'txt');
-    addLog('剧本片场导入成功啦！ 📥：' + (res.data.scenes?.length || 0) + ' 场次', 'success');
+    const res = await scriptStore.importScript(currentProjectId.value, importContent.value, 'txt', importTitle.value);
+    addLog('剧本片场导入成功啦！ 📥：' + (res.scenes?.length || 0) + ' 场次', 'success');
     ElMessage.success('片场导入成功啦！');
     importContent.value = '';
+    importTitle.value = '';
     showImportDialog.value = false;
     loadScripts(currentProjectId.value);
   } catch (e) {
     addLog('导入失败，请检查格式: ' + (e.response?.data?.message || e.message), 'error');
     ElMessage.error('导入失败，请检查格式');
   } finally { importing.value = false; }
+}
+
+async function handleStoryToScript() {
+  if (!importContent.value.trim()) return;
+  importing.value = true;
+  try {
+    const res = await scriptStore.storyToScript(currentProjectId.value, importContent.value, importTitle.value);
+    addLog('AI改编完成！ 📖：' + (res.scenes?.length || 0) + ' 场次', 'success');
+    ElMessage.success('故事已转写为剧本！');
+    importContent.value = '';
+    importTitle.value = '';
+    showImportDialog.value = false;
+    loadScripts(currentProjectId.value);
+  } catch (e) {
+    addLog('AI转写失败: ' + (e.response?.data?.message || e.message), 'error');
+    ElMessage.error('AI改编失败，请重试');
+  } finally { importing.value = false; }
+}
+
+const EXAMPLE_SCRIPT = `场次:1
+时间:白天
+地点:咖啡厅
+人物:张三, 李四
+氛围:温馨
+
+张三:你好，好久不见。
+(张三微笑)
+
+李四:是你...没想到会在这里遇见你。
+(低头搅动咖啡)
+
+张三:这些年，你过得好吗？
+(目光注视对方)
+
+李四:还行吧，老样子。你呢？
+
+场次:2
+时间:夜晚
+地点:江边步道
+人物:张三, 李四
+氛围:感伤
+
+(江风吹过，两人并肩而行)
+
+张三:还记得以前我们总来这儿吗？
+(停下脚步，望向远处灯火)
+
+李四:怎么会忘。那时候真傻。`;
+
+function fillExample() {
+  importContent.value = EXAMPLE_SCRIPT;
 }
 
 function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
@@ -737,6 +826,10 @@ function applyQuickTemplate(t) {
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 .import-link { font-size: 14px; color: var(--gold-dark) !important; font-weight: 600; letter-spacing: 0.5px; background: transparent !important; border: none !important; }
 .import-link:hover { color: var(--navy) !important; }
+
+.tab-switch { padding: 6px 16px; font-size: 13px; cursor: pointer; color: var(--text-200); font-weight: 500; background: var(--bg-200); transition: all 0.15s; user-select: none; letter-spacing: 0.5px; }
+.tab-switch.active { background: var(--navy); color: var(--gold); font-weight: 700; }
+.tab-switch:hover:not(.active) { color: var(--text-100); background: var(--bg-100); }
 .sg-main { display: flex; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; }
 .card-title { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--text-100); font-size: 15px; letter-spacing: 0.5px; }
 .card-header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }

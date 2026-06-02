@@ -69,8 +69,8 @@ const appConfig = {
   },
   minio: {
     endpoint: process.env.MINIO_ENDPOINT || 'localhost:9000',
-    accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-    secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+    accessKey: process.env.MINIO_ACCESS_KEY || '',
+    secretKey: process.env.MINIO_SECRET_KEY || '',
     bucket: process.env.MINIO_BUCKET || 'autodrama',
   },
   llm: {

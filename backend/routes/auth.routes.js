@@ -28,19 +28,13 @@ async function logLogin(username, ip, ua, success, message, userId) {
 // ===== 获取图形验证码 =====
 router.get('/captcha', captchaLimiter, (req, res) => {
   const captcha = svgCaptcha.create({ size: 4, noise: 3, ignoreChars: '0o1il', color: true, background: '#FBF7F0' });
-  const captchaId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const captchaId = require('crypto').randomBytes(12).toString('hex');
   captchaStore.set(captchaId, { text: captcha.text.toLowerCase(), expires: Date.now() + 300000 });
   for (const [k, v] of captchaStore) { if (v.expires < Date.now()) captchaStore.delete(k); }
   res.json({ data: { captchaId, svg: captcha.data } });
 });
 
-// ===== 滑块验证码 =====
-router.get('/captcha/slider', captchaLimiter, (req, res) => {
-  const token = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-  captchaStore.set(token, { text: 'verified', expires: Date.now() + 300000 });
-  for (const [k, v] of captchaStore) { if (v.expires < Date.now()) captchaStore.delete(k); }
-  res.json({ data: { captchaId: token, captchaText: 'verified' } });
-});
+// 注：滑块验证码已移除（安全性不足），统一使用 SVG 图形验证码
 
 // ===== 注册 =====
 router.post('/register', registerLimiter, async (req, res) => {
@@ -49,16 +43,15 @@ router.post('/register', registerLimiter, async (req, res) => {
     const ip = getClientIp(req);
     const ua = req.headers['user-agent'] || '';
 
-    // 校验
-    if (!username || !password) return res.status(400).json({ message: '请填写账号和密码' });
-    if (username.length < 3 || username.length > 30) return res.status(400).json({ message: '账号长度3-30个字符' });
-    if (password.length < 6) return res.status(400).json({ message: '密码长度至少6位' });
-
-    // 验证码校验
+    // 验证码先校验（防止探测规则）
     const cap = captchaStore.get(captchaId);
     if (!cap || cap.expires < Date.now()) return res.status(400).json({ message: '验证码已过期，请刷新' });
     if (cap.text !== (captchaText || '').toLowerCase()) return res.status(400).json({ message: '验证码错误' });
     captchaStore.delete(captchaId);
+
+    // 校验用户名密码
+    if (username.length < 3 || username.length > 30) return res.status(400).json({ message: '账号长度3-30个字符' });
+    if (password.length < 8) return res.status(400).json({ message: '密码长度至少8位' });
 
     // 防重复注册
     const exists = await User.findOne({ username });
@@ -88,8 +81,9 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (!username || !password) return res.status(400).json({ message: '请填写账号和密码' });
 
-    // 验证码（失败超过2次后要求验证码）
     const user = await User.findOne({ username });
+
+    // 防定时枚举：无论用户是否存在都做 bcrypt（非空用户先过 captcha + lock 检查）
     const needCaptcha = user && user.loginAttempts >= 2;
     if (needCaptcha) {
       const cap = captchaStore.get(captchaId);
@@ -98,30 +92,32 @@ router.post('/login', loginLimiter, async (req, res) => {
       captchaStore.delete(captchaId);
     }
 
-    if (!user) {
-      await logLogin(username, ip, ua, false, '账号不存在');
-      return res.status(400).json({ message: '账号或密码错误' });
-    }
-
-    // 账号状态检查
-    if (user.status === 'banned') return res.status(403).json({ message: '账号已被封禁' });
-    if (user.status === 'disabled') return res.status(403).json({ message: '账号已被禁用' });
-
-    // 锁定检查（密码错误5次锁定30分钟）
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
+    // 锁定检查
+    if (user && user.lockedUntil && user.lockedUntil > new Date()) {
       const minutes = Math.ceil((user.lockedUntil - new Date()) / 60000);
-      await logLogin(username, ip, ua, false, `账号锁定中，剩余${minutes}分钟`, user._id);
+      await logLogin(username, ip, ua, false, `account locked, ${minutes}min left`, user._id);
       return res.status(429).json({ message: `账号已临时锁定，请${minutes}分钟后再试` });
     }
 
-    // 密码校验
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      user.loginAttempts = (user.loginAttempts || 0) + 1;
-      if (user.loginAttempts >= 5) user.lockedUntil = new Date(Date.now() + 30 * 60000);
-      await user.save();
-      await logLogin(username, ip, ua, false, `密码错误 (${user.loginAttempts}/5)`, user._id);
-      return res.status(400).json({ message: `账号或密码错误${user.loginAttempts >= 3 ? '，已输错' + user.loginAttempts + '次，再错将锁定' : ''}` });
+    // 状态检查
+    if (user && user.status === 'banned') return res.status(403).json({ message: '账号已被封禁' });
+    if (user && user.status === 'disabled') return res.status(403).json({ message: '账号已被禁用' });
+
+    // 恒定时间密码校验（防用户枚举）
+    const dummyHash = '$2a$12$LJ3m4ys3GZfnYMz8kVsKaOSPFmMRYx.LqCGEfSJx0YvMNqJG5qL4G';
+    const hashToCheck = user ? user.password : dummyHash;
+    const valid = await bcrypt.compare(password, hashToCheck);
+
+    if (!user || !valid) {
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= 5) user.lockedUntil = new Date(Date.now() + 30 * 60000);
+        await user.save();
+        await logLogin(username, ip, ua, false, `wrong pw (${user.loginAttempts}/5)`, user._id);
+      } else {
+        await logLogin(username, ip, ua, false, 'user not found');
+      }
+      return res.status(400).json({ message: '账号或密码错误' });
     }
 
     // 登录成功
@@ -160,13 +156,19 @@ router.put('/password', authRequired, async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
     if (!oldPassword || !newPassword) return res.status(400).json({ message: '请填写新旧密码' });
-    if (newPassword.length < 6) return res.status(400).json({ message: '新密码至少6位' });
-    const valid = await bcrypt.compare(oldPassword, req.user.password);
+    if (newPassword.length < 8) return res.status(400).json({ message: '新密码至少8位' });
+
+    // auth 中间件的 req.user 不含 password，需重新查询
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+
+    const valid = await bcrypt.compare(oldPassword, user.password);
     if (!valid) return res.status(400).json({ message: '原密码错误' });
-    req.user.password = await bcrypt.hash(newPassword, 12);
-    await req.user.save();
-    res.json({ message: '密码修改成功' });
-  } catch (e) { res.status(500).json({ message: '修改失败' }); }
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    res.json({ message: '密码修改成功，请重新登录' });
+  } catch (e) { console.error('[password] 修改失败:', e.message); res.status(500).json({ message: '修改失败' }); }
 });
 
 // ===== 管理员：用户列表 =====

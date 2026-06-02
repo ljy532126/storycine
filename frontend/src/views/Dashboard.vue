@@ -14,7 +14,7 @@
         <p class="db-sub">你的故事，你的视野，你的工作室</p>
       </div>
       <div class="db-masthead-actions">
-        <el-button class="db-cta" size="large" @click="$router.push('/script-generate')">
+        <el-button class="db-cta" size="large" @click="$router.push('/projects')">
           <span class="cta-icon">✦</span> 开始创作
         </el-button>
       </div>
@@ -54,7 +54,7 @@
             :key="p._id"
             class="recent-item"
             :style="{ animationDelay: (i * 60) + 'ms' }"
-            @click="$router.push('/script-generate')"
+            @click="goToProject(p)"
           >
             <div class="recent-index">{{ String(i + 1).padStart(2, '0') }}</div>
             <div class="recent-body">
@@ -140,6 +140,11 @@ const quickActions = [
   { label: '镜头板', icon: '🎞️', route: '/storyboard' },
   { label: '剪辑室', icon: '🎥', route: '/composition' },
 ];
+
+function goToProject(p) {
+  projectStore.setCurrentProject(p);
+  router.push('/script-generate');
+}
 
 onMounted(async () => {
   await projectStore.fetchProjects();

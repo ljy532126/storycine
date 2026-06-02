@@ -6,8 +6,8 @@ const sceneSchema = new mongoose.Schema({
 // legacy — 以下字段定义保留作为文档参考（strict:false 模式下实际不做校验）
 sceneSchema.add({
   sceneNumber: { type: Number, required: true },
-  timeOfDay: { type: String, enum: ['白天', '夜晚', '黄昏', '傍晚', '清晨', '黎明', '正午', '深夜', '雨天', '雪天', '不限'], default: '白天' },
-  location: { type: String, required: true },
+  timeOfDay: { type: String, default: '白天' },
+  location: { type: String, default: '' },
   shotType: { type: String, enum: ['远景', '中景', '近景', '特写', '大特写', '全景', '中近景'], default: '中景' },
   composition: { type: String, default: '' },
   cameraMovement: { type: String, enum: ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动'], default: '静止' },

@@ -17,9 +17,12 @@ api.interceptors.response.use(
   (res) => res.data,
   (err) => {
     if (err.response?.status === 401) {
+      const msg = err.response?.data?.message || '登录已过期';
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        // 存下原因，登录页取出来展示
+        try { sessionStorage.setItem('logout_reason', msg); } catch {}
         window.location.href = '/login';
       }
     }
@@ -48,6 +51,7 @@ export const scriptAPI = {
   aiGenerate: (data) => api.post('/scripts/ai-generate', data),
   continue: (data) => api.post('/scripts/continue', data),
   import: (data) => api.post('/scripts/import', data),
+  storyToScript: (data) => api.post('/scripts/story-to-script', data),
   createEmpty: (data) => api.post('/scripts/create-empty', data),
   delete: (id) => api.delete(`/scripts/${id}`),
   batchDelete: (ids) => api.post('/scripts/batch-delete', { ids }),

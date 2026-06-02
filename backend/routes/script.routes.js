@@ -8,9 +8,20 @@ const { parseScriptToStructure, getProjectScriptHistory } = require('../services
 const { batchCreateCharacters } = require('../services/asset.service');
 const { authRequired } = require('../middleware/auth.middleware');
 const appConfig = require('../config/app.config');
+const { callLLM } = require('../utils/llm-client');
+const { checkDocOwnership } = require('../middleware/ownership.middleware');
+const { aiGenerateLimiter, aiContinueLimiter } = require('../middleware/rate-limiter.middleware');
 router.use(authRequired);
 
 const VALID_TIMES = ['白天', '夜晚', '黄昏', '傍晚', '清晨', '黎明', '正午', '深夜', '雨天', '雪天', '不限'];
+
+/** 校验剧本归属：非 admin 用户只能操作自己项目下的剧本 */
+async function verifyScriptAccess(script, userId, role) {
+  if (!script) return false;
+  if (role === 'admin') return true;
+  const project = await Project.findById(script.projectId);
+  return project && project.userId === userId.toString();
+}
 
 /** 清洗AI生成的剧本数据，确保字段值在Schema枚举范围内 */
 function sanitizeScriptData(scriptData) {
@@ -65,7 +76,7 @@ function sanitizeScriptData(scriptData) {
 }
 
 // AI一键生成完整剧本体系（异步，WebSocket推送结果）
-router.post('/ai-generate', async (req, res, next) => {
+router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
   try {
     await appConfig.loadUserConfig(req.user._id);
     const { projectId, tags } = req.body;
@@ -149,10 +160,11 @@ router.post('/ai-generate', async (req, res, next) => {
 });
 
 // 剧本续写
-router.post('/continue', async (req, res, next) => {
+router.post('/continue', aiContinueLimiter, async (req, res, next) => {
   try {
     await appConfig.loadUserConfig(req.user._id);
     const { projectId, episodeId, continueCount = 1 } = req.body;
+    const safeCount = Math.min(Math.max(1, Number(continueCount) || 1), 5); // 上限5集
     const io = req.app.get('io');
 
     if (!projectId) {
@@ -182,7 +194,7 @@ router.post('/continue', async (req, res, next) => {
       directorSettings,
       episodeNumber: targetEpisode,
       targetEpisode,
-      continueCount,
+      safeCount,
       status: 'continuing',
       historyScripts,
       characters: [],
@@ -237,7 +249,7 @@ router.post('/create-empty', async (req, res, next) => {
 // 外部剧本导入 + 自动结构化
 router.post('/import', async (req, res, next) => {
   try {
-    const { projectId, fileContent, fileType = 'txt' } = req.body;
+    const { projectId, fileContent, fileType = 'txt', episodeTitle } = req.body;
 
     if (!projectId || !fileContent) {
       return res.status(400).json({ message: '缺少必要参数: projectId, fileContent' });
@@ -245,15 +257,110 @@ router.post('/import', async (req, res, next) => {
 
     const structuredScenes = parseScriptToStructure(fileContent, fileType);
 
+    // 自动推断剧集编号：当前最大集数 + 1
+    const maxEp = await Script.findOne({ projectId }).sort({ episodeNumber: -1 }).select('episodeNumber').lean();
+    const nextEp = (maxEp?.episodeNumber || 0) + 1;
+
     const script = await Script.create({
       projectId,
-      episodeNumber: 1,
+      episodeNumber: nextEp,
+      episodeTitle: episodeTitle || '',
       source: 'manual_import',
       scenes: structuredScenes,
     });
 
     res.json({ message: '导入成功', data: script });
   } catch (error) { next(error); }
+});
+
+// 故事导入 → AI 改编为剧本
+router.post('/story-to-script', async (req, res, next) => {
+  try {
+    const { projectId, storyContent, episodeTitle } = req.body;
+
+    if (!projectId || !storyContent) {
+      return res.status(400).json({ message: '缺少必要参数' });
+    }
+
+    const project = await Project.findById(projectId).lean();
+    const styleInfo = project?.videoConfig ? `${project.videoConfig.visualStyle || '写实'} / ${project.videoConfig.aspectRatio || '9:16'}` : '写实 / 9:16';
+
+    const systemPrompt = `你是资深短剧编剧，擅长将故事/小说片段改编为标准短剧剧本格式。
+
+【改编规则 - 严格遵循】
+1. 忠于原作：保持原故事的人物性格、情节走向、核心冲突和情感基调，不添加无关新角色或支线
+2. 剧本化：将叙述性文字转为场景+对白+动作提示的标准格式
+3. 分场合理：按地点/时间转换自然分场，每场有明确的场景信息
+4. 对白生动：将内心独白、间接引语转为自然的口语对白；叙述中的互动转为具体台词
+5. 动作提示：环境描写、人物动作、表情用括号标注，如"（放下咖啡杯，目光闪躲）"
+6. 节奏紧凑：短剧每场戏控制在 3-8 句对白，去掉冗长铺垫
+7. JSON 输出格式必须严格遵照示例
+
+【视觉风格】${styleInfo}
+
+请输出 JSON 格式（只输出 JSON，不要其他文字）：
+{
+  "episodeTitle": "根据故事内容提炼的标题（10字以内）",
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "timeOfDay": "白天/夜晚/黄昏等",
+      "location": "具体地点",
+      "characters": ["人物1", "人物2"],
+      "atmosphere": "氛围描述（温馨/紧张/悲伤等）",
+      "sceneDescription": "场景环境简述",
+      "dialogues": [
+        { "characterName": "人物名", "text": "台词内容", "actionHint": "动作/表情提示" },
+        { "characterName": "人物名", "text": "台词", "actionHint": "" }
+      ]
+    }
+  ]
+}`;
+
+    const userPrompt = `请将以下故事改编为短剧剧本：\n\n${storyContent}`;
+
+    const result = await callLLM(systemPrompt, userPrompt, {
+      response_format: 'json_object',
+      temperature: 0.7,
+      maxTokens: 4096,
+    });
+
+    let parsed;
+    try {
+      parsed = typeof result === 'string' ? JSON.parse(result) : result;
+    } catch {
+      // 尝试从文本中提取 JSON
+      const jsonMatch = (typeof result === 'string' ? result : JSON.stringify(result)).match(/\{[\s\S]*\}/);
+      if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      else throw new Error('AI 返回格式无法解析');
+    }
+
+    if (!parsed.scenes || !Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
+      return res.status(500).json({ message: 'AI 未能生成有效剧本，请尝试缩短故事内容' });
+    }
+
+    // 给每场补齐 sceneNumber
+    parsed.scenes.forEach((s, i) => {
+      if (!s.sceneNumber) s.sceneNumber = i + 1;
+      if (!s.dialogues) s.dialogues = [];
+    });
+
+    const maxEp = await Script.findOne({ projectId }).sort({ episodeNumber: -1 }).select('episodeNumber').lean();
+    const nextEp = (maxEp?.episodeNumber || 0) + 1;
+
+    const script = await Script.create({
+      projectId,
+      episodeNumber: nextEp,
+      episodeTitle: episodeTitle || parsed.episodeTitle || '',
+      source: 'manual_import',
+      scenes: parsed.scenes,
+    });
+
+    res.json({ message: '故事已改编为剧本', data: script });
+  } catch (error) {
+    console.error('[story-to-script] 失败:', error.message);
+    next(error);
+  }
 });
 
 // 获取剧本列表
@@ -271,15 +378,26 @@ router.get('/:id', async (req, res, next) => {
   try {
     const script = await Script.findById(req.params.id);
     if (!script) return res.status(404).json({ message: '剧本不存在' });
+    if (!(await verifyScriptAccess(script, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此剧本' });
+    }
     res.json({ data: script });
   } catch (error) { next(error); }
 });
 
-// 更新剧本（在线编辑）
+// 更新剧本（在线编辑，仅白名单字段）
 router.put('/:id', async (req, res, next) => {
   try {
-    const script = await Script.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const script = await Script.findById(req.params.id);
     if (!script) return res.status(404).json({ message: '剧本不存在' });
+    if (!(await verifyScriptAccess(script, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权修改此剧本' });
+    }
+    const allowed = ['episodeTitle', 'scenes', 'summary', 'status', 'source'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    Object.assign(script, update);
+    await script.save();
     res.json({ message: '保存成功', data: script });
   } catch (error) { next(error); }
 });
@@ -287,8 +405,12 @@ router.put('/:id', async (req, res, next) => {
 // 删除剧本
 router.delete('/:id', async (req, res, next) => {
   try {
-    const script = await Script.findByIdAndDelete(req.params.id);
+    const script = await Script.findById(req.params.id);
     if (!script) return res.status(404).json({ message: '剧本不存在' });
+    if (!(await verifyScriptAccess(script, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权删除此剧本' });
+    }
+    await Script.findByIdAndDelete(req.params.id);
     res.json({ message: '删除成功', data: script });
   } catch (error) { next(error); }
 });
@@ -298,10 +420,16 @@ router.post('/batch-delete', async (req, res, next) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ message: '缺少ids数组' });
+      return res.status(400).json({ message: '请选择要删除的剧本' });
     }
-    const result = await Script.deleteMany({ _id: { $in: ids } });
-    res.json({ message: `已删除 ${result.deletedCount} 个剧本`, data: { deletedCount: result.deletedCount } });
+    const scripts = await Script.find({ _id: { $in: ids } });
+    for (const s of scripts) {
+      if (!(await verifyScriptAccess(s, req.user._id, req.user.role))) {
+        return res.status(403).json({ message: '无权删除部分剧本' });
+      }
+    }
+    const r = await Script.deleteMany({ _id: { $in: ids } });
+    res.json({ message: `已删除 ${r.deletedCount} 个剧本`, data: { deletedCount: r.deletedCount } });
   } catch (error) { next(error); }
 });
 

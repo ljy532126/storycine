@@ -6,7 +6,98 @@ const Settings = require('../models/settings.model');
 const storageService = require('../services/storage.service');
 const { authRequired } = require('../middleware/auth.middleware');
 
+// ===== 视频代理（Ark TOS 链接有时效性，通过后端代理解决） =====
+
+router.get('/llm/video-proxy', async (req, res, next) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ message: '缺少 url 参数' });
+
+    console.log(`[video-proxy] 代理: ${url.substring(0, 100)}...`);
+    const resp = await axios({
+      url,
+      method: 'GET',
+      responseType: 'stream',
+      timeout: 30000,
+      validateStatus: s => s < 400,
+    });
+
+    res.setHeader('Content-Type', resp.headers['content-type'] || 'video/mp4');
+    res.setHeader('Content-Length', resp.headers['content-length'] || '');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    resp.data.pipe(res);
+    resp.data.on('error', (err) => { console.error('[video-proxy] 流中断:', err.message); res.end(); });
+  } catch (e) {
+    const status = e.response?.status || 500;
+    const msg = e.response?.data?.error?.message || e.message;
+    console.error(`[video-proxy] 失败 (${status}):`, msg);
+    res.status(status).json({ message: `视频加载失败: ${msg}` });
+  }
+});
+
 router.use(authRequired);
+
+// ===== 下载 Seedance 视频到本地素材库（需登录） =====
+router.post('/llm/download-video', async (req, res, next) => {
+  try {
+    const { taskId, storyboardId, shotNumber } = req.body;
+    if (!taskId) return res.status(400).json({ message: '缺少 taskId' });
+
+    const settings = await Settings.getSettings(req.user._id);
+    let apiKey = settings?.llmProviders?.doubao?.apiKey || process.env.DOUBAO_API_KEY || '';
+    let baseUrl = settings?.llmProviders?.doubao?.baseUrl || process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
+    if (!apiKey) return res.status(400).json({ message: '请先配置豆包 API Key' });
+
+    const resp = await axios.get(`${baseUrl}/contents/generations/tasks/${taskId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }, timeout: 15000,
+    });
+    const t = resp.data;
+    if (t.status !== 'succeeded' || !t.content?.video_url) {
+      return res.json({ data: { ok: false, message: `任务状态: ${t.status}，无法下载` } });
+    }
+
+    const videoUrl = t.content.video_url;
+    console.log(`[download-video] 下载: ${videoUrl.substring(0, 80)}...`);
+    const vidResp = await axios({ url: videoUrl, method: 'GET', responseType: 'arraybuffer', timeout: 120000 });
+    const filename = `video-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4`;
+    const userCategory = (req.user?.uid || 'anonymous') + '/videos';
+    const storedUrl = await storageService.upload(Buffer.from(vidResp.data), filename, userCategory);
+    console.log(`[download-video] 已存储: ${storedUrl}`);
+
+    // 更新分镜
+    let updatedShot = null;
+    const Storyboard = require('../models/storyboard.model');
+    if (storyboardId && shotNumber != null) {
+      const sb = await Storyboard.findById(storyboardId);
+      if (sb) {
+        const shot = sb.shots.find(s => s.shotNumber === shotNumber);
+        if (shot) { shot.renderedVideo = storedUrl; shot.status = 'completed'; await sb.save(); updatedShot = { storyboardId, shotNumber }; }
+      }
+    }
+    if (!updatedShot) {
+      const safetyId = t.safety_identifier || '';
+      if (safetyId && safetyId !== 'autodrama_user') {
+        const sbs = await Storyboard.find({});
+        for (const sb of sbs) {
+          for (const shot of sb.shots) {
+            if (!shot.renderedVideo || shot.renderedVideo === '' || shot.renderedVideo.startsWith('cgt-')) {
+              shot.renderedVideo = storedUrl; shot.status = 'completed'; updatedShot = { storyboardId: sb._id, shotNumber: shot.shotNumber }; await sb.save(); break;
+            }
+          }
+          if (updatedShot) break;
+        }
+      }
+    }
+
+    res.json({ data: { ok: true, localUrl: storedUrl, updatedShot } });
+  } catch (e) {
+    const msg = e.response?.data?.error?.message || e.message;
+    console.error('[download-video] 失败:', msg);
+    res.status(500).json({ message: `下载失败: ${msg}` });
+  }
+});
 
 // ===== LLM 配置 =====
 
@@ -175,5 +266,109 @@ function maskSecret(secret) {
   if (secret.length <= 8) return '****';
   return secret.substring(0, 4) + '****' + secret.substring(secret.length - 4);
 }
+
+// ===== Seedance 用量查询 =====
+
+router.get('/llm/usage', async (req, res, next) => {
+  try {
+    const settings = await Settings.getSettings(req.user._id);
+
+    // 取豆包 API Key：优先用户配置 → 环境变量
+    let apiKey = settings.llmProviders?.doubao?.apiKey || '';
+    let baseUrl = settings.llmProviders?.doubao?.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3';
+    if (!apiKey) {
+      apiKey = process.env.DOUBAO_API_KEY || '';
+      baseUrl = process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
+    }
+    if (!apiKey) {
+      return res.json({ data: { error: '请先配置豆包 API Key', tasks: [], totalTokens: 0 } });
+    }
+
+    // 查询 Ark 任务列表
+    let tasks = [];
+    try {
+      const resp = await axios.get(`${baseUrl}/contents/generations/tasks`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        timeout: 15000,
+      });
+      tasks = resp.data.items || [];
+    } catch (e) {
+      const status = e.response?.status || 0;
+      if (status === 401) return res.json({ data: { error: 'API Key 无效或已过期', tasks: [], totalTokens: 0 } });
+      throw e;
+    }
+
+    // 汇总 Token 用量
+    let totalTokens = 0;
+    let succeededCount = 0;
+    let failedCount = 0;
+    const byModel = {};
+    const byResolution = {};
+
+    tasks.forEach(t => {
+      const tokens = t.usage?.total_tokens || 0;
+      totalTokens += tokens;
+
+      if (t.status === 'succeeded') succeededCount++;
+      else if (t.status === 'failed') failedCount++;
+
+      const model = t.model || 'unknown';
+      if (!byModel[model]) byModel[model] = { tokens: 0, tasks: 0 };
+      byModel[model].tokens += tokens;
+      byModel[model].tasks++;
+
+      const res = t.resolution || 'unknown';
+      if (!byResolution[res]) byResolution[res] = { tokens: 0, tasks: 0 };
+      byResolution[res].tokens += tokens;
+      byResolution[res].tasks++;
+    });
+
+    // Seedance 2.0 参考定价（CNY/秒）：720p≈0.3, 1080p≈1.0
+    const pricingEstimates = { '480p': 0.15, '720p': 0.3, '1080p': 1.0, '2K': 2.0 };
+    let estimatedCost = 0;
+    tasks.forEach(t => {
+      if (t.status !== 'succeeded') return;
+      const rate = pricingEstimates[t.resolution] || 0.3;
+      estimatedCost += rate * (t.duration || 5);
+    });
+
+    // 全部任务详情，按时间倒序
+    const now = Date.now();
+    const allTasks = tasks.map(t => {
+      const rate = pricingEstimates[t.resolution] || 0.3;
+      const tokens = t.usage?.total_tokens || 0;
+      const createdAt = t.created_at ? new Date(t.created_at * 1000) : null;
+      const ageHours = createdAt ? (now - createdAt.getTime()) / 3600000 : 0;
+      return {
+        id: t.id,
+        model: t.model,
+        status: t.status,
+        tokens,
+        cost: t.status === 'succeeded' ? Math.round(rate * (t.duration || 5) * 100) / 100 : 0,
+        resolution: t.resolution || '',
+        duration: t.duration || 0,
+        ratio: t.ratio || '',
+        videoUrl: t.content?.video_url || '',
+        expired: t.status === 'succeeded' && ageHours > 22,
+        error: t.error?.message || '',
+        safetyId: t.safety_identifier || '',
+        createdAt: createdAt ? createdAt.toISOString() : null,
+      };
+    });
+
+    res.json({
+      data: {
+        totalTasks: tasks.length,
+        succeededCount,
+        failedCount,
+        totalTokens,
+        estimatedCost: Math.round(estimatedCost * 100) / 100,
+        byModel,
+        byResolution,
+        tasks: allTasks,
+      },
+    });
+  } catch (e) { next(e); }
+});
 
 module.exports = router;

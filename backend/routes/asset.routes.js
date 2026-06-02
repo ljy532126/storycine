@@ -6,7 +6,17 @@ const fs = require('fs');
 const storageService = require('../services/storage.service');
 const { authRequired } = require('../middleware/auth.middleware');
 const appConfig = require('../config/app.config');
+const { checkDocOwnership } = require('../middleware/ownership.middleware');
+const { aiExtractLimiter, aiGeneratePromptLimiter, aiGenerateImageLimiter } = require('../middleware/rate-limiter.middleware');
 router.use(authRequired);
+
+/** 校验项目归属 */
+async function verifyProjectAccess(projectId, userId, role) {
+  if (role === 'admin') return true;
+  const Project = require('../models/project.model');
+  const project = await Project.findById(projectId);
+  return project && project.userId === userId.toString();
+}
 
 /** 读取项目的导演设定，返回 { qualityKeywords, artStyleCommands, atmosphereLighting } */
 async function readDirectorSettings(projectId) {
@@ -32,7 +42,15 @@ const storage = multer.diskStorage({
     cb(null, `char-${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`);
   },
 });
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+const ALLOWED_MIMES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIMES.includes(file.mimetype)) { cb(null, true); }
+    else { cb(new Error('仅允许上传 PNG / JPEG / WebP / GIF 格式的图片')); }
+  },
+});
 
 // 角色三视图标准后缀（全局复用）
 const THREE_VIEW_SUFFIX = `左区：角色正脸特写，面部占满左区，五官/发型/配饰清晰，无身体入镜、无遮挡变形；右区：标准角色设定三视图，横向依次排列侧视图、正视图和背视图，三个视图严格呈现侧视、正视和背视，从头到脚完整无遮挡；核心约束：特写与三视图为同一角色，五官/服装/配饰/体态100%一致；右区尺寸：三视图角色高度画面高度的80%，三视图高度统一；无多余元素的浅灰色背景，角色无阴影；超高清分辨率，统一85mm焦距，无畸变，角色无动作，平视；中性表情（无喜怒哀乐），眼神平静，自然站立，双手自然下垂，空手（无手持物），身上无任何背负物（无背包/无武器背负）；严禁画面出现不相关的文字；古风/仙侠风格下严禁光腿、严禁腿部裸露、严禁服饰残缺暴露`;
@@ -42,7 +60,18 @@ const { buildCharacterMap, buildShotPrompt } = require('../services/asset.servic
 
 router.post('/characters', async (req, res, next) => {
   try {
-    const character = await Character.create(req.body);
+    if (!(await verifyProjectAccess(req.body.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权在此项目中创建角色' });
+    }
+    const character = await Character.create({
+      projectId: req.body.projectId,
+      name: req.body.name,
+      age: req.body.age,
+      gender: req.body.gender,
+      appearance: req.body.appearance || '',
+      personality: req.body.personality || '',
+      roleType: req.body.roleType || '配角',
+    });
     res.status(201).json({ message: '角色创建成功', data: character });
   } catch (error) { next(error); }
 });
@@ -51,6 +80,9 @@ router.get('/characters', async (req, res, next) => {
   try {
     const { projectId } = req.query;
     if (!projectId) return res.status(400).json({ message: '缺少projectId参数' });
+    if (!(await verifyProjectAccess(projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此项目的角色' });
+    }
     const characters = await Character.find({ projectId });
     res.json({ data: characters });
   } catch (error) { next(error); }
@@ -60,22 +92,37 @@ router.get('/characters/:id', async (req, res, next) => {
   try {
     const character = await Character.findById(req.params.id);
     if (!character) return res.status(404).json({ message: '角色不存在' });
+    if (!(await verifyProjectAccess(character.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此角色' });
+    }
     res.json({ data: character });
   } catch (error) { next(error); }
 });
 
 router.put('/characters/:id', async (req, res, next) => {
   try {
-    const character = await Character.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const character = await Character.findById(req.params.id);
     if (!character) return res.status(404).json({ message: '角色不存在' });
+    if (!(await verifyProjectAccess(character.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权修改此角色' });
+    }
+    const allowed = ['name', 'age', 'gender', 'appearance', 'personality', 'roleType', 'morphs', 'referenceImage', 'generatedImage'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    Object.assign(character, update);
+    await character.save();
     res.json({ message: '更新成功', data: character });
   } catch (error) { next(error); }
 });
 
 router.delete('/characters/:id', async (req, res, next) => {
   try {
-    const character = await Character.findByIdAndDelete(req.params.id);
+    const character = await Character.findById(req.params.id);
     if (!character) return res.status(404).json({ message: '角色不存在' });
+    if (!(await verifyProjectAccess(character.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权删除此角色' });
+    }
+    await Character.findByIdAndDelete(req.params.id);
     res.json({ message: '删除成功' });
   } catch (error) { next(error); }
 });
@@ -84,6 +131,12 @@ router.post('/characters/batch-delete', async (req, res, next) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: '缺少ids' });
+    const chars = await Character.find({ _id: { $in: ids } });
+    for (const c of chars) {
+      if (!(await verifyProjectAccess(c.projectId, req.user._id, req.user.role))) {
+        return res.status(403).json({ message: '无权删除部分角色' });
+      }
+    }
     const r = await Character.deleteMany({ _id: { $in: ids } });
     res.json({ message: `已删除 ${r.deletedCount} 个角色`, data: { deletedCount: r.deletedCount } });
   } catch (error) { next(error); }
@@ -93,7 +146,15 @@ router.post('/characters/batch-delete', async (req, res, next) => {
 
 router.post('/scenes', async (req, res, next) => {
   try {
-    const scene = await SceneAsset.create(req.body);
+    if (!(await verifyProjectAccess(req.body.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权在此项目中创建场景' });
+    }
+    const scene = await SceneAsset.create({
+      projectId: req.body.projectId,
+      sceneName: req.body.sceneName,
+      description: req.body.description || '',
+      stylePrompt: req.body.stylePrompt || '',
+    });
     res.status(201).json({ message: '场景创建成功', data: scene });
   } catch (error) { next(error); }
 });
@@ -102,6 +163,9 @@ router.get('/scenes', async (req, res, next) => {
   try {
     const { projectId } = req.query;
     if (!projectId) return res.status(400).json({ message: '缺少projectId参数' });
+    if (!(await verifyProjectAccess(projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此项目的场景' });
+    }
     const scenes = await SceneAsset.find({ projectId });
     res.json({ data: scenes });
   } catch (error) { next(error); }
@@ -111,22 +175,37 @@ router.get('/scenes/:id', async (req, res, next) => {
   try {
     const scene = await SceneAsset.findById(req.params.id);
     if (!scene) return res.status(404).json({ message: '场景不存在' });
+    if (!(await verifyProjectAccess(scene.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此场景' });
+    }
     res.json({ data: scene });
   } catch (error) { next(error); }
 });
 
 router.put('/scenes/:id', async (req, res, next) => {
   try {
-    const scene = await SceneAsset.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const scene = await SceneAsset.findById(req.params.id);
     if (!scene) return res.status(404).json({ message: '场景不存在' });
+    if (!(await verifyProjectAccess(scene.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权修改此场景' });
+    }
+    const allowed = ['sceneName', 'description', 'stylePrompt', 'referenceImage', 'generatedImage'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    Object.assign(scene, update);
+    await scene.save();
     res.json({ message: '更新成功', data: scene });
   } catch (error) { next(error); }
 });
 
 router.delete('/scenes/:id', async (req, res, next) => {
   try {
-    const scene = await SceneAsset.findByIdAndDelete(req.params.id);
+    const scene = await SceneAsset.findById(req.params.id);
     if (!scene) return res.status(404).json({ message: '场景不存在' });
+    if (!(await verifyProjectAccess(scene.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权删除此场景' });
+    }
+    await SceneAsset.findByIdAndDelete(req.params.id);
     res.json({ message: '删除成功' });
   } catch (error) { next(error); }
 });
@@ -135,6 +214,12 @@ router.post('/scenes/batch-delete', async (req, res, next) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: '缺少ids' });
+    const scenes = await SceneAsset.find({ _id: { $in: ids } });
+    for (const s of scenes) {
+      if (!(await verifyProjectAccess(s.projectId, req.user._id, req.user.role))) {
+        return res.status(403).json({ message: '无权删除部分场景' });
+      }
+    }
     const r = await SceneAsset.deleteMany({ _id: { $in: ids } });
     res.json({ message: `已删除 ${r.deletedCount} 个场景`, data: { deletedCount: r.deletedCount } });
   } catch (error) { next(error); }
@@ -144,7 +229,15 @@ router.post('/scenes/batch-delete', async (req, res, next) => {
 
 router.post('/props', async (req, res, next) => {
   try {
-    const prop = await Prop.create(req.body);
+    if (!(await verifyProjectAccess(req.body.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权在此项目中创建道具' });
+    }
+    const prop = await Prop.create({
+      projectId: req.body.projectId,
+      propName: req.body.propName,
+      description: req.body.description || '',
+      category: req.body.category || '',
+    });
     res.status(201).json({ message: '道具创建成功', data: prop });
   } catch (error) { next(error); }
 });
@@ -153,6 +246,9 @@ router.get('/props', async (req, res, next) => {
   try {
     const { projectId } = req.query;
     if (!projectId) return res.status(400).json({ message: '缺少projectId参数' });
+    if (!(await verifyProjectAccess(projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此项目的道具' });
+    }
     const props = await Prop.find({ projectId });
     res.json({ data: props });
   } catch (error) { next(error); }
@@ -162,22 +258,37 @@ router.get('/props/:id', async (req, res, next) => {
   try {
     const prop = await Prop.findById(req.params.id);
     if (!prop) return res.status(404).json({ message: '道具不存在' });
+    if (!(await verifyProjectAccess(prop.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权查看此道具' });
+    }
     res.json({ data: prop });
   } catch (error) { next(error); }
 });
 
 router.put('/props/:id', async (req, res, next) => {
   try {
-    const prop = await Prop.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const prop = await Prop.findById(req.params.id);
     if (!prop) return res.status(404).json({ message: '道具不存在' });
+    if (!(await verifyProjectAccess(prop.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权修改此道具' });
+    }
+    const allowed = ['propName', 'description', 'category', 'referenceImage', 'generatedImage'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    Object.assign(prop, update);
+    await prop.save();
     res.json({ message: '更新成功', data: prop });
   } catch (error) { next(error); }
 });
 
 router.delete('/props/:id', async (req, res, next) => {
   try {
-    const prop = await Prop.findByIdAndDelete(req.params.id);
+    const prop = await Prop.findById(req.params.id);
     if (!prop) return res.status(404).json({ message: '道具不存在' });
+    if (!(await verifyProjectAccess(prop.projectId, req.user._id, req.user.role))) {
+      return res.status(403).json({ message: '无权删除此道具' });
+    }
+    await Prop.findByIdAndDelete(req.params.id);
     res.json({ message: '删除成功' });
   } catch (error) { next(error); }
 });
@@ -186,6 +297,12 @@ router.post('/props/batch-delete', async (req, res, next) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: '缺少ids' });
+    const props = await Prop.find({ _id: { $in: ids } });
+    for (const p of props) {
+      if (!(await verifyProjectAccess(p.projectId, req.user._id, req.user.role))) {
+        return res.status(403).json({ message: '无权删除部分道具' });
+      }
+    }
     const r = await Prop.deleteMany({ _id: { $in: ids } });
     res.json({ message: `已删除 ${r.deletedCount} 个道具`, data: { deletedCount: r.deletedCount } });
   } catch (error) { next(error); }
@@ -237,7 +354,7 @@ router.post('/characters/:id/upload-image', upload.single('image'), async (req, 
 });
 
 // ===== 批量主体提取（角色 + 场景 + 道具） =====
-router.post('/extract-all', async (req, res, next) => {
+router.post('/extract-all', aiExtractLimiter, async (req, res, next) => {
   try {
     const { scriptId, projectId } = req.body;
     if (!scriptId || !projectId) {
@@ -441,7 +558,7 @@ ${charListText}
 });
 
 // ===== AI 生成提示词 =====
-router.post('/generate-prompt', async (req, res, next) => {
+router.post('/generate-prompt', aiGeneratePromptLimiter, async (req, res, next) => {
   try {
     await appConfig.loadUserConfig(req.user._id);
     const { projectId, assetId, assetType, existingPrompt } = req.body;
@@ -562,7 +679,7 @@ ${hasRefImage ? '⚠️ 该角色已上传参考图，必须100%继承参考图�
 });
 
 // ===== 图片/视频生成 =====
-router.post('/generate-image', async (req, res, next) => {
+router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) => {
   try {
     await appConfig.loadUserConfig(req.user._id);
     const { projectId, assetId, assetType, prompt, model, referenceImages, inputImage } = req.body;
@@ -765,6 +882,7 @@ router.post('/video-tasks/recover', async (req, res, next) => {
     if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
       return res.status(400).json({ message: '请提供 taskIds 数组' });
     }
+    if (taskIds.length > 20) return res.status(400).json({ message: '每次最多恢复20个任务' });
     const { callVideoTaskQuery } = require('../utils/llm-client');
     const axios = require('axios');
 
@@ -879,6 +997,17 @@ router.post('/download-image', async (req, res, next) => {
   try {
     const { imageUrl } = req.body;
     if (!imageUrl) return res.status(400).json({ message: '缺少 imageUrl' });
+
+    // 防御 SSRF：只允许 HTTPS URL，阻止内网/本地地址
+    let url;
+    try { url = new URL(imageUrl); } catch { return res.status(400).json({ message: '无效的 URL' }); }
+    if (url.protocol !== 'https:') return res.status(400).json({ message: '仅支持 HTTPS 链接' });
+    const hostname = url.hostname;
+    const blocked = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]',
+      '169.254.169.254', 'metadata.google.internal'];
+    if (blocked.includes(hostname) || hostname.match(/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/)) {
+      return res.status(400).json({ message: '不允许访问内网地址' });
+    }
 
     const axios = require('axios');
     const fs = require('fs');

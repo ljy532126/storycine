@@ -52,8 +52,13 @@ export const useScriptStore = defineStore('script', {
       try { const res = await scriptAPI.continue({ projectId, episodeId, continueCount }); return res; }
       finally {}
     },
-    async importScript(projectId, fileContent, fileType) {
-      const res = await scriptAPI.import({ projectId, fileContent, fileType });
+    async importScript(projectId, fileContent, fileType, episodeTitle) {
+      const res = await scriptAPI.import({ projectId, fileContent, fileType, episodeTitle });
+      this.scripts.push(res.data);
+      return res.data;
+    },
+    async storyToScript(projectId, storyContent, episodeTitle) {
+      const res = await scriptAPI.storyToScript({ projectId, storyContent, episodeTitle });
       this.scripts.push(res.data);
       return res.data;
     },

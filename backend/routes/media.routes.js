@@ -58,6 +58,24 @@ router.get('/', async (req, res, next) => {
       items.push({ url: project.coverImage, name: project.name, type: '封面', subType: '海报', assetId: project._id, createdAt: project.updatedAt });
     }
 
+    // 只扫描当前用户 UID 目录下的 .mp4 文件（不同用户只能看到自己的视频）
+    const fs = require('fs');
+    const path = require('path');
+    const existingUrls = new Set(items.filter(i => i.isVideo).map(i => i.url));
+    const userUid = req.user?.uid;
+    if (userUid) {
+      const userVideosDir = path.join(__dirname, '..', 'uploads', userUid, 'videos');
+      if (fs.existsSync(userVideosDir)) {
+        fs.readdirSync(userVideosDir).filter(f => f.endsWith('.mp4')).forEach(f => {
+          const url = `/uploads/${userUid}/videos/${f}`;
+          if (!existingUrls.has(url)) {
+            const stat = fs.statSync(path.join(userVideosDir, f));
+            items.push({ url, name: f.replace(/^video-/, '').replace('.mp4', ''), type: '视频', subType: '已下载', assetId: null, createdAt: stat.mtime, isVideo: true });
+          }
+        });
+      }
+    }
+
     // 按时间倒序
     items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
@@ -69,7 +87,18 @@ router.get('/', async (req, res, next) => {
 router.delete('/item', async (req, res, next) => {
   try {
     const { type, assetId, url } = req.body;
-    if (!type || !assetId) return res.status(400).json({ message: '缺少参数' });
+    if (!type) return res.status(400).json({ message: '缺少参数' });
+
+    // 视频：直接从磁盘删除文件
+    if (type === '视频' && url) {
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(__dirname, '..', url);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      return res.json({ message: '已删除' });
+    }
+
+    if (!assetId) return res.status(400).json({ message: '缺少参数' });
 
     switch (type) {
       case '角色': {

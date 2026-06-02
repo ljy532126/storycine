@@ -5,14 +5,16 @@
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
-function errorHandler(err, req, res, next) {
-  console.error('Error:', err.message);
-  console.error('Stack:', err.stack);
+function errorHandler(err, req, res, _next) {
+  const isDev = process.env.NODE_ENV === 'development';
+  if (isDev) { console.error('Error:', err.message); console.error('Stack:', err.stack); }
+  else { console.error('Error:', err.message); }
 
   if (err.name === 'ValidationError') {
     return res.status(400).json({
-      message: '数据验证失败',
-      errors: Object.values(err.errors).map(e => e.message),
+      message: isDev
+        ? 'Validation: ' + Object.values(err.errors).map(e => e.message).join(', ')
+        : '数据验证失败',
     });
   }
 
@@ -26,8 +28,7 @@ function errorHandler(err, req, res, next) {
 
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
-    message: err.message || '服务器内部错误',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    message: isDev ? err.message : '服务器内部错误',
   });
 }
 

@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
 const morgan = require('morgan');
 const { connectDB } = require('./config/database');
 const errorHandler = require('./middleware/error-handler');
@@ -17,17 +18,26 @@ const configRoutes = require('./routes/config.routes');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
+  cors: { origin: process.env.CORS_ORIGIN || 'http://localhost:3012', methods: ['GET', 'POST'] }
 });
 
 app.set('io', io);
 require('./utils/socket-registry').setIO(io);
 
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: false,  // SPA 需要内联脚本
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3012',
+  credentials: true,
+}));
 app.use(morgan('dev'));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 1000 }));
 app.use('/uploads', express.static('uploads'));
+
+app.set('trust proxy', 1);
 
 // 生产环境：单端口部署，后端直接托管前端静态文件
 const path = require('path');
@@ -68,8 +78,8 @@ app.use('/api/v1', (req, res, next) => {
   };
   next();
 });
-// 接口监控查询
-app.get('/api/v1/monitor/endpoints', (req, res) => {
+// 接口监控查询（需登录）
+app.get('/api/v1/monitor/endpoints', require('./middleware/auth.middleware').authRequired, (req, res) => {
   const list = Object.entries(apiStats.routes).map(([k, v]) => ({ route: k, ...v }));
   list.sort((a, b) => b.count - a.count);
   const okCount = apiStats.recent.filter(r => r.status < 400).length;
@@ -116,7 +126,7 @@ app.post('/api/v1/analytics/event', async (req, res) => {
       },
     });
     res.status(201).json({ data: { id: doc._id } });
-  } catch (e) { res.status(500).json({ message: e.message }); }
+  } catch (e) { next(e); }
 });
 
 // 初始化默认管理员账号（首次启动生成随机密码）
@@ -130,7 +140,7 @@ async function initAdmin() {
     let adminUser = exists;
     const RESET_ADMIN = process.env.RESET_ADMIN_PWD === 'true';
     if (!adminUser || RESET_ADMIN) {
-      const defaultPassword = RESET_ADMIN ? String(Math.floor(100000 + Math.random() * 900000)) : 'storycine';
+      const defaultPassword = String(Math.floor(100000 + Math.random() * 900000));
       const hashed = await bcrypt.hash(defaultPassword, 12);
       if (adminUser && RESET_ADMIN) {
         adminUser.password = hashed;
@@ -138,13 +148,13 @@ async function initAdmin() {
         console.log('══════════════════════════════════════════');
         console.log('  🔄 Admin password reset');
         console.log('  Username: admin');
-        console.log('  New password: ' + defaultPassword);
+        console.log('  ⚠️  New password saved. Find it in startup log or reset via RESET_ADMIN_PWD=true');
       } else {
         adminUser = await User.create({ username: 'admin', password: hashed, role: 'admin', status: 'active' });
         console.log('══════════════════════════════════════════');
         console.log('  🔐 Default admin created');
         console.log('  Username: admin');
-        console.log('  Password: ' + defaultPassword);
+        console.log('  ⚠️  Random password generated. See startup log or reset with RESET_ADMIN_PWD=true');
       }
       console.log('  ⚠️  Please change password after login!');
       console.log('══════════════════════════════════════════');

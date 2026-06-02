@@ -98,6 +98,7 @@ function extractRegion(provider, endpoint) {
 
 async function getStorageConfig() {
   const s = await Settings.getSettings();
+  if (!s) return {};
   return s.storageConfig || Settings.schema.paths['storageConfig']?.defaultValue || {};
 }
 

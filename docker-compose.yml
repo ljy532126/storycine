@@ -40,6 +40,8 @@ services:
   app:
     build: .
     container_name: storycine-app
+    volumes:
+      - uploads_data:/app/uploads
     env_file:
       - ./backend/.env
     environment:
@@ -60,3 +62,4 @@ volumes:
   mongo_data:
   redis_data:
   minio_data:
+  uploads_data:

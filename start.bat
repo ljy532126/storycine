@@ -38,6 +38,7 @@ echo.
 
 echo [*] Starting databases...
 docker compose up -d mongodb redis minio >nul 2>&1
+if errorlevel 1 docker-compose up -d mongodb redis minio >nul 2>&1
 if errorlevel 1 (
     echo [!] Docker not running, make sure DB is up
 )

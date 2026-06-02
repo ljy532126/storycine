@@ -110,7 +110,15 @@ async function refreshCaptcha() {
   } catch (e) {}
 }
 
-onMounted(() => { initCaptcha(); });
+onMounted(() => {
+  initCaptcha();
+  // 显示被踢出的原因
+  const reason = sessionStorage.getItem('logout_reason');
+  if (reason) {
+    sessionStorage.removeItem('logout_reason');
+    ElMessage.warning(reason);
+  }
+});
 
 async function handleLogin() {
   const valid = await formRef.value?.validate().catch(() => false);

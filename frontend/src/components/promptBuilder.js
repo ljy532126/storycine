@@ -152,6 +152,8 @@ function buildVideoPrompt(shot, videoConfig, directorSettings) {
 export function buildShotsFromScenes(scenes, videoConfig, noSubtitles = false, directorSettings = null, allAssets = []) {
   if (!scenes || scenes.length === 0) return [];
   const subtitleBlock = noSubtitles ? '，无字幕' : '';
+  const VALID_SHOT_TYPES = ['远景', '中景', '近景', '特写', '大特写', '全景', '中近景'];
+  const VALID_CAM_MOVES = ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动'];
 
   return scenes.map(s => {
     const imgDesc = s.sceneDescription || '';
@@ -161,14 +163,19 @@ export function buildShotsFromScenes(scenes, videoConfig, noSubtitles = false, d
     const action = extractAction(imgDesc);
     const outfit = extractOutfit(imgDesc);
 
+    const st = s.shotType || '中景';
+    const shotType = VALID_SHOT_TYPES.includes(st) ? st : '中景';
+    const cm = s.cameraMovement || '静止';
+    const cameraMovement = VALID_CAM_MOVES.includes(cm) ? cm : '静止';
+
     const shot = {
       shotNumber: s.sceneNumber,
       sceneName: s.location || '',
       _timeOfDay: s.timeOfDay || '',
       _atmosphere: s.atmosphere || '',
-      shotType: s.shotType || '中景',
+      shotType,
       composition: s.composition || '',
-      cameraMovement: s.cameraMovement || '静止',
+      cameraMovement,
       lighting: s.lighting || '',
       duration: s.duration || 3,
       imageDescription: imgDesc,

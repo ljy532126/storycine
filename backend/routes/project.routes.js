@@ -9,6 +9,8 @@ const Prop = require('../models/prop.model');
 const Storyboard = require('../models/storyboard.model');
 const Composition = require('../models/composition.model');
 const { authRequired } = require('../middleware/auth.middleware');
+const { checkDocOwnership } = require('../middleware/ownership.middleware');
+const { aiCoverLimiter } = require('../middleware/rate-limiter.middleware');
 router.use(authRequired);
 
 // 创建项目
@@ -40,15 +42,26 @@ router.get('/:id', async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
+    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: '无权查看此项目' });
+    }
     res.json({ data: project });
   } catch (error) { next(error); }
 });
 
-// 更新项目
+// 更新项目（仅白名单字段）
 router.put('/:id', async (req, res, next) => {
   try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
+    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: '无权修改此项目' });
+    }
+    const allowed = ['name', 'description', 'coverImage', 'status', 'scriptSource', 'videoConfig', 'directorSettings'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    Object.assign(project, update);
+    await project.save();
     res.json({ message: '更新成功', data: project });
   } catch (error) { next(error); }
 });
@@ -56,10 +69,14 @@ router.put('/:id', async (req, res, next) => {
 // 删除（级联删除所有关联数据）
 router.delete('/:id', async (req, res, next) => {
   try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: '项目不存在' });
+    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: '无权删除此项目' });
+    }
+
     const projectId = req.params.id;
     const objId = new mongoose.Types.ObjectId(projectId);
-    const project = await Project.findById(projectId);
-    if (!project) return res.status(404).json({ message: '项目不存在' });
 
     // 级联删除所有关联数据（显式 ObjectId 确保匹配）
     const results = await Promise.all([
@@ -90,10 +107,13 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 // ===== AI 生成项目封面 =====
-router.post('/:id/generate-cover', async (req, res, next) => {
+router.post('/:id/generate-cover', aiCoverLimiter, async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
+    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: '无权操作此项目' });
+    }
 
     // 读取项目剧本，提取关键信息
     const scripts = await Script.find({ projectId: project._id }).sort({ episodeNumber: 1 }).limit(3);

@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   lockedUntil: { type: Date, default: null },
   lastLoginAt: { type: Date, default: null },
   lastLoginIp: { type: String, default: '' },
+  tokenVersion: { type: Number, default: 0 },  // 改密码后 +1，旧 token 失效
 }, { timestamps: true });
 
 // 自动生成唯一短ID：US-XXXXXXXX

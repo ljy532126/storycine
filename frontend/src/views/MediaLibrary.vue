@@ -13,12 +13,13 @@
 
     <!-- 分类 Tab -->
     <div class="ml-tabs" v-if="currentProjectId">
-      <span class="ml-tab active" style="font-weight:600;color:var(--text-100)">筛选：</span>
+      <span style="font-size:13px;font-weight:600;color:var(--text-100);padding:6px 8px 6px 0;flex-shrink:0">筛选：</span>
       <span :class="['ml-tab', { active: filterType === '' }]" @click="setFilter('')">全部</span>
       <span :class="['ml-tab', { active: filterType === '角色' }]" @click="setFilter('角色')">👤 角色</span>
       <span :class="['ml-tab', { active: filterType === '场景' }]" @click="setFilter('场景')">🏞️ 场景</span>
       <span :class="['ml-tab', { active: filterType === '道具' }]" @click="setFilter('道具')">🔧 道具</span>
       <span :class="['ml-tab', { active: filterType === '故事板' }]" @click="setFilter('故事板')">🎬 故事板</span>
+      <span :class="['ml-tab', { active: filterType === '视频' }]" @click="setFilter('视频')">🎥 视频</span>
       <span :class="['ml-tab', { active: filterType === '封面' }]" @click="setFilter('封面')">🎨 封面</span>
       <span class="ml-count" v-if="items.length > 0" style="margin-left:auto">
         共 {{ items.length }} 个
@@ -145,7 +146,7 @@ async function batchDownload() {
     const urls = selectedItems.value.map(i => i.url);
     const names = selectedItems.value.map(i => (i.name || 'file') + (i.isVideo ? '.mp4' : '.png'));
     const res = await fetch('/api/v1/media-library/batch-download', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
       body: JSON.stringify({ urls, names }),
     });
     if (res.ok) {
@@ -164,13 +165,14 @@ async function batchDownload() {
 
 const filteredItems = computed(() => {
   if (!filterType.value) return items.value;
+  if (filterType.value === '视频') return items.value.filter(i => i.isVideo);
   return items.value.filter(i => i.type === filterType.value);
 });
 
 function setFilter(type) { filterType.value = type; }
 function isCloudUrl(url) { return url && (url.startsWith('https://') || url.startsWith('http://')); }
 function tagType(t) {
-  const m = { '角色': 'success', '场景': '', '道具': 'warning', '故事板': 'info', '封面': 'danger' };
+  const m = { '角色': 'success', '场景': '', '道具': 'warning', '故事板': 'info', '视频': 'danger', '封面': 'danger' };
   return m[t] || 'info';
 }
 
@@ -183,7 +185,10 @@ onMounted(async () => {
 async function loadMedia() {
   if (!currentProjectId.value) return;
   try {
-    const res = await fetch(`/api/v1/media-library?projectId=${currentProjectId.value}`);
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch(`/api/v1/media-library?projectId=${currentProjectId.value}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
     const data = await res.json();
     items.value = data.data?.items || [];
   } catch (e) { items.value = []; }
@@ -206,7 +211,7 @@ async function deleteItem(item) {
   try { await ElMessageBox.confirm('确定删除这个资源？', '提示', { type: 'warning' }); } catch { return; }
   try {
     await fetch('/api/v1/media-library/item', {
-      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
       body: JSON.stringify({ type: item.type, assetId: item.assetId, url: item.url }),
     });
     items.value = items.value.filter(i => i !== item);

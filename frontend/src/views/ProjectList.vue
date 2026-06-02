@@ -53,6 +53,9 @@
               </div>
               <div class="poster-actions">
                 <button class="poster-btn" @click.stop="editProject(p)">改剧本</button>
+                <button class="poster-btn poster-btn-redraw" @click.stop="generateCover(p)" :title="genCoverId === p._id ? '绘制中...' : '重新绘制海报'">
+                  {{ genCoverId === p._id ? '⏳' : '重绘' }}
+                </button>
                 <button class="poster-btn poster-btn-del" @click.stop="handleDelete(p._id)">移除</button>
               </div>
             </div>
@@ -147,6 +150,7 @@ import { ref, reactive, computed, onMounted, onActivated } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
+import api from '../api';
 
 const router = useRouter();
 const projectStore = useProjectStore();
@@ -223,16 +227,15 @@ async function handleSave() {
 }
 
 async function generateCover(p) {
-  if (genCoverId.value) return; // 已有任务进行中
+  if (genCoverId.value) return;
   genCoverId.value = p._id;
   try {
-    const res = await fetch(`/api/v1/projects/${p._id}/generate-cover`, { method: 'POST' });
-    const data = await res.json();
+    const data = await api.post(`/projects/${p._id}/generate-cover`);
     if (data.data?.coverImage) {
       p.coverImage = data.data.coverImage;
-      ElMessage.success('封面生成完成 🎉');
-    }
-  } catch (e) { ElMessage.error('封面生成失败'); }
+      ElMessage.success('海报绘制完成 🎉');
+    } else { ElMessage.error('海报生成失败，请重试'); }
+  } catch (e) { ElMessage.error('海报生成失败'); }
   finally { genCoverId.value = null; }
 }
 
@@ -401,6 +404,8 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('zh-CN', { mo
 .poster-btn { font-size: 11px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.3); color: rgba(255,255,255,0.8); cursor: pointer; border-radius: 4px; transition: all 0.15s; backdrop-filter: blur(4px); }
 .poster-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.7); }
 .poster-btn-del:hover { border-color: #e88; color: #faa; }
+.poster-btn-redraw { color: var(--gold); border-color: rgba(201,168,76,0.5); font-weight: 500; }
+.poster-btn-redraw:hover { border-color: var(--gold); background: rgba(201,168,76,0.15); color: var(--gold-light); }
 
 /* ===== Animations ===== */
 @keyframes magFadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }

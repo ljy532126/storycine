@@ -15,7 +15,7 @@
           <el-option v-for="s in scripts" :key="s._id" :label="`第${s.episodeNumber}集`" :value="s._id" />
         </el-select>
         <el-button type="primary" style="margin-left:8px" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating">生成故事板</el-button>
-        <el-button type="danger" size="small" style="margin-left:4px;color:#fff;background:#C44545;border-color:#C44545" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
+        <el-button size="small" class="btn-danger-delete" style="margin-left:4px" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
         <el-button size="small" style="margin-left:4px" @click="openExport">导出</el-button>
         <el-button size="small" style="margin-left:4px" @click="showImportDialog = true" :disabled="!currentStoryboard">导入</el-button>
         <el-divider direction="vertical" style="margin:0 8px" />
@@ -359,7 +359,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+import { ref, watch, computed, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { QuestionFilled } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
@@ -428,6 +428,15 @@ onMounted(async () => {
   if (restored) { currentProjectId.value = restored._id; onProjectChange(restored._id); }
   // 恢复未完成的视频任务
   setTimeout(() => resumeVideoTasks(), 1000);
+});
+
+// keep-alive 缓存激活时：同步从其他页面切换过来的项目
+onActivated(() => {
+  const storeProject = projectStore.currentProject;
+  if (storeProject && storeProject._id !== currentProjectId.value) {
+    currentProjectId.value = storeProject._id;
+    onProjectChange(storeProject._id);
+  }
 });
 
 function onProjectChange(val) {
@@ -1238,32 +1247,34 @@ async function handleImport() {
 
 /* Preview */
 .preview-area {
-  background: var(--navy); border-radius: 12px;
-  border: 2px solid var(--gold); flex: 1; display: flex;
+  background: linear-gradient(135deg, #f8f6f0 0%, #f0ece3 100%);
+  border-radius: 12px;
+  border: 1px solid #e0d9cc;
+  flex: 1; display: flex;
   align-items: center; justify-content: center; overflow: hidden;
   position: relative;
-  box-shadow: inset 0 0 60px rgba(0,0,0,0.3), 0 4px 24px rgba(139,105,20,0.1);
+  box-shadow: inset 0 0 40px rgba(201,168,76,0.06), 0 2px 16px rgba(0,0,0,0.06);
 }
 .preview-area::before {
   content: ''; position: absolute; top: 12px; left: 16px;
   font-family: 'Playfair Display', serif; font-size: 10px;
-  color: var(--gold); letter-spacing: 3px; opacity: 0.6;
+  color: #b8a88a; letter-spacing: 3px; opacity: 0.6;
 }
-.preview-empty { text-align: center; color: var(--primary-300); }
-.preview-empty p { margin-top: 10px; font-size: 14px; color: var(--gold); opacity: 0.5; letter-spacing: 1px; }
+.preview-empty { text-align: center; color: #8b7355; }
+.preview-empty p { margin-top: 10px; font-size: 14px; color: #8b7355; opacity: 0.7; letter-spacing: 1px; }
 .preview-shot { text-align: center; width: 100%; }
 .preview-frame {
   height: 220px; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.03); border-radius: 6px; margin: 0 12px;
 }
 .preview-info { display: flex; gap: 10px; justify-content: center; padding: 10px; font-size: 12px; }
 .pi-tag {
-  background: var(--gold); color: var(--navy); padding: 3px 10px;
+  background: #c9a84c; color: #fff; padding: 3px 10px;
   border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 1px;
 }
 .preview-dialogue {
-  padding: 10px 18px; color: var(--gold-light); font-size: 13px;
-  background: rgba(0,0,0,0.3); border-top: 1px solid var(--gold);
+  padding: 10px 18px; color: #6b5e47; font-size: 13px;
+  background: rgba(201,168,76,0.08); border-top: 1px solid #e0d9cc;
   font-style: italic;
 }
 
@@ -1396,4 +1407,9 @@ async function handleImport() {
 
   .tl-track-row { flex-wrap: wrap; gap: 4px; }
 }
+
+/* 删除按钮 - 覆盖全局 disabled 样式 */
+.btn-danger-delete { background: #e74c3c !important; border-color: #e74c3c !important; color: #fff !important; font-weight: 600 !important; }
+.btn-danger-delete:hover { background: #c0392b !important; border-color: #c0392b !important; color: #fff !important; }
+.btn-danger-delete.is-disabled { background: #ebc9c6 !important; border-color: #ebc9c6 !important; color: rgba(255,255,255,0.7) !important; }
 </style>
