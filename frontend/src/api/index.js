@@ -113,6 +113,7 @@ export const configAPI = {
   getTTSConfig: () => api.get('/config/tts'),
   updateTTSConfig: (data) => api.put('/config/tts', data),
   testTTSConnection: (data) => api.post('/config/tts/test', data),
+  getTTSVoices: () => api.get('/config/tts/voices'),
 };
 
 // ===== TTS 配音 =====

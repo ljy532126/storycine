@@ -370,7 +370,10 @@
       </div>
       <el-form label-position="top" size="small">
         <el-form-item label="音色">
-          <el-input v-model="ttsParams.speaker" placeholder="默认音色ID" />
+          <el-select v-model="ttsParams.speaker" style="width:100%" filterable>
+            <el-option v-for="v in ttsVoiceOptions" :key="v.value" :label="v.label" :value="v.value" :disabled="v.disabled"/>
+          </el-select>
+          <el-input v-if="ttsParams.speaker === '__custom__'" v-model="ttsCustomSpeaker" placeholder="输入音色ID" size="small" style="margin-top:8px" />
         </el-form-item>
         <el-row :gutter="12">
           <el-col :span="12">
@@ -401,7 +404,7 @@ import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
 import { useAssetStore } from '../stores/asset';
 import { storyboardAPI } from '../api';
-import { ttsAPI } from '../api';
+import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 
 const projectStore = useProjectStore();
@@ -1194,8 +1197,25 @@ const ttsTargetShot = ref(null);
 const synthingShot = ref(null);
 const ttsBatchRunning = ref(false);
 const ttsParams = reactive({ speaker: 'zh_female_vv_uranus_bigtts', speechRate: 0, loudnessRate: 0 });
+const ttsCustomSpeaker = ref('');
+
+const ttsVoiceOptions = ref([{ label: '加载中...', value: '' }]);
+
+async function fetchTTSVoices() {
+  try {
+    const { data } = await configAPI.getTTSVoices();
+    if (data && data.length > 0) {
+      const opts = [{ label: '自定义音色ID (手动输入)', value: '__custom__' }];
+      const byGender = {};
+      data.forEach(v => { const g = v.gender || '其他'; if (!byGender[g]) byGender[g] = []; byGender[g].push({ label: v.name, value: v.id }); });
+      Object.entries(byGender).forEach(([g, voices]) => { opts.push({ label: `──── ${g}声 ────`, value: '', disabled: true }); opts.push(...voices); });
+      ttsVoiceOptions.value = opts;
+    }
+  } catch {}
+}
 
 function openTTSDialog(shot) {
+  fetchTTSVoices();
   ttsTargetShot.value = shot;
   ttsParams.speaker = 'zh_female_vv_uranus_bigtts';
   ttsParams.speechRate = 0;
@@ -1207,12 +1227,12 @@ async function handleTTSSynthesize() {
   if (!synthingShot.value && !ttsTargetShot.value) { ttsBatchRunning.value = true; }
   else { synthingShot.value = ttsTargetShot.value ? ttsTargetShot.value.shotNumber : -1; }
   showTTSDialog.value = false;
+  const speaker = ttsParams.speaker === '__custom__' ? (ttsCustomSpeaker.value || 'zh_female_vv_uranus_bigtts') : ttsParams.speaker;
   try {
     if (!ttsTargetShot.value) {
-      // 批量合成
       const { data } = await ttsAPI.batchSynthesize({
         storyboardId: currentStoryboard.value._id,
-        ...ttsParams,
+        speaker, speechRate: ttsParams.speechRate, loudnessRate: ttsParams.loudnessRate,
       });
       const ok = data.results?.filter(r => r.success).length || 0;
       ElMessage.success(`批量配音完成: ${ok}/${data.results?.length || 0}`);
@@ -1230,7 +1250,7 @@ async function handleTTSSynthesize() {
         text, characterName: shot.dialogue?.characterName || '',
         projectId: currentProjectId.value,
         scriptId: currentScriptId.value,
-        ...ttsParams,
+        speaker, speechRate: ttsParams.speechRate, loudnessRate: ttsParams.loudnessRate,
       });
       if (shot.dialogue) shot.dialogue.audioUrl = data.audioUrl;
       ElMessage.success('配音完成');

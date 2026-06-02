@@ -258,7 +258,7 @@
 
         <div class="ac-card">
           <h3 class="ac-card-title">音色 & 音频参数</h3>
-          <div class="ac-row"><span class="ac-label">默认音色 ID</span><el-input v-model="ttsForm.defaultSpeaker" size="small" style="width:320px" placeholder="如 zh_female_qingxinnvsheng_tob" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><span class="ac-label">默认音色</span><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><el-select v-model="ttsForm.defaultSpeaker" size="small" style="width:260px" filterable><el-option v-for="v in ttsVoiceOptions" :key="v.value" :label="v.label" :value="v.value"/></el-select></div></div>
           <div class="ac-row"><span class="ac-label">音频格式</span><el-select v-model="ttsForm.format" size="small" style="width:180px" @change="autoSaveTTS"><el-option label="MP3" value="mp3"/><el-option label="PCM" value="pcm"/><el-option label="OGG Opus" value="ogg_opus"/></el-select></div>
           <div class="ac-row"><span class="ac-label">采样率</span><el-select v-model="ttsForm.sampleRate" size="small" style="width:140px" @change="autoSaveTTS"><el-option :label="24000" :value="24000"/><el-option :label="16000" :value="16000"/><el-option :label="48000" :value="48000"/></el-select></div>
           <div class="ac-row"><span class="ac-label">语速</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.speechRate" :min="-50" :max="100" :step="1" size="small" style="width:200px" @change="autoSaveTTS"/><code style="font-size:12px;width:40px">{{ ttsForm.speechRate }}</code></div></div>
@@ -342,9 +342,33 @@ const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instru
 // ===== TTS 配音配置 =====
 const ttsForm = reactive({
   apiKey: '', resourceId: 'seed-tts-2.0', defaultSpeaker: 'zh_female_vv_uranus_bigtts',
-  customVoiceId: '', format: 'mp3', sampleRate: 24000, speechRate: 0, loudnessRate: 0,
-  enableSubtitle: true, disableMarkdownFilter: true, useCache: true, explicitLanguage: 'zh-cn',
+  customVoiceId: '', format: 'mp3', sampleRate: 24000,
+  speechRate: 0, loudnessRate: 0, enableSubtitle: true, disableMarkdownFilter: true,
+  useCache: true, explicitLanguage: 'zh-cn',
 });
+
+const ttsVoiceOptions = ref([{ label: '加载中...', value: '' }]);
+
+async function fetchTTSVoices() {
+  try {
+    const { data } = await configAPI.getTTSVoices();
+    if (data && data.length > 0) {
+      const opts = [{ label: '🤖 自定义音色ID...', value: '__custom__' }];
+      const byGender = {};
+      data.forEach(v => {
+        const g = v.gender || '其他';
+        if (!byGender[g]) byGender[g] = [];
+        byGender[g].push({ label: `${v.name} (${v.id.split('_').slice(0,3).join('_')})`, value: v.id });
+      });
+      Object.entries(byGender).forEach(([gender, voices]) => {
+        const emoji = { '女': '👩', '男': '👨' }[gender] || '🎤';
+        opts.push({ label: `──────── ${emoji} ${gender}声 ────────`, value: '', disabled: true });
+        opts.push(...voices);
+      });
+      ttsVoiceOptions.value = opts;
+    }
+  } catch {}
+}
 const ttsSaving = ref(false);
 const ttsTesting = ref(false);
 const ttsTestResult = ref(null);
@@ -358,8 +382,10 @@ async function fetchTTSConfig() {
 }
 async function saveTTS() {
   ttsSaving.value = true;
-  try { await configAPI.updateTTSConfig({ ...ttsForm }); ElMessage.success('TTS 配置已保存'); }
-  catch { ElMessage.error('保存失败'); }
+  try {
+    await configAPI.updateTTSConfig({ ...ttsForm });
+    ElMessage.success('TTS 配置已保存');
+  } catch { ElMessage.error('保存失败'); }
   finally { ttsSaving.value = false; }
 }
 function autoSaveTTS() {}
@@ -376,7 +402,7 @@ async function testTTS() {
   finally { ttsTesting.value = false; }
 }
 
-onMounted(() => { refreshStatus(); fetchTTSConfig(); });
+onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); });
 // keep-alive 后切换用户需要刷新
 import { watch } from 'vue';
 import { useRoute } from 'vue-router';
