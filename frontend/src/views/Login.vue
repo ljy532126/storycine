@@ -19,16 +19,10 @@
 
         <!-- 验证码 -->
         <el-form-item label="验证码" prop="captchaText">
-          <div v-if="!sliderPassed" class="slider-wrap" @mousedown="sliderStart" @mousemove="sliderMove" @mouseup="sliderEnd" @mouseleave="sliderEnd" @touchstart="sliderStart" @touchmove="sliderMove" @touchend="sliderEnd">
-            <div class="slider-track">
-              <div class="slider-fill" :style="{width: sliderPercent + '%'}"></div>
-              <div class="slider-btn" :style="{left: sliderPercent + '%'}" :class="{done: sliderPassed}">
-                <span v-if="!sliderPassed">→</span><span v-else>✓</span>
-              </div>
-            </div>
-            <div class="slider-text">{{ sliderPassed ? '验证通过 ✓' : '按住滑块拖到最右边' }}</div>
+          <div class="captcha-row">
+            <el-input v-model="form.captchaText" placeholder="请输入验证码" maxlength="4" style="flex:1" />
+            <div class="captcha-svg" v-html="captchaSvg" @click="refreshCaptcha" title="点击刷新验证码"></div>
           </div>
-          <div v-else class="slider-done">✅ 验证通过</div>
         </el-form-item>
 
         <el-form-item>
@@ -55,51 +49,9 @@ import { ElMessage } from 'element-plus';
 const router = useRouter();
 const loading = ref(false);
 const rememberMe = ref(false);
-const needCaptcha = ref(true);
 const formRef = ref(null);
+const captchaSvg = ref('');
 const form = reactive({ username: '', password: '', captchaText: '', captchaId: '' });
-// 滑块验证
-const sliderPassed = ref(false);
-const sliderPercent = ref(0);
-let sliderDragging = false;
-let sliderStartX = 0;
-let sliderTrackWidth = 0;
-
-async function initCaptcha() {
-  sliderPassed.value = false;
-  sliderPercent.value = 0;
-  try {
-    const res = await fetch('/api/v1/auth/captcha/slider');
-    const data = await res.json();
-    form.captchaId = data.data.captchaId;
-    form.captchaText = data.data.captchaText;
-  } catch {}
-}
-function sliderStart(e) {
-  if (sliderPassed.value) return;
-  sliderDragging = true;
-  const track = e.currentTarget.querySelector('.slider-track');
-  sliderTrackWidth = track.offsetWidth - 40;
-  sliderStartX = (e.touches ? e.touches[0].clientX : e.clientX) - sliderPercent.value / 100 * sliderTrackWidth;
-}
-function sliderMove(e) {
-  if (!sliderDragging || sliderPassed.value) return;
-  const x = (e.touches ? e.touches[0].clientX : e.clientX) - sliderStartX;
-  sliderPercent.value = Math.max(0, Math.min(100, (x / sliderTrackWidth) * 100));
-}
-async function sliderEnd() {
-  sliderDragging = false;
-  if (sliderPercent.value >= 90) {
-    sliderPercent.value = 100;
-    sliderPassed.value = true;
-  } else if (!sliderPassed.value) {
-    sliderPercent.value = 0;
-  }
-}
-const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, min: 6, message: '密码至少6位', trigger: 'blur' }],
-};
 
 async function refreshCaptcha() {
   try {
@@ -107,11 +59,15 @@ async function refreshCaptcha() {
     const data = await res.json();
     form.captchaId = data.data.captchaId;
     captchaSvg.value = data.data.svg;
-  } catch (e) {}
+  } catch {}
 }
+const rules = {
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  password: [{ required: true, min: 6, message: '密码至少6位', trigger: 'blur' }],
+};
 
 onMounted(() => {
-  initCaptcha();
+  refreshCaptcha();
   // 显示被踢出的原因
   const reason = sessionStorage.getItem('logout_reason');
   if (reason) {
@@ -130,7 +86,7 @@ async function handleLogin() {
     const data = await res.json();
     if (!res.ok) {
       ElMessage.error(data.message || '登录失败');
-      initCaptcha();
+      refreshCaptcha();
       return;
     }
     localStorage.setItem('token', data.data.token);
@@ -150,14 +106,9 @@ async function handleLogin() {
 .auth-header h1 { font-family: 'Playfair Display', serif; color: var(--text-100); font-size: 24px; margin: 8px 0 4px; letter-spacing: 1px; }
 .auth-header p { color: var(--text-200); font-size: 12px; letter-spacing: 2px; }
 .auth-card h2 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text-100); text-align: center; margin-bottom: 28px; padding-bottom: 14px; border-bottom: 2px solid var(--gold); }
-.slider-wrap { user-select: none; margin: 4px 0; }
-.slider-track { position: relative; height: 40px; background: var(--bg-100); border-radius: 20px; overflow: hidden; border: 1px solid var(--bg-300); }
-.slider-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-dark)); border-radius: 20px 0 0 20px; transition: width 0.05s; }
-.slider-btn { position: absolute; top: 2px; width: 36px; height: 36px; background: var(--navy); color: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; cursor: grab; transform: translateX(-18px); transition: background 0.2s; }
-.slider-btn.done { background: var(--gold); color: var(--navy); cursor: default; }
-.slider-btn:active { cursor: grabbing; }
-.slider-text { text-align: center; font-size: 12px; color: var(--text-200); margin-top: 4px; }
-.slider-done { text-align: center; padding: 8px; background: rgba(46,125,50,0.1); border-radius: 6px; font-size: 13px; color: #2E7D32; }
+.captcha-row { display: flex; gap: 10px; align-items: center; }
+.captcha-svg { width: 110px; height: 40px; cursor: pointer; border: 1px solid var(--bg-300); border-radius: 6px; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FBF7F0; }
+.captcha-svg:hover { border-color: var(--gold); }
 .auth-footer { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-200); }
 .auth-footer a { color: var(--gold-dark); font-weight: 600; text-decoration: none; }
 .auth-footer a:hover { color: var(--gold); }
