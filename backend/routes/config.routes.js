@@ -288,11 +288,18 @@ router.put('/tts', async (req, res, next) => {
       'useCache', 'explicitLanguage'];
     allowed.forEach(k => {
       if (req.body[k] !== undefined) {
-        cfg[k] = (k === 'apiKey' && req.body[k] && req.body[k].indexOf('****') === -1)
-          ? ttsService.encrypt(req.body[k]) : req.body[k];
+        if (k === 'apiKey') {
+          // masked key（含 ****）→ 保持旧值不覆盖；新明文 → 加密后存储
+          if (req.body[k] && req.body[k].indexOf('****') === -1) {
+            cfg[k] = ttsService.encrypt(req.body[k]);
+          }
+          // else: keep existing cfg[k] (already encrypted)
+        } else {
+          cfg[k] = req.body[k];
+        }
       }
     });
-    cfg.configured = !!(cfg.apiKey);
+    cfg.configured = !!(cfg.apiKey && cfg.apiKey.length > 40); // encrypted keys are >40 chars
     await Settings.updateSettings(req.user._id, { ttsConfig: cfg });
     const mask = (k) => k ? k.substring(0, 4) + '****' + k.substring(Math.max(0, k.length - 4)) : '';
     res.json({ message: 'TTS 配置已保存', data: { ...cfg, apiKey: mask(cfg.apiKey || '') } });

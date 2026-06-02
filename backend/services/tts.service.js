@@ -93,36 +93,20 @@ function synthesizeViaSSE(apiKey, resourceId, body) {
           if (!payload) continue;
           try {
             const json = JSON.parse(payload);
-            // event 352 (TTSResponse): 音频数据在 json.data 里，base64 编码
-            if (json.data && typeof json.data === 'string' && json.data.length > 100) {
+            // 352 TTSResponse — audio in json.data as base64
+            if (json.data && typeof json.data === 'string' && json.data.length > 50) {
               try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(json.data, 'base64')]); } catch {}
             }
-            // event 351 (TTSSentenceEnd): 可能含字幕
+            // 351 TTSSentenceEnd — subtitle timestamps
             if (json.sentence?.words) subtitles.push(...json.sentence.words);
-            // event 153 (SessionFailed): 错误
-            if (json.code === 55000000 || json.code === 45000000) {
-              console.warn('[tts] SSE 服务端错误:', json.code, json.message);
-            }
-          } catch {
-            // 非 JSON 的 data 行（例如纯 base64），直接追加
-            try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]); } catch {}
-          }
+            // 153/error codes — log for debugging
+            if (json.code && json.code !== 0) console.warn('[tts] 服务端返回:', json.code, json.message || '');
+          } catch { /* ignore non-JSON lines */ }
         }
       });
 
       resp.data.on('end', () => {
         clearTimeout(timer);
-        if (buffer.trim().startsWith('data:')) {
-          const payload = buffer.trim().substring(5).trim();
-          if (payload) {
-            try {
-              const json = JSON.parse(payload);
-              if (json.data && typeof json.data === 'string') {
-                try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(json.data, 'base64')]); } catch {}
-              }
-            } catch { try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]); } catch {} }
-          }
-        }
         if (!resolved) {
           resolved = true;
           if (audioBuffer.length > 0) {
