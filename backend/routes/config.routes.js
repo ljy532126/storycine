@@ -269,32 +269,26 @@ function maskSecret(secret) {
 
 // ===== TTS 配音配置 =====
 
-// 火山 TTS 音色列表 (从 ListSpeakers API 同步, ResourceID=seed-tts-2.0)
-const TTS_VOICE_LIST = [
-  // 女声
+// 音色缓存 (内存，启动时从火山 ListSpeakers 拉取，失败则用内置默认列表)
+let ttsVoiceCache = null;
+let ttsVoiceCacheTime = 0;
+const VOICE_CACHE_TTL = 3600000; // 1 小时
+
+// 内置默认音色列表（API 拉取失败时的回退）
+const FALLBACK_VOICES = [
   { id: 'zh_female_vv_uranus_bigtts', name: 'Vivi 2.0', gender: '女' },
   { id: 'zh_female_xiaohe_uranus_bigtts', name: '小何 2.0', gender: '女' },
   { id: 'zh_female_wenroumama_uranus_bigtts', name: '温柔妈妈 2.0', gender: '女' },
   { id: 'zh_female_qiaopinv_uranus_bigtts', name: '俏皮女声 2.0', gender: '女' },
   { id: 'zh_female_shaoergushi_uranus_bigtts', name: '少儿故事 2.0', gender: '女' },
-  { id: 'zh_female_gujie_uranus_bigtts', name: '顾姐 2.0', gender: '女' },
   { id: 'zh_female_wuzetian_uranus_bigtts', name: '武则天 2.0', gender: '女' },
-  { id: 'zh_female_wenrouxiaoya_uranus_bigtts', name: '温柔小雅 2.0', gender: '女' },
-  { id: 'zh_female_roumeinvyou_uranus_bigtts', name: '柔美女友 2.0', gender: '女' },
-  { id: 'zh_female_xinlingjitang_uranus_bigtts', name: '心灵鸡汤 2.0', gender: '女' },
   { id: 'zh_female_tianmeiyueyue_uranus_bigtts', name: '甜美悦悦 2.0', gender: '女' },
   { id: 'zh_female_qingchezizi_uranus_bigtts', name: '清澈梓梓 2.0', gender: '女' },
   { id: 'zh_female_zhixingnv_uranus_bigtts', name: '知性女声 2.0', gender: '女' },
-  { id: 'zh_female_wenjingmaomao_uranus_bigtts', name: '文静毛毛 2.0', gender: '女' },
-  { id: 'zh_female_qinqienv_uranus_bigtts', name: '亲切女声 2.0', gender: '女' },
   { id: 'zh_female_sophie_uranus_bigtts', name: '魅力苏菲 2.0', gender: '女' },
   { id: 'zh_female_zhishuaiyingzi_uranus_bigtts', name: '直率英子 2.0', gender: '女' },
-  { id: 'zh_female_nvleishen_uranus_bigtts', name: '女雷神 2.0', gender: '女' },
-  // 男声
   { id: 'zh_male_wennuanahu_uranus_bigtts', name: '温暖阿虎 2.0', gender: '男' },
   { id: 'zh_male_jieshuoxiaoming_uranus_bigtts', name: '解说小明 2.0', gender: '男' },
-  { id: 'zh_male_guanggaojieshuo_uranus_bigtts', name: '广告解说 2.0', gender: '男' },
-  { id: 'zh_male_tiancaitongsheng_uranus_bigtts', name: '天才童声 2.0', gender: '男' },
   { id: 'zh_male_dongfanghaoran_uranus_bigtts', name: '东方浩然 2.0', gender: '男' },
   { id: 'zh_male_wenrouxiaoge_uranus_bigtts', name: '温柔小哥 2.0', gender: '男' },
   { id: 'zh_male_yangguangqingnian_uranus_bigtts', name: '阳光青年 2.0', gender: '男' },
@@ -305,8 +299,79 @@ const TTS_VOICE_LIST = [
   { id: 'zh_male_kuailexiaodong_uranus_bigtts', name: '快乐小东 2.0', gender: '男' },
 ];
 
-router.get('/tts/voices', (req, res) => {
-  res.json({ data: TTS_VOICE_LIST });
+/** 从火山 ListSpeakers API 实时拉取音色，失败则用缓存或默认列表 */
+async function fetchVolcanoVoices() {
+  const ak = process.env.VOLCANO_ACCESS_KEY || process.env.VOLCANO_AK || '';
+  const sk = process.env.VOLCANO_SECRET_KEY || process.env.VOLCANO_SK || '';
+  if (!ak || !sk) {
+    // 没有配置 AK/SK，用缓存或默认
+    if (ttsVoiceCache) return ttsVoiceCache;
+    ttsVoiceCache = FALLBACK_VOICES;
+    ttsVoiceCacheTime = Date.now();
+    console.log('[tts-voices] 未配置火山 AK/SK，使用内置音色列表 (' + FALLBACK_VOICES.length + ' 个)');
+    return FALLBACK_VOICES;
+  }
+
+  const { signRequest } = require('../utils/volcano-sign');
+  const body = { ResourceIDs: ['seed-tts-2.0'], Limit: 200, Page: 1 };
+  const headers = signRequest(ak, sk, 'speech_saas_prod', 'cn-beijing', 'POST', '/', 'Action=ListSpeakers&Version=2025-05-20', body);
+
+  const allSpeakers = [];
+  let page = 1;
+  while (true) {
+    body.Page = page;
+    const finalBody = JSON.stringify(body);
+    // 每页重新签名（X-Date 变化）
+    const hdrs = signRequest(ak, sk, 'speech_saas_prod', 'cn-beijing', 'POST', '/', 'Action=ListSpeakers&Version=2025-05-20', finalBody);
+
+    const resp = await axios.post(
+      'https://speech-saas-prod.volcengineapi.com?Action=ListSpeakers&Version=2025-05-20',
+      finalBody,
+      { headers: hdrs, timeout: 10000, validateStatus: () => true }
+    );
+
+    if (resp.data?.ResponseMetadata?.Error) {
+      const err = resp.data.ResponseMetadata.Error;
+      throw new Error(`火山 API 错误: ${err.Code} - ${err.Message}`);
+    }
+
+    const speakers = resp.data?.Result?.Speakers || [];
+    allSpeakers.push(...speakers);
+    const total = resp.data?.Result?.Total || 0;
+    console.log(`[tts-voices] 第${page}页: ${speakers.length} 个, 累计 ${allSpeakers.length}/${total}`);
+
+    if (allSpeakers.length >= total || speakers.length < 200) break;
+    page++;
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  const result = allSpeakers.map(s => ({ id: s.VoiceType, name: s.Name, gender: s.Gender || '未知' }));
+  ttsVoiceCache = result;
+  ttsVoiceCacheTime = Date.now();
+  console.log(`[tts-voices] 更新完成: ${result.length} 个音色`);
+  return result;
+}
+
+// 启动时拉取
+fetchVolcanoVoices().catch(() => {});
+
+// GET /config/tts/voices — 返回音色列表（缓存优先）
+router.get('/tts/voices', async (req, res) => {
+  try {
+    const voices = ttsVoiceCache || (await fetchVolcanoVoices());
+    res.json({ data: voices, cached: true, count: voices.length });
+  } catch (e) {
+    res.json({ data: FALLBACK_VOICES, cached: false, count: FALLBACK_VOICES.length, error: e.message });
+  }
+});
+
+// POST /config/tts/voices/sync — 强制刷新音色缓存
+router.post('/tts/voices/sync', async (req, res, next) => {
+  try {
+    ttsVoiceCache = null;
+    const voices = await fetchVolcanoVoices();
+    res.json({ message: '音色列表已更新', data: voices, count: voices.length });
+  } catch (e) { next(e); }
 });
 
 router.get('/tts', async (req, res, next) => {
