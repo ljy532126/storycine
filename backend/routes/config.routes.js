@@ -269,10 +269,40 @@ function maskSecret(secret) {
 
 // ===== TTS 配音配置 =====
 
-// 已验证可用的火山 TTS 音色（seed-tts-2.0）
+// 火山 TTS 音色列表 (从 ListSpeakers API 同步, ResourceID=seed-tts-2.0)
 const TTS_VOICE_LIST = [
-  { id: 'zh_female_vv_uranus_bigtts', name: '女声-温柔知性', gender: '女' },
-  { id: 'zh_female_xiaohe_uranus_bigtts', name: '女声-活泼小荷', gender: '女' },
+  // 女声
+  { id: 'zh_female_vv_uranus_bigtts', name: 'Vivi 2.0', gender: '女' },
+  { id: 'zh_female_xiaohe_uranus_bigtts', name: '小何 2.0', gender: '女' },
+  { id: 'zh_female_wenroumama_uranus_bigtts', name: '温柔妈妈 2.0', gender: '女' },
+  { id: 'zh_female_qiaopinv_uranus_bigtts', name: '俏皮女声 2.0', gender: '女' },
+  { id: 'zh_female_shaoergushi_uranus_bigtts', name: '少儿故事 2.0', gender: '女' },
+  { id: 'zh_female_gujie_uranus_bigtts', name: '顾姐 2.0', gender: '女' },
+  { id: 'zh_female_wuzetian_uranus_bigtts', name: '武则天 2.0', gender: '女' },
+  { id: 'zh_female_wenrouxiaoya_uranus_bigtts', name: '温柔小雅 2.0', gender: '女' },
+  { id: 'zh_female_roumeinvyou_uranus_bigtts', name: '柔美女友 2.0', gender: '女' },
+  { id: 'zh_female_xinlingjitang_uranus_bigtts', name: '心灵鸡汤 2.0', gender: '女' },
+  { id: 'zh_female_tianmeiyueyue_uranus_bigtts', name: '甜美悦悦 2.0', gender: '女' },
+  { id: 'zh_female_qingchezizi_uranus_bigtts', name: '清澈梓梓 2.0', gender: '女' },
+  { id: 'zh_female_zhixingnv_uranus_bigtts', name: '知性女声 2.0', gender: '女' },
+  { id: 'zh_female_wenjingmaomao_uranus_bigtts', name: '文静毛毛 2.0', gender: '女' },
+  { id: 'zh_female_qinqienv_uranus_bigtts', name: '亲切女声 2.0', gender: '女' },
+  { id: 'zh_female_sophie_uranus_bigtts', name: '魅力苏菲 2.0', gender: '女' },
+  { id: 'zh_female_zhishuaiyingzi_uranus_bigtts', name: '直率英子 2.0', gender: '女' },
+  { id: 'zh_female_nvleishen_uranus_bigtts', name: '女雷神 2.0', gender: '女' },
+  // 男声
+  { id: 'zh_male_wennuanahu_uranus_bigtts', name: '温暖阿虎 2.0', gender: '男' },
+  { id: 'zh_male_jieshuoxiaoming_uranus_bigtts', name: '解说小明 2.0', gender: '男' },
+  { id: 'zh_male_guanggaojieshuo_uranus_bigtts', name: '广告解说 2.0', gender: '男' },
+  { id: 'zh_male_tiancaitongsheng_uranus_bigtts', name: '天才童声 2.0', gender: '男' },
+  { id: 'zh_male_dongfanghaoran_uranus_bigtts', name: '东方浩然 2.0', gender: '男' },
+  { id: 'zh_male_wenrouxiaoge_uranus_bigtts', name: '温柔小哥 2.0', gender: '男' },
+  { id: 'zh_male_yangguangqingnian_uranus_bigtts', name: '阳光青年 2.0', gender: '男' },
+  { id: 'zh_male_yuanboxiaoshu_uranus_bigtts', name: '渊博小叔 2.0', gender: '男' },
+  { id: 'zh_male_qingshuangnanda_uranus_bigtts', name: '清爽男大 2.0', gender: '男' },
+  { id: 'zh_male_youyoujunzi_uranus_bigtts', name: '悠悠君子 2.0', gender: '男' },
+  { id: 'zh_male_kailangxuezhang_uranus_bigtts', name: '开朗学长 2.0', gender: '男' },
+  { id: 'zh_male_kuailexiaodong_uranus_bigtts', name: '快乐小东 2.0', gender: '男' },
 ];
 
 router.get('/tts/voices', (req, res) => {

@@ -152,9 +152,7 @@ async function synthesizeSpeech(userId, params) {
   const speaker = params.speaker || ttsCfg.defaultSpeaker || 'zh_female_vv_uranus_bigtts';
   const format = params.format || ttsCfg.format || 'mp3';
 
-  // 根据音色自动匹配 resourceId，只有明确传参时才用 params
-  const isTTS2 = speaker === 'zh_female_vv_uranus_bigtts' || speaker === 'zh_female_xiaohe_uranus_bigtts';
-  const resourceId = params.resourceId || (isTTS2 ? 'seed-tts-2.0' : 'seed-tts-1.0');
+  const resourceId = params.resourceId || ttsCfg.resourceId || 'seed-tts-2.0';
 
   const addObj = {};
   if (params.disableMarkdownFilter !== undefined ? params.disableMarkdownFilter : ttsCfg.disableMarkdownFilter !== false) addObj.disable_markdown_filter = true;
