@@ -16,6 +16,7 @@ const Statistics = () => import('../views/Statistics.vue');
 const AIConfig = () => import('../views/AIConfig.vue');
 const AIStorageConfig = () => import('../views/AIStorageConfig.vue');
 const MediaLibrary = () => import('../views/MediaLibrary.vue');
+const TTSLibrary = () => import('../views/TTSLibrary.vue');
 const UserManagement = () => import('../views/UserManagement.vue');
 const Profile = () => import('../views/Profile.vue');
 
@@ -35,6 +36,7 @@ const routes = [
   { path: '/ai-config', name: 'AIConfig', component: AIConfig, meta: { requiresAuth: true } },
   { path: '/ai-storage', name: 'AIStorageConfig', component: AIStorageConfig, meta: { requiresAuth: true } },
   { path: '/media-library', name: 'MediaLibrary', component: MediaLibrary, meta: { requiresAuth: true } },
+  { path: '/tts-library', name: 'TTSLibrary', component: TTSLibrary, meta: { requiresAuth: true } },
   { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
 ];

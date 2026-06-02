@@ -109,6 +109,20 @@ export const configAPI = {
   updateLLMConfig: (data) => api.put('/config/llm', data),
   getLLMStatus: () => api.get('/config/llm/status'),
   testLLMConnection: (data) => api.post('/config/llm/test', data),
+  // TTS
+  getTTSConfig: () => api.get('/config/tts'),
+  updateTTSConfig: (data) => api.put('/config/tts', data),
+  testTTSConnection: (data) => api.post('/config/tts/test', data),
+};
+
+// ===== TTS 配音 =====
+export const ttsAPI = {
+  synthesize: (data) => api.post('/tts/synthesize', data),
+  batchSynthesize: (data) => api.post('/tts/batch-synthesize', data),
+  getLibrary: (params) => api.get('/tts/library', { params }),
+  deleteAudio: (id) => api.delete(`/tts/library/${id}`),
+  batchDelete: (ids) => api.post('/tts/library/batch-delete', { ids }),
+  batchDownload: (ids) => api.post('/tts/library/batch-download', { ids }, { responseType: 'blob' }),
 };
 
 // ===== 合成 =====

@@ -13,6 +13,7 @@
       <span :class="['st-tab', { active: settingsTab === 'llm' }]" @click="settingsTab = 'llm'">LLM配置</span>
       <span :class="['st-tab', { active: settingsTab === 'image' }]" @click="settingsTab = 'image'">生图设置</span>
       <span :class="['st-tab', { active: settingsTab === 'storage' }]" @click="settingsTab = 'storage'">存储设置</span>
+      <span :class="['st-tab', { active: settingsTab === 'tts' }]" @click="settingsTab = 'tts'">火山 TTS 配音</span>
     </div>
 
     <!-- ===== LLM 配置 ===== -->
@@ -245,6 +246,53 @@
       </div>
     </div>
 
+    <!-- ===== TTS 配音设置 ===== -->
+    <div v-show="settingsTab === 'tts'" class="st-section">
+      <div class="ac-grid">
+        <div class="ac-card">
+          <h3 class="ac-card-title">鉴权配置</h3>
+          <div class="ac-row"><span class="ac-label">API Key (X-Api-Key)</span><el-input v-model="ttsForm.apiKey" size="small" style="width:360px" type="password" show-password placeholder="火山控制台 API 密钥" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><span class="ac-label">Resource ID</span><el-select v-model="ttsForm.resourceId" size="small" style="width:260px" @change="autoSaveTTS"><el-option label="seed-tts-2.0 (325官方音色)" value="seed-tts-2.0"/><el-option label="seed-icl-2.0 (自定义复刻)" value="seed-icl-2.0"/><el-option label="seed-tts-1.0 (旧版)" value="seed-tts-1.0"/></el-select></div>
+          <div class="ac-row" v-if="ttsForm.resourceId === 'seed-icl-2.0'"><span class="ac-label">自定义 Voice ID</span><el-input v-model="ttsForm.customVoiceId" size="small" style="width:280px" placeholder="ICL 复刻返回的 voice_id" @change="autoSaveTTS"/></div>
+        </div>
+
+        <div class="ac-card">
+          <h3 class="ac-card-title">音色 & 音频参数</h3>
+          <div class="ac-row"><span class="ac-label">默认音色 ID</span><el-input v-model="ttsForm.defaultSpeaker" size="small" style="width:320px" placeholder="如 zh_female_qingxinnvsheng_tob" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><span class="ac-label">音频格式</span><el-select v-model="ttsForm.format" size="small" style="width:180px" @change="autoSaveTTS"><el-option label="MP3" value="mp3"/><el-option label="PCM" value="pcm"/><el-option label="OGG Opus" value="ogg_opus"/></el-select></div>
+          <div class="ac-row"><span class="ac-label">采样率</span><el-select v-model="ttsForm.sampleRate" size="small" style="width:140px" @change="autoSaveTTS"><el-option :label="24000" :value="24000"/><el-option :label="16000" :value="16000"/><el-option :label="48000" :value="48000"/></el-select></div>
+          <div class="ac-row"><span class="ac-label">语速</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.speechRate" :min="-50" :max="100" :step="1" size="small" style="width:200px" @change="autoSaveTTS"/><code style="font-size:12px;width:40px">{{ ttsForm.speechRate }}</code></div></div>
+          <div class="ac-row"><span class="ac-label">音量</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.loudnessRate" :min="-50" :max="100" :step="1" size="small" style="width:200px" @change="autoSaveTTS"/><code style="font-size:12px;width:40px">{{ ttsForm.loudnessRate }}</code></div></div>
+          <div class="ac-row"><span class="ac-label">情绪</span><el-select v-model="ttsForm.emotion" size="small" style="width:180px" clearable @change="autoSaveTTS"><el-option label="默认(无)" value=""/><el-option label="开心 happy" value="happy"/><el-option label="生气 angry" value="angry"/><el-option label="悲伤 sad" value="sad"/><el-option label="惊讶 surprised" value="surprised"/><el-option label="恐惧 fearful" value="fearful"/><el-option label="厌恶 disgusted" value="disgusted"/></el-select></div>
+          <div class="ac-row" v-if="ttsForm.emotion"><span class="ac-label">情绪强度</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.emotionScale" :min="1" :max="5" :step="1" size="small" style="width:140px" @change="autoSaveTTS"/><code style="font-size:12px;width:20px">{{ ttsForm.emotionScale }}</code></div></div>
+        </div>
+
+        <div class="ac-card">
+          <h3 class="ac-card-title">高级选项</h3>
+          <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">开启字幕时间戳</span><span class="ac-desc">短剧字幕必备</span></div><el-switch v-model="ttsForm.enableSubtitle" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">过滤 Markdown 符号</span><span class="ac-desc">移除 ** 加粗等标记</span></div><el-switch v-model="ttsForm.disableMarkdownFilter" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">开启文本缓存</span><span class="ac-desc">重复台词复用音频、不计费</span></div><el-switch v-model="ttsForm.useCache" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">启用 COT 标签</span><span class="ac-desc">支持 &lt;Cot text=缓慢&gt;台词&lt;/Cot&gt; 控语速</span></div><el-switch v-model="ttsForm.useTagParser" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><span class="ac-label">语种</span><el-select v-model="ttsForm.explicitLanguage" size="small" style="width:140px" @change="autoSaveTTS"><el-option label="中文" value="zh-cn"/><el-option label="英文" value="en"/><el-option label="日文" value="ja"/><el-option label="自动" value=""/></el-select></div>
+          <div class="ac-row"><span class="ac-label">句尾静音 (ms)</span><el-input v-model.number="ttsForm.silenceDuration" type="number" :min="0" :max="30000" size="small" style="width:120px" @change="autoSaveTTS"/></div>
+          <div class="ac-row"><span class="ac-label">TTS 模型</span><el-select v-model="ttsForm.model" size="small" style="width:240px" @change="autoSaveTTS"><el-option label="2.0 标准版 (低延迟)" value="seed-tts-2.0-standard"/><el-option label="2.0 增强版 (高情绪)" value="seed-tts-2.0-expressive"/></el-select></div>
+        </div>
+
+        <div class="ac-card" style="display:flex;align-items:center;gap:12px;flex-direction:row">
+          <el-button type="primary" size="small" @click="saveTTS" :loading="ttsSaving">{{ ttsSaving ? '保存中...' : '保存 TTS 配置' }}</el-button>
+          <el-button size="small" @click="testTTS" :loading="ttsTesting">{{ ttsTesting ? '测试中...' : '测试合成连接' }}</el-button>
+          <span v-if="ttsTestResult" :style="{ color: ttsTestResult.ok ? '#67C23A' : '#F56C6C', fontSize:'13px' }">{{ ttsTestResult.ok ? '✓' : '✗' }} {{ ttsTestResult.message }}</span>
+        </div>
+
+        <div class="ac-card" :style="ttsStatusText.includes('已配置') ? 'background:#E8F5E9;border-color:#A5D6A7' : 'background:var(--accent-200);border-color:var(--accent-100)'">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-100)">
+            <span style="font-size:20px">🎙️</span>
+            <span>{{ ttsStatusText }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -296,7 +344,45 @@ const doubaoModels = ['doubao-seedance-2-0-260128', 'doubao-pro-32k', 'doubao-li
 const seedreamModels = ['doubao-seedream-4-5-251128', 'doubao-seedream-4-0-250828'];
 const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instruct'];
 
-onMounted(() => { refreshStatus(); });
+// ===== TTS 配音配置 =====
+const ttsForm = reactive({
+  apiKey: '', resourceId: 'seed-tts-2.0', defaultSpeaker: 'zh_female_qingxinnvsheng_tob',
+  customVoiceId: '', format: 'mp3', sampleRate: 24000, speechRate: 0, loudnessRate: 0,
+  emotion: '', emotionScale: 4, enableSubtitle: true, disableMarkdownFilter: true,
+  useCache: true, useTagParser: false, explicitLanguage: 'zh-cn', silenceDuration: 0,
+  model: 'seed-tts-2.0-standard',
+});
+const ttsSaving = ref(false);
+const ttsTesting = ref(false);
+const ttsTestResult = ref(null);
+const ttsStatusText = computed(() => ttsForm.apiKey ? '已配置 ✓' : '未配置 — 请填写火山 API Key');
+
+async function fetchTTSConfig() {
+  try {
+    const { data } = await configAPI.getTTSConfig();
+    if (data) Object.keys(ttsForm).forEach(k => { if (data[k] !== undefined && data[k] !== null) ttsForm[k] = data[k]; });
+  } catch {}
+}
+async function saveTTS() {
+  ttsSaving.value = true;
+  try { await configAPI.updateTTSConfig({ ...ttsForm }); ElMessage.success('TTS 配置已保存'); }
+  catch { ElMessage.error('保存失败'); }
+  finally { ttsSaving.value = false; }
+}
+function autoSaveTTS() {}
+async function testTTS() {
+  if (!ttsForm.apiKey) { ElMessage.warning('请先填写 API Key'); return; }
+  ttsTesting.value = true; ttsTestResult.value = null;
+  try {
+    const res = await configAPI.testTTSConnection({});
+    ttsTestResult.value = res.data || res;
+    if (res.data?.ok) ElMessage.success('TTS 连接成功');
+    else ElMessage.error(res.data?.message || '测试失败');
+  } catch (e) { ttsTestResult.value = { ok: false, message: e.response?.data?.message || e.message }; }
+  finally { ttsTesting.value = false; }
+}
+
+onMounted(() => { refreshStatus(); fetchTTSConfig(); });
 // keep-alive 后切换用户需要刷新
 import { watch } from 'vue';
 import { useRoute } from 'vue-router';

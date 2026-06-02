@@ -18,6 +18,9 @@
         <el-button size="small" class="btn-danger-delete" style="margin-left:4px" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
         <el-button size="small" style="margin-left:4px" @click="openExport">导出</el-button>
         <el-button size="small" style="margin-left:4px" @click="showImportDialog = true" :disabled="!currentStoryboard">导入</el-button>
+        <el-button size="small" type="warning" style="margin-left:4px" @click="openTTSDialog(null)" :disabled="!currentStoryboard || ttsBatchRunning" :loading="ttsBatchRunning">
+          {{ ttsBatchRunning ? '批量配音中...' : '🎙️ 批量配音' }}
+        </el-button>
         <el-divider direction="vertical" style="margin:0 8px" />
         <span style="font-size:12px;color:var(--text-100)">关闭内嵌字幕</span>
         <el-switch v-model="noSubtitles" size="small" />
@@ -125,7 +128,11 @@
                   </label>
                   <span class="tl-btn" title="复制分镜" @click.stop="copyShot(s)">📋</span>
                   <span class="tl-btn" title="插入新分镜" @click.stop="insertShotAfter(s)">➕</span>
-                  <span class="tl-btn tl-btn-del" title="删除分镜" @click.stop="deleteShot(s)">🗑️</span>
+                  <span class="tl-btn" title="删除分镜" @click.stop="deleteShot(s)">🗑️</span>
+                  <span class="tl-btn" :title="synthingShot === s.shotNumber ? '生成中...' : 'AI 语音合成'" @click.stop="openTTSDialog(s)" :style="synthingShot === s.shotNumber ? 'opacity:0.5' : ''">🎙️</span>
+                </div>
+                <div class="tl-audio" v-if="s.dialogue?.audioUrl && s.dialogue.audioUrl !== synthingShot">
+                  <audio :src="s.dialogue.audioUrl" controls preload="none" style="width:100%;height:28px;margin-top:4px" />
                 </div>
               </div>
             </template>
@@ -355,6 +362,38 @@
         <el-button type="primary" @click="handleImport" :loading="importing" :disabled="!importText.trim()">导入</el-button>
       </template>
     </el-dialog>
+
+    <!-- TTS 配音参数弹窗 -->
+    <el-dialog v-model="showTTSDialog" :title="ttsTargetShot ? `配音: 镜头 ${ttsTargetShot.shotNumber}` : '批量全集配音'" width="520px" destroy-on-close>
+      <div style="margin-bottom:12px;font-size:13px;color:var(--text-100)" v-if="ttsTargetShot">
+        台词: <strong>{{ (ttsTargetShot.dialogue?.text || ttsTargetShot.imageDescription || '').substring(0, 80) }}{{ (ttsTargetShot.dialogue?.text || ttsTargetShot.imageDescription || '').length > 80 ? '...' : '' }}</strong>
+      </div>
+      <el-form label-position="top" size="small">
+        <el-form-item label="音色">
+          <el-input v-model="ttsParams.speaker" placeholder="默认音色ID" />
+        </el-form-item>
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="语速"><el-slider v-model="ttsParams.speechRate" :min="-50" :max="100" /></el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="音量"><el-slider v-model="ttsParams.loudnessRate" :min="-50" :max="100" /></el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="情绪">
+          <el-select v-model="ttsParams.emotion" style="width:100%" clearable>
+            <el-option label="默认(无)" value=""/><el-option label="开心" value="happy"/><el-option label="生气" value="angry"/><el-option label="悲伤" value="sad"/>
+          </el-select>
+        </el-form-item>
+        <el-alert type="info" :closable="false" style="font-size:12px" title="临时修改仅本次合成生效，不保存到全局配置" />
+      </el-form>
+      <template #footer>
+        <el-button @click="showTTSDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleTTSSynthesize" :loading="synthingShot !== null">
+          {{ ttsTargetShot ? '🎙️ 合成此句' : '🎙️ 批量合成全部' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -367,6 +406,7 @@ import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
 import { useAssetStore } from '../stores/asset';
 import { storyboardAPI } from '../api';
+import { ttsAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 
 const projectStore = useProjectStore();
@@ -1151,6 +1191,58 @@ onUnmounted(() => { clearInterval(videoPollTimer); });
 function formatEpLabel(ep) {
   const title = (ep.episodeTitle || '').replace(/^第\d+集[：:]*\s*/, '').trim();
   return title ? `第${ep.episodeNumber}集：${title}` : `第${ep.episodeNumber}集`;
+}
+
+// ===== TTS 配音 =====
+const showTTSDialog = ref(false);
+const ttsTargetShot = ref(null);
+const synthingShot = ref(null);
+const ttsBatchRunning = ref(false);
+const ttsParams = reactive({ speaker: 'zh_female_qingxinnvsheng_tob', speechRate: 0, loudnessRate: 0, emotion: '' });
+
+function openTTSDialog(shot) {
+  ttsTargetShot.value = shot;
+  ttsParams.speaker = 'zh_female_qingxinnvsheng_tob';
+  ttsParams.speechRate = 0;
+  ttsParams.loudnessRate = 0;
+  ttsParams.emotion = '';
+  showTTSDialog.value = true;
+}
+
+async function handleTTSSynthesize() {
+  if (!synthingShot.value && !ttsTargetShot.value) { ttsBatchRunning.value = true; }
+  else { synthingShot.value = ttsTargetShot.value ? ttsTargetShot.value.shotNumber : -1; }
+  showTTSDialog.value = false;
+  try {
+    if (!ttsTargetShot.value) {
+      // 批量合成
+      const { data } = await ttsAPI.batchSynthesize({
+        storyboardId: currentStoryboard.value._id,
+        ...ttsParams,
+      });
+      const ok = data.results?.filter(r => r.success).length || 0;
+      ElMessage.success(`批量配音完成: ${ok}/${data.results?.length || 0}`);
+      if (currentStoryboard.value) {
+        const sb = await storyboardAPI.get(currentStoryboard.value._id);
+        if (sb?.data) { currentStoryboard.value = sb.data; }
+      }
+    } else {
+      const shot = ttsTargetShot.value;
+      const text = shot.dialogue?.text || shot.imageDescription || '';
+      if (!text.trim()) { ElMessage.warning('该镜头没有台词'); return; }
+      const { data } = await ttsAPI.synthesize({
+        storyboardId: currentStoryboard.value._id,
+        shotNumber: shot.shotNumber,
+        text, characterName: shot.dialogue?.characterName || '',
+        projectId: currentProjectId.value,
+        scriptId: currentScriptId.value,
+        ...ttsParams,
+      });
+      if (shot.dialogue) shot.dialogue.audioUrl = data.audioUrl;
+      ElMessage.success('配音完成');
+    }
+  } catch (e) { ElMessage.error(e.response?.data?.message || '配音失败'); }
+  finally { synthingShot.value = null; ttsBatchRunning.value = false; ttsTargetShot.value = null; }
 }
 
 function openExport() {

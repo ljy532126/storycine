@@ -94,6 +94,7 @@ app.use('/api/v1/config', configRoutes);
 app.use('/api/v1/export', require('./routes/export.routes'));
 app.use('/api/v1/statistics', require('./routes/statistics.routes'));
 app.use('/api/v1/media-library', require('./routes/media.routes'));
+app.use('/api/v1/tts', require('./routes/tts.routes'));
 app.use('/api/v1/auth', require('./routes/auth.routes'));
 
 app.get('/api/health', (req, res) => {

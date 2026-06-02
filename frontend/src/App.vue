@@ -59,6 +59,10 @@
             <el-icon><PictureFilled /></el-icon>
             <template #title>素材库</template>
           </el-menu-item>
+          <el-menu-item index="/tts-library">
+            <el-icon><Headset /></el-icon>
+            <template #title>配音素材库</template>
+          </el-menu-item>
 <el-menu-item index="/users" v-if="isAdmin">
             <el-icon><UserFilled /></el-icon>
             <template #title>用户管理</template>
@@ -172,7 +176,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
-  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search,
+  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset,
   ArrowLeft, ArrowRight, Menu as MenuIcon, Close,
 } from '@element-plus/icons-vue';
 import { useProjectStore } from './stores/project';

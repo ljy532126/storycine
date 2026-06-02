@@ -267,6 +267,48 @@ function maskSecret(secret) {
   return secret.substring(0, 4) + '****' + secret.substring(secret.length - 4);
 }
 
+// ===== TTS 配音配置 =====
+
+router.get('/tts', async (req, res, next) => {
+  try {
+    const settings = await Settings.getSettings(req.user._id);
+    const cfg = settings.ttsConfig || {};
+    const mask = (k) => k ? k.substring(0, 4) + '****' + k.substring(Math.max(0, k.length - 4)) : '';
+    res.json({ data: { ...cfg, apiKey: mask(cfg.apiKey || ''), _hasKey: !!cfg.apiKey } });
+  } catch (e) { next(e); }
+});
+
+router.put('/tts', async (req, res, next) => {
+  try {
+    const settings = await Settings.getSettings(req.user._id);
+    const ttsService = require('../services/tts.service');
+    const cfg = { ...(settings.ttsConfig || {}) };
+    const allowed = ['apiKey', 'resourceId', 'defaultSpeaker', 'customVoiceId', 'format', 'sampleRate',
+      'speechRate', 'loudnessRate', 'emotion', 'emotionScale', 'enableSubtitle', 'disableMarkdownFilter',
+      'useCache', 'useTagParser', 'explicitLanguage', 'silenceDuration', 'model'];
+    allowed.forEach(k => {
+      if (req.body[k] !== undefined) {
+        cfg[k] = (k === 'apiKey' && req.body[k] && req.body[k].indexOf('****') === -1)
+          ? ttsService.encrypt(req.body[k]) : req.body[k];
+      }
+    });
+    cfg.configured = !!(cfg.apiKey);
+    await Settings.updateSettings(req.user._id, { ttsConfig: cfg });
+    const mask = (k) => k ? k.substring(0, 4) + '****' + k.substring(Math.max(0, k.length - 4)) : '';
+    res.json({ message: 'TTS 配置已保存', data: { ...cfg, apiKey: mask(cfg.apiKey || '') } });
+  } catch (e) { next(e); }
+});
+
+router.post('/tts/test', async (req, res, next) => {
+  try {
+    const ttsService = require('../services/tts.service');
+    await ttsService.synthesizeSpeech(req.user._id, { text: '测试语音合成', ...req.body });
+    res.json({ message: 'TTS 连接成功', data: { ok: true } });
+  } catch (e) {
+    res.json({ message: `TTS 测试失败: ${e.message}`, data: { ok: false } });
+  }
+});
+
 // ===== Seedance 用量查询 =====
 
 router.get('/llm/usage', async (req, res, next) => {
