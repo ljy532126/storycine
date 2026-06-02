@@ -284,8 +284,8 @@ router.put('/tts', async (req, res, next) => {
     const ttsService = require('../services/tts.service');
     const cfg = { ...(settings.ttsConfig || {}) };
     const allowed = ['apiKey', 'resourceId', 'defaultSpeaker', 'customVoiceId', 'format', 'sampleRate',
-      'speechRate', 'loudnessRate', 'emotion', 'emotionScale', 'enableSubtitle', 'disableMarkdownFilter',
-      'useCache', 'useTagParser', 'explicitLanguage', 'silenceDuration', 'model'];
+      'speechRate', 'loudnessRate', 'enableSubtitle', 'disableMarkdownFilter',
+      'useCache', 'explicitLanguage'];
     allowed.forEach(k => {
       if (req.body[k] !== undefined) {
         cfg[k] = (k === 'apiKey' && req.body[k] && req.body[k].indexOf('****') === -1)

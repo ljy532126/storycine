@@ -1,15 +1,16 @@
 /**
- * 火山引擎 openspeech V3 双向 WebSocket TTS 代理服务
+ * 火山引擎 openspeech V3 单向 SSE TTS 服务
+ * POST https://openspeech.bytedance.com/api/v3/tts/unidirectional/sse
  */
-const WebSocket = require('ws');
+const axios = require('axios');
 const crypto = require('crypto');
 const Settings = require('../models/settings.model');
 const TtsAudio = require('../models/tts-audio.model');
 const Storyboard = require('../models/storyboard.model');
 const storageService = require('./storage.service');
 
-const VOLCANO_WSS = 'wss://openspeech.bytedance.com/api/v3/tts/bidirection';
-const WS_TIMEOUT = 30000;
+const VOLCANO_TTS_URL = 'https://openspeech.bytedance.com/api/v3/tts/unidirectional/sse';
+const TTS_TIMEOUT = 30000;
 
 // AES 加密/解密
 const ENC_KEY = (() => {
@@ -29,7 +30,7 @@ function encrypt(text) {
 function decrypt(ciphertext) {
   if (!ciphertext) return '';
   const parts = ciphertext.split(':');
-  if (parts.length !== 2) return ciphertext; // legacy plaintext
+  if (parts.length !== 2) return ciphertext;
   try {
     const iv = Buffer.from(parts[0], 'hex');
     const encrypted = Buffer.from(parts[1], 'hex');
@@ -38,147 +39,156 @@ function decrypt(ciphertext) {
   } catch { return ciphertext; }
 }
 
-/** 读取用户 TTS 配置，apiKey 解密 */
 async function getTTSConfig(userId) {
   const settings = await Settings.getSettings(userId);
   const cfg = settings.ttsConfig || {};
-  return {
-    ...cfg,
-    apiKey: cfg.apiKey ? decrypt(cfg.apiKey) : '',
-    _raw: cfg,
-  };
+  return { ...cfg, apiKey: cfg.apiKey ? decrypt(cfg.apiKey) : '', _raw: cfg };
 }
 
-/** 建立火山双向 WebSocket 并完成一次合成 */
-function synthesizeViaWS(headers, params) {
+/** 通过 SSE HTTP POST 合成单句语音 */
+function synthesizeViaSSE(apiKey, resourceId, body) {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(VOLCANO_WSS, { headers, handshakeTimeout: 10000 });
-    const audioChunks = [];
-    const subtitles = [];
+    let audioBuffer = Buffer.alloc(0);
+    let subtitles = [];
     let resolved = false;
-    let connectId = '';
 
     const timer = setTimeout(() => {
-      if (!resolved) { resolved = true; ws.close(); reject(new Error('TTS 合成超时')); }
-    }, WS_TIMEOUT);
+      if (!resolved) { resolved = true; reject(new Error('TTS 合成超时')); }
+    }, TTS_TIMEOUT);
 
-    ws.on('open', () => {
-      ws.send(JSON.stringify({ event: 1, version: 'v3' }));
-    });
+    axios.post(VOLCANO_TTS_URL, body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': apiKey,
+        'X-Api-Resource-Id': resourceId,
+      },
+      responseType: 'stream',
+      timeout: TTS_TIMEOUT,
+      validateStatus: s => s < 500,
+    }).then(resp => {
+      if (resp.status === 401 || resp.status === 403) {
+        clearTimeout(timer);
+        if (!resolved) { resolved = true; reject(new Error(`火山鉴权失败 (HTTP ${resp.status})，请检查 API Key 和 Resource ID`)); }
+        return;
+      }
+      if (resp.status >= 400) {
+        clearTimeout(timer);
+        let body = '';
+        resp.data.on('data', c => body += c.toString());
+        resp.data.on('end', () => {
+          if (!resolved) { resolved = true; reject(new Error(`火山返回错误 (HTTP ${resp.status}): ${body.substring(0, 200)}`)); }
+        });
+        return;
+      }
 
-    ws.on('message', (raw) => {
-      try {
-        if (typeof raw === 'string') {
-          const msg = JSON.parse(raw);
-          switch (msg.event) {
-            case 50: // ConnectionStarted
-              connectId = msg.payload?.connect_id || '';
-              ws.send(JSON.stringify({
-                event: 100, version: 'v3',
-                payload: {
-                  user: { uid: params.userId?.toString() || 'storycine' },
-                  req_params: {
-                    speaker: params.speaker,
-                    audio_params: {
-                      format: params.format || 'mp3',
-                      sample_rate: params.sampleRate || 24000,
-                      speech_rate: params.speechRate ?? 0,
-                      loudness_rate: params.loudnessRate ?? 0,
-                      ...(params.emotion ? { emotion: params.emotion } : {}),
-                      ...(params.emotionScale ? { emotion_scale: params.emotionScale } : {}),
-                      enable_subtitle: params.enableSubtitle !== false,
-                    },
-                    additions: {
-                      disable_markdown_filter: params.disableMarkdownFilter !== false,
-                      use_cache: params.useCache !== false,
-                      use_tag_parser: params.useTagParser === true,
-                      ...(params.explicitLanguage ? { explicit_language: params.explicitLanguage } : {}),
-                      silence_duration: params.silenceDuration ?? 0,
-                    },
-                    model: params.model || 'seed-tts-2.0-standard',
-                  },
-                },
-              }));
-              break;
-            case 150: // SessionStarted
-              ws.send(JSON.stringify({ event: 200, version: 'v3', payload: { text: params.text } }));
-              break;
-            case 350: // TTSSentenceStart
-              break;
-            case 351: // TTSSentenceEnd
-              if (msg.payload?.subtitles) {
-                subtitles.push(...msg.payload.subtitles);
-              }
-              break;
-            case 152: // SessionFinished
-              break;
+      let buffer = '';
+      resp.data.on('data', (chunk) => {
+        buffer += chunk.toString('utf-8');
+        // SSE 格式: "data:..." 行
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 不完整的行留到下次
+
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const payload = line.substring(5).trim();
+            if (!payload) continue;
+            if (payload.startsWith('{')) {
+              // JSON: 可能是字幕时间戳或错误
+              try {
+                const json = JSON.parse(payload);
+                if (json.subtitles) subtitles = json.subtitles;
+                if (json.error) console.warn('[tts] SSE 错误:', json.error);
+              } catch {}
+            } else {
+              // base64 编码的二进制音频块
+              try {
+                audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]);
+              } catch { /* 非 base64，可能是其他文本 */ }
+            }
           }
-        } else if (raw instanceof Buffer) {
-          audioChunks.push(raw);
         }
-      } catch {}
-    });
+      });
 
-    ws.on('close', () => {
+      resp.data.on('end', () => {
+        clearTimeout(timer);
+        // 处理剩余 buffer
+        if (buffer.trim().startsWith('data:')) {
+          const payload = buffer.trim().substring(5).trim();
+          if (payload && !payload.startsWith('{')) {
+            try { audioBuffer = Buffer.concat([audioBuffer, Buffer.from(payload, 'base64')]); } catch {}
+          }
+        }
+        if (!resolved) {
+          resolved = true;
+          if (audioBuffer.length > 0) {
+            resolve({ audio: audioBuffer, subtitles });
+          } else {
+            reject(new Error('TTS 未返回音频数据'));
+          }
+        }
+      });
+
+      resp.data.on('error', (err) => {
+        clearTimeout(timer);
+        if (!resolved) { resolved = true; reject(err); }
+      });
+    }).catch(err => {
       clearTimeout(timer);
       if (!resolved) {
         resolved = true;
-        if (audioChunks.length > 0) {
-          resolve({ audio: Buffer.concat(audioChunks), subtitles });
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          reject(new Error('火山鉴权失败，请检查 API Key 和 Resource ID'));
         } else {
-          reject(new Error('TTS 未返回音频数据'));
+          reject(new Error(`TTS 请求失败: ${err.message}`));
         }
       }
-    });
-
-    ws.on('error', (err) => {
-      clearTimeout(timer);
-      if (!resolved) { resolved = true; reject(err); }
     });
   });
 }
 
-/** 单次语音合成：鉴权 → WS 代理 → 落盘 → 写入 DB */
+/** 单次语音合成：鉴权 → SSE → 落盘 → DB */
 async function synthesizeSpeech(userId, params) {
   const ttsCfg = await getTTSConfig(userId);
   const apiKey = (params.apiKey || ttsCfg.apiKey || '').trim();
   if (!apiKey) throw Object.assign(new Error('请先在系统设置中配置火山 TTS API Key'), { statusCode: 400 });
 
   const resourceId = params.resourceId || ttsCfg.resourceId || 'seed-tts-2.0';
-  const headers = { 'X-Api-Key': apiKey, 'X-Api-Resource-Id': resourceId };
-  const connectId = crypto.randomUUID();
-  headers['X-Api-Connect-Id'] = connectId;
+  const speaker = params.speaker || ttsCfg.defaultSpeaker || 'zh_female_qingxinnvsheng_tob';
+  const format = params.format || ttsCfg.format || 'mp3';
 
-  console.log(`[tts] 鉴权: apiKey=${apiKey.substring(0,8)}..., resourceId=${resourceId}`);
-
-  const synthParams = {
-    userId,
-    text: params.text,
-    speaker: params.speaker || ttsCfg.defaultSpeaker,
-    format: params.format || ttsCfg.format || 'mp3',
-    sampleRate: params.sampleRate ?? ttsCfg.sampleRate ?? 24000,
-    speechRate: params.speechRate ?? ttsCfg.speechRate ?? 0,
-    loudnessRate: params.loudnessRate ?? ttsCfg.loudnessRate ?? 0,
-    emotion: params.emotion !== undefined ? params.emotion : ttsCfg.emotion || '',
-    emotionScale: params.emotionScale ?? ttsCfg.emotionScale ?? 4,
-    enableSubtitle: params.enableSubtitle !== undefined ? params.enableSubtitle : ttsCfg.enableSubtitle !== false,
-    disableMarkdownFilter: params.disableMarkdownFilter !== undefined ? params.disableMarkdownFilter : ttsCfg.disableMarkdownFilter !== false,
-    useCache: params.useCache !== undefined ? params.useCache : ttsCfg.useCache !== false,
-    useTagParser: params.useTagParser !== undefined ? params.useTagParser : ttsCfg.useTagParser === true,
-    explicitLanguage: params.explicitLanguage || ttsCfg.explicitLanguage || 'zh-cn',
-    silenceDuration: params.silenceDuration ?? ttsCfg.silenceDuration ?? 0,
-    model: params.model || ttsCfg.model || 'seed-tts-2.0-standard',
+  const body = {
+    req_params: {
+      text: params.text,
+      speaker,
+      audio_params: {
+        format,
+        sample_rate: params.sampleRate ?? ttsCfg.sampleRate ?? 24000,
+        speech_rate: params.speechRate ?? ttsCfg.speechRate ?? 0,
+        loudness_rate: params.loudnessRate ?? ttsCfg.loudnessRate ?? 0,
+        enable_subtitle: params.enableSubtitle !== undefined ? params.enableSubtitle : ttsCfg.enableSubtitle !== false,
+      },
+      additions: {
+        disable_markdown_filter: params.disableMarkdownFilter !== undefined ? params.disableMarkdownFilter : ttsCfg.disableMarkdownFilter !== false,
+        use_cache: params.useCache !== undefined ? params.useCache : ttsCfg.useCache !== false,
+        explicit_language: params.explicitLanguage || ttsCfg.explicitLanguage || 'zh-cn',
+      },
+    },
   };
 
+  // 可选情绪
+  if (params.emotion) body.req_params.audio_params.emotion = params.emotion;
+  if (params.emotionScale) body.req_params.audio_params.emotion_scale = params.emotionScale;
+
+  // ICL 复刻音色
   if (resourceId === 'seed-icl-2.0' && (params.customVoiceId || ttsCfg.customVoiceId)) {
-    synthParams.speaker = params.customVoiceId || ttsCfg.customVoiceId;
+    body.req_params.speaker = params.customVoiceId || ttsCfg.customVoiceId;
   }
 
-  console.log(`[tts] 开始合成: "${synthParams.text.substring(0, 50)}..." speaker=${synthParams.speaker}`);
+  console.log(`[tts] 开始合成: "${params.text.substring(0, 50)}..." speaker=${body.req_params.speaker}`);
 
-  const { audio, subtitles } = await synthesizeViaWS(headers, synthParams);
+  const { audio, subtitles } = await synthesizeViaSSE(apiKey, resourceId, body);
 
-  const ext = synthParams.format === 'ogg_opus' ? 'ogg' : synthParams.format;
+  const ext = format === 'ogg_opus' ? 'ogg' : format;
   const filename = `tts-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.${ext}`;
   const userUid = `TTS-${userId.toString().slice(-8)}`;
   const category = `${userUid}/tts`;
@@ -186,7 +196,6 @@ async function synthesizeSpeech(userId, params) {
 
   console.log(`[tts] 合成完成: ${audioUrl} (${(audio.length / 1024).toFixed(1)} KB)`);
 
-  // 测试调用（无 projectId）不写数据库
   if (!params.projectId) return { audioUrl, subtitles, duration: 0 };
 
   const doc = await TtsAudio.create({
@@ -199,13 +208,12 @@ async function synthesizeSpeech(userId, params) {
     characterName: params.characterName || '',
     text: params.text,
     audioUrl,
-    format: synthParams.format,
+    format,
     duration: subtitles.length > 0 ? Math.ceil(subtitles[subtitles.length - 1]?.end || 0) : 0,
     subtitles,
-    ttsParams: { speaker: synthParams.speaker, format: synthParams.format },
+    ttsParams: { speaker: body.req_params.speaker, format },
   });
 
-  // 更新对应分镜的 dialogue.audioUrl
   if (params.storyboardId && params.shotNumber != null) {
     try {
       const sb = await Storyboard.findById(params.storyboardId);
@@ -223,7 +231,6 @@ async function synthesizeSpeech(userId, params) {
   return { id: doc._id, audioUrl, subtitles, duration: doc.duration };
 }
 
-/** 批量合成 */
 async function batchSynthesize(userId, shots) {
   const results = [];
   for (let i = 0; i < shots.length; i++) {
@@ -234,9 +241,7 @@ async function batchSynthesize(userId, shots) {
     } catch (e) {
       results.push({ shotNumber: s.shotNumber, success: false, error: e.message });
     }
-    if (i < shots.length - 1) {
-      await new Promise(r => setTimeout(r, 500)); // 间隔 500ms 避免火山 QPS 限制
-    }
+    if (i < shots.length - 1) await new Promise(r => setTimeout(r, 500));
   }
   return results;
 }

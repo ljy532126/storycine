@@ -380,12 +380,7 @@
             <el-form-item label="音量"><el-slider v-model="ttsParams.loudnessRate" :min="-50" :max="100" /></el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="情绪">
-          <el-select v-model="ttsParams.emotion" style="width:100%" clearable>
-            <el-option label="默认(无)" value=""/><el-option label="开心" value="happy"/><el-option label="生气" value="angry"/><el-option label="悲伤" value="sad"/>
-          </el-select>
-        </el-form-item>
-        <el-alert type="info" :closable="false" style="font-size:12px" title="临时修改仅本次合成生效，不保存到全局配置" />
+        <el-alert type="info" :closable="false" style="font-size:12px" title="临时修改仅本次合成生效" />
       </el-form>
       <template #footer>
         <el-button @click="showTTSDialog = false">取消</el-button>
@@ -1198,14 +1193,13 @@ const showTTSDialog = ref(false);
 const ttsTargetShot = ref(null);
 const synthingShot = ref(null);
 const ttsBatchRunning = ref(false);
-const ttsParams = reactive({ speaker: 'zh_female_qingxinnvsheng_tob', speechRate: 0, loudnessRate: 0, emotion: '' });
+const ttsParams = reactive({ speaker: 'zh_female_qingxinnvsheng_tob', speechRate: 0, loudnessRate: 0 });
 
 function openTTSDialog(shot) {
   ttsTargetShot.value = shot;
   ttsParams.speaker = 'zh_female_qingxinnvsheng_tob';
   ttsParams.speechRate = 0;
   ttsParams.loudnessRate = 0;
-  ttsParams.emotion = '';
   showTTSDialog.value = true;
 }
 

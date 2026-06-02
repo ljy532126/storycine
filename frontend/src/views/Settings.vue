@@ -263,8 +263,6 @@
           <div class="ac-row"><span class="ac-label">采样率</span><el-select v-model="ttsForm.sampleRate" size="small" style="width:140px" @change="autoSaveTTS"><el-option :label="24000" :value="24000"/><el-option :label="16000" :value="16000"/><el-option :label="48000" :value="48000"/></el-select></div>
           <div class="ac-row"><span class="ac-label">语速</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.speechRate" :min="-50" :max="100" :step="1" size="small" style="width:200px" @change="autoSaveTTS"/><code style="font-size:12px;width:40px">{{ ttsForm.speechRate }}</code></div></div>
           <div class="ac-row"><span class="ac-label">音量</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.loudnessRate" :min="-50" :max="100" :step="1" size="small" style="width:200px" @change="autoSaveTTS"/><code style="font-size:12px;width:40px">{{ ttsForm.loudnessRate }}</code></div></div>
-          <div class="ac-row"><span class="ac-label">情绪</span><el-select v-model="ttsForm.emotion" size="small" style="width:180px" clearable @change="autoSaveTTS"><el-option label="默认(无)" value=""/><el-option label="开心 happy" value="happy"/><el-option label="生气 angry" value="angry"/><el-option label="悲伤 sad" value="sad"/><el-option label="惊讶 surprised" value="surprised"/><el-option label="恐惧 fearful" value="fearful"/><el-option label="厌恶 disgusted" value="disgusted"/></el-select></div>
-          <div class="ac-row" v-if="ttsForm.emotion"><span class="ac-label">情绪强度</span><div style="display:flex;align-items:center;gap:8px"><el-slider v-model="ttsForm.emotionScale" :min="1" :max="5" :step="1" size="small" style="width:140px" @change="autoSaveTTS"/><code style="font-size:12px;width:20px">{{ ttsForm.emotionScale }}</code></div></div>
         </div>
 
         <div class="ac-card">
@@ -272,10 +270,7 @@
           <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">开启字幕时间戳</span><span class="ac-desc">短剧字幕必备</span></div><el-switch v-model="ttsForm.enableSubtitle" @change="autoSaveTTS"/></div>
           <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">过滤 Markdown 符号</span><span class="ac-desc">移除 ** 加粗等标记</span></div><el-switch v-model="ttsForm.disableMarkdownFilter" @change="autoSaveTTS"/></div>
           <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">开启文本缓存</span><span class="ac-desc">重复台词复用音频、不计费</span></div><el-switch v-model="ttsForm.useCache" @change="autoSaveTTS"/></div>
-          <div class="ac-row"><div class="ac-label-wrap"><span class="ac-label">启用 COT 标签</span><span class="ac-desc">支持 &lt;Cot text=缓慢&gt;台词&lt;/Cot&gt; 控语速</span></div><el-switch v-model="ttsForm.useTagParser" @change="autoSaveTTS"/></div>
           <div class="ac-row"><span class="ac-label">语种</span><el-select v-model="ttsForm.explicitLanguage" size="small" style="width:140px" @change="autoSaveTTS"><el-option label="中文" value="zh-cn"/><el-option label="英文" value="en"/><el-option label="日文" value="ja"/><el-option label="自动" value=""/></el-select></div>
-          <div class="ac-row"><span class="ac-label">句尾静音 (ms)</span><el-input v-model.number="ttsForm.silenceDuration" type="number" :min="0" :max="30000" size="small" style="width:120px" @change="autoSaveTTS"/></div>
-          <div class="ac-row"><span class="ac-label">TTS 模型</span><el-select v-model="ttsForm.model" size="small" style="width:240px" @change="autoSaveTTS"><el-option label="2.0 标准版 (低延迟)" value="seed-tts-2.0-standard"/><el-option label="2.0 增强版 (高情绪)" value="seed-tts-2.0-expressive"/></el-select></div>
         </div>
 
         <div class="ac-card" style="display:flex;align-items:center;gap:12px;flex-direction:row">
@@ -348,9 +343,7 @@ const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instru
 const ttsForm = reactive({
   apiKey: '', resourceId: 'seed-tts-2.0', defaultSpeaker: 'zh_female_qingxinnvsheng_tob',
   customVoiceId: '', format: 'mp3', sampleRate: 24000, speechRate: 0, loudnessRate: 0,
-  emotion: '', emotionScale: 4, enableSubtitle: true, disableMarkdownFilter: true,
-  useCache: true, useTagParser: false, explicitLanguage: 'zh-cn', silenceDuration: 0,
-  model: 'seed-tts-2.0-standard',
+  enableSubtitle: true, disableMarkdownFilter: true, useCache: true, explicitLanguage: 'zh-cn',
 });
 const ttsSaving = ref(false);
 const ttsTesting = ref(false);
