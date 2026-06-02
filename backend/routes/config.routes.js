@@ -269,7 +269,7 @@ function maskSecret(secret) {
 
 // ===== TTS 配音配置 =====
 
-// 内置火山 TTS 2.0 音色列表（已验证兼容 seed-tts-2.0）
+// 已验证可用的火山 TTS 音色（seed-tts-2.0）
 const TTS_VOICE_LIST = [
   { id: 'zh_female_vv_uranus_bigtts', name: '女声-温柔知性', gender: '女' },
   { id: 'zh_female_xiaohe_uranus_bigtts', name: '女声-活泼小荷', gender: '女' },

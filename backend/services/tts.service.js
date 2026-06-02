@@ -149,9 +149,12 @@ async function synthesizeSpeech(userId, params) {
   const apiKey = (params.apiKey || ttsCfg.apiKey || '').trim();
   if (!apiKey) throw Object.assign(new Error('请先在系统设置中配置火山 TTS API Key'), { statusCode: 400 });
 
-  const resourceId = params.resourceId || ttsCfg.resourceId || 'seed-tts-2.0';
   const speaker = params.speaker || ttsCfg.defaultSpeaker || 'zh_female_vv_uranus_bigtts';
   const format = params.format || ttsCfg.format || 'mp3';
+
+  // 根据音色自动匹配 resourceId，只有明确传参时才用 params
+  const isTTS2 = speaker === 'zh_female_vv_uranus_bigtts' || speaker === 'zh_female_xiaohe_uranus_bigtts';
+  const resourceId = params.resourceId || (isTTS2 ? 'seed-tts-2.0' : 'seed-tts-1.0');
 
   const addObj = {};
   if (params.disableMarkdownFilter !== undefined ? params.disableMarkdownFilter : ttsCfg.disableMarkdownFilter !== false) addObj.disable_markdown_filter = true;
