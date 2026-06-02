@@ -56,12 +56,15 @@ StoryCine 是一款端到端的 AI 短剧创作工具。从灵感到成片，覆
 ### 剧本工坊
 - 7 Agent 串联工作流：标签解析 → 大纲 → 人物 → 剧情架构 → 撰写 → 校验
 - 支持续写（基于前文上下文自动延续）
-- 手动导入 TXT 剧本，自动结构化解析
+- **格式导入**：粘贴结构化剧本（场次/时间/地点/人物/台词），自动解析
+- **故事转剧本**：粘贴小说/故事片段，AI 改编为标准剧本格式，保持原故事方向
+- 导入时可自定义剧集标题，自动递增集号
 
 ### 分镜台本
 - AI 智能拆镜：根据剧本内容自动推荐景别/运镜/光影/时长
 - 可视化编辑，实时参数调整
-- 一键同步至镜头板，支持导出 PDF/Markdown/CSV/Word
+- 导演全局设定（画质关键词/氛围光影/艺术风格），一键应用到全剧
+- 一键推送至镜头板，支持选择目标脚本同步
 
 ### 演员库 (角色 & 场景资产管理)
 - 角色三视图智能生成（正面/侧面/背面）
@@ -106,8 +109,8 @@ StoryCine 是一款端到端的 AI 短剧创作工具。从灵感到成片，覆
 | **数据库** | MongoDB 7.0 + Mongoose ODM |
 | **缓存** | Redis (可选) |
 | **对象存储** | 阿里云 OSS / 腾讯云 COS / MinIO |
-| **AI 模型** | 豆包 Seedream 4.0 (生图) / Seedance 2.0 (生视频) / DeepSeek / OpenAI / 通义 |
-| **部署** | Docker + Docker Compose |
+| **AI 模型** | DeepSeek / 豆包 Seedance / 豆包 Seedream / OpenAI / 通义 |
+| **部署** | Docker + Docker Compose（含 MongoDB/Redis/MinIO 全套） |
 
 ## 🚀 快速开始
 
@@ -134,7 +137,7 @@ cp backend/.env.example backend/.env
 
 # 4. 启动数据库（选一种）
 # 选项A: Docker 只启动数据库
-docker-compose up -d mongodb redis minio
+docker compose up -d mongodb redis minio
 # 选项B: 本地已安装 MongoDB/Redis，修改 .env 中的连接地址
 
 # 5. 启动开发服务器
@@ -151,15 +154,15 @@ cd frontend && npm run dev
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/ljy532126/storycine.git /www/wwwroot/storycine
-cd /www/wwwroot/storycine
+git clone https://github.com/ljy532126/storycine.git
+cd storycine
 
 # 2. 配置环境变量（重要！）
 cp backend/.env.example backend/.env
 # 编辑 backend/.env，必须设置 JWT_SECRET 和至少一个 LLM API Key
 
 # 3. 一键构建 + 启动
-sh deploy.sh
+docker compose up -d --build
 
 # 4. 打开浏览器 http://你的服务器IP:3012
 ```
@@ -226,16 +229,11 @@ db.users.updateOne({ username: "storycine" }, { $set: { password: ... } })
 注意：密码需用 bcrypt 加密，推荐用方法一。
 
 ```bash
-# 后续更新（服务器能访问 GitHub）
-cd /www/wwwroot/storycine && git pull && docker compose up -d --build
-
-# 后续更新（服务器不能访问 GitHub，用 SCP 上传）
-# 本机：tar -czf storycine.tar.gz . && scp storycine.tar.gz root@IP:/www/wwwroot/
-# 服务器：cd /www/wwwroot/storycine && tar -xzf ../storycine.tar.gz && docker compose up -d --build
+# 后续更新
+cd /path/to/storycine && git pull && docker compose up -d --build
 ```
 
-> `deploy.sh` 自动完成前端构建 + Docker 镜像打包 + 启动全部服务。  
-> Dockerfile 已配置国内 npm 镜像 (`npmmirror.com`)，国内构建速度更快。
+> 数据持久化：MongoDB、Redis、MinIO、uploads 均使用 Docker 命名卷，重建容器不会丢失数据。
 
 ## 🏗️ 项目结构
 
@@ -246,7 +244,9 @@ cd /www/wwwroot/storycine && git pull && docker compose up -d --build
 │   │   ├── app.config.js            # 应用配置 (LLM 运行时管理)
 │   │   └── database.js              # MongoDB 连接
 │   ├── middleware/
-│   │   ├── auth.middleware.js        # JWT 认证中间件
+│   │   ├── auth.middleware.js        # JWT 认证 + tokenVersion 安全校验
+│   │   ├── ownership.middleware.js    # 资源所有权校验
+│   │   ├── rate-limiter.middleware.js # AI 接口限流
 │   │   └── error-handler.js         # 全局错误处理
 │   ├── models/                      # Mongoose 模型 (11 个)
 │   │   ├── user.model.js            # 用户 (bcrypt 加密)
@@ -270,13 +270,20 @@ cd /www/wwwroot/storycine && git pull && docker compose up -d --build
 │       └── prompt-templates.js      # Prompt 模板库
 ├── frontend/
 │   ├── src/
-│   │   ├── views/                   # 15 个页面组件
+│   │   ├── views/                   # 页面组件
 │   │   ├── stores/                  # Pinia 状态管理
 │   │   ├── components/              # 共享组件
+│   │   ├── api/                     # Axios 封装 + 接口定义
 │   │   └── router/                  # 路由 + Auth Guard
 │   └── public/
-│       └── logo.svg                 # Logo
+│       └── logo.svg
+├── docs/
+│   ├── images/                      # 截图
+│   └── 风格.md                       # 设计规范
 ├── docker-compose.yml
+├── start.bat                        # Windows 一键启动
+├── start.sh                         # Linux/macOS 一键启动
+├── Dockerfile
 └── README.md
 ```
 
