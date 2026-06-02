@@ -32,10 +32,10 @@ async function loadUserConfig(userId) {
     let loadedCount = 0;
     providers.forEach(p => {
       const dbCfg = settings.llmProviders?.[p] || {};
-      // 用用户保存的值；未保存则清空，不回退到上一个用户的缓存
-      runtimeConfig[p].apiKey = dbCfg.apiKey || process.env[envKeys[p]] || '';
-      runtimeConfig[p].baseUrl = dbCfg.baseUrl || runtimeConfig[p].baseUrl || '';
-      runtimeConfig[p].model = dbCfg.model || runtimeConfig[p].model || '';
+      // 仅加载用户自己保存的配置，不回退到 env 全局 key（防止新用户泄漏 admin 的 Key）
+      runtimeConfig[p].apiKey = dbCfg.apiKey || '';
+      runtimeConfig[p].baseUrl = dbCfg.baseUrl || '';
+      runtimeConfig[p].model = dbCfg.model || '';
       runtimeConfig[p].imageModel = dbCfg.imageModel || '';
       if (dbCfg.apiKey) loadedCount++;
     });

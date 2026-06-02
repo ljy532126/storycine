@@ -46,8 +46,8 @@ router.post('/llm/download-video', async (req, res, next) => {
     if (!taskId) return res.status(400).json({ message: '缺少 taskId' });
 
     const settings = await Settings.getSettings(req.user._id);
-    let apiKey = settings?.llmProviders?.doubao?.apiKey || process.env.DOUBAO_API_KEY || '';
-    let baseUrl = settings?.llmProviders?.doubao?.baseUrl || process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
+    let apiKey = settings?.llmProviders?.doubao?.apiKey || '';
+    let baseUrl = settings?.llmProviders?.doubao?.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3';
     if (!apiKey) return res.status(400).json({ message: '请先配置豆包 API Key' });
 
     const resp = await axios.get(`${baseUrl}/contents/generations/tasks/${taskId}`, {
@@ -273,15 +273,11 @@ router.get('/llm/usage', async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
 
-    // 取豆包 API Key：优先用户配置 → 环境变量
+    // 只能读取当前用户自己保存的 Key，不回退到 env 全局密钥（防止用户间泄漏）
     let apiKey = settings.llmProviders?.doubao?.apiKey || '';
     let baseUrl = settings.llmProviders?.doubao?.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3';
     if (!apiKey) {
-      apiKey = process.env.DOUBAO_API_KEY || '';
-      baseUrl = process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
-    }
-    if (!apiKey) {
-      return res.json({ data: { error: '请先配置豆包 API Key', tasks: [], totalTokens: 0 } });
+      return res.json({ data: { error: '请先在系统设置中配置你的豆包 API Key', tasks: [], totalTokens: 0 } });
     }
 
     // 查询 Ark 任务列表
