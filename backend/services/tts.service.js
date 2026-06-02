@@ -184,6 +184,9 @@ async function synthesizeSpeech(userId, params) {
 
   console.log(`[tts] 合成完成: ${audioUrl} (${(audio.length / 1024).toFixed(1)} KB)`);
 
+  // 测试调用（无 projectId）不写数据库
+  if (!params.projectId) return { audioUrl, subtitles, duration: 0 };
+
   const doc = await TtsAudio.create({
     userId,
     projectId: params.projectId,

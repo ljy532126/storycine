@@ -374,6 +374,7 @@ async function testTTS() {
   if (!ttsForm.apiKey) { ElMessage.warning('请先填写 API Key'); return; }
   ttsTesting.value = true; ttsTestResult.value = null;
   try {
+    await configAPI.updateTTSConfig({ ...ttsForm });
     const res = await configAPI.testTTSConnection({});
     ttsTestResult.value = res.data || res;
     if (res.data?.ok) ElMessage.success('TTS 连接成功');

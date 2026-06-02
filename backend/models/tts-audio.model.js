@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const ttsAudioSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', index: true },
   scriptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Script', index: true },
   storyboardId: { type: mongoose.Schema.Types.ObjectId, ref: 'Storyboard' },
   shotNumber: { type: Number },
