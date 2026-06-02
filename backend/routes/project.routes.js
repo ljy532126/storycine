@@ -30,8 +30,7 @@ router.post('/', async (req, res, next) => {
 // 获取所有项目
 router.get('/', async (req, res, next) => {
   try {
-    const filter = { isDeleted: false };
-    if (req.user.role !== 'admin') filter.userId = req.user._id;
+    const filter = { isDeleted: false, userId: req.user._id };
     const projects = await Project.find(filter).sort({ createdAt: -1 });
     res.json({ data: projects });
   } catch (error) { next(error); }
@@ -42,7 +41,7 @@ router.get('/:id', async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
-    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+    if (!checkDocOwnership(project, req.user._id)) {
       return res.status(403).json({ message: '无权查看此项目' });
     }
     res.json({ data: project });
@@ -54,7 +53,7 @@ router.put('/:id', async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
-    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+    if (!checkDocOwnership(project, req.user._id)) {
       return res.status(403).json({ message: '无权修改此项目' });
     }
     const allowed = ['name', 'description', 'coverImage', 'status', 'scriptSource', 'videoConfig', 'directorSettings'];
@@ -71,7 +70,7 @@ router.delete('/:id', async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
-    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+    if (!checkDocOwnership(project, req.user._id)) {
       return res.status(403).json({ message: '无权删除此项目' });
     }
 
@@ -111,7 +110,7 @@ router.post('/:id/generate-cover', aiCoverLimiter, async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: '项目不存在' });
-    if (!checkDocOwnership(project, req.user._id) && req.user.role !== 'admin') {
+    if (!checkDocOwnership(project, req.user._id)) {
       return res.status(403).json({ message: '无权操作此项目' });
     }
 

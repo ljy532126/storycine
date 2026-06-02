@@ -4,12 +4,10 @@
  */
 const Project = require('../models/project.model');
 
-/** 校验请求的操作对象是否属于当前用户 */
+/** 校验请求的操作对象是否属于当前用户（所有用户一律隔离，包括 admin） */
 async function assertOwnership(req, res, next) {
   const projectId = req.params.id || req.params.projectId || req.body.projectId;
   if (!projectId) return res.status(400).json({ message: '缺少 projectId' });
-
-  if (req.user.role === 'admin') return next(); // admin 不受限
 
   const project = await Project.findById(projectId);
   if (!project) return res.status(404).json({ message: '项目不存在' });
