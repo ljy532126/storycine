@@ -101,7 +101,13 @@ function synthesizeViaSSE(apiKey, resourceId, body) {
             if (json.sentence?.words) subtitles.push(...json.sentence.words);
             // 153/error codes — reject with actual message
             if (json.code && json.code !== 0 && json.code !== 20000000) {
-              if (!resolved) { resolved = true; reject(new Error(json.message || '火山服务端错误 (code=' + json.code + ')')); return; }
+              if (!resolved) {
+                resolved = true;
+                const err = new Error(json.message || `火山服务端错误 (code=${json.code})`);
+                err.statusCode = 400;
+                reject(err);
+                return;
+              }
             }
           } catch { /* ignore non-JSON lines */ }
         }
