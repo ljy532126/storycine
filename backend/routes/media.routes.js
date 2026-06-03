@@ -49,7 +49,10 @@ router.get('/', async (req, res, next) => {
     storyboards.forEach(sb => {
       (sb.shots || []).forEach(shot => {
         if (shot.renderedImage) items.push({ url: shot.renderedImage, name: `镜头${shot.shotNumber}`, type: '故事板', subType: '分镜图', assetId: sb._id, shotNumber: shot.shotNumber, createdAt: sb.updatedAt });
-        if (shot.renderedVideo) items.push({ url: shot.renderedVideo, name: `镜头${shot.shotNumber}`, type: '故事板', subType: '视频', assetId: sb._id, shotNumber: shot.shotNumber, createdAt: sb.updatedAt, isVideo: true });
+        // 跳过 taskId（cgt-xxx），只展示已完成的视频 URL
+        if (shot.renderedVideo && !/^cgt-/.test(shot.renderedVideo)) {
+          items.push({ url: shot.renderedVideo, name: `镜头${shot.shotNumber}`, type: '故事板', subType: '视频', assetId: sb._id, shotNumber: shot.shotNumber, createdAt: sb.updatedAt, isVideo: true });
+        }
       });
     });
 
