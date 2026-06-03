@@ -19,7 +19,7 @@
         <el-button size="small" style="margin-left:4px" @click="openExport">导出</el-button>
         <el-button size="small" style="margin-left:4px" @click="showImportDialog = true" :disabled="!currentStoryboard">导入</el-button>
         <el-button size="small" type="warning" style="margin-left:4px" @click="openTTSDialog(null)" :disabled="!currentStoryboard || ttsBatchRunning" :loading="ttsBatchRunning">
-          {{ ttsBatchRunning ? '批量配音中...' : '🎙️ 批量配音' }}
+          {{ ttsBatchRunning ? '批量配音中...' : '' }}<Voice size="14" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/>批量配音
         </el-button>
         <el-divider direction="vertical" style="margin:0 8px" />
         <span style="font-size:12px;color:var(--text-100)">关闭内嵌字幕</span>
@@ -32,9 +32,9 @@
 
     <!-- 移动端 Tab 导航 -->
     <div class="sb-mobile-tabs" v-if="currentProjectId && screenWidth < 768">
-      <div :class="['smtab', { active: mobileTab === 'episodes' }]" @click="mobileTab = 'episodes'">📋 剧集</div>
-      <div :class="['smtab', { active: mobileTab === 'shots' }]" @click="mobileTab = 'shots'">🎬 镜头</div>
-      <div :class="['smtab', { active: mobileTab === 'settings' }]" @click="mobileTab = 'settings'">⚙️ 设置</div>
+      <div :class="['smtab', { active: mobileTab === 'episodes' }]" @click="mobileTab = 'episodes'"><List size="14" fill="currentColor"/> 剧集</div>
+      <div :class="['smtab', { active: mobileTab === 'shots' }]" @click="mobileTab = 'shots'"><Film size="14" fill="currentColor"/> 镜头</div>
+      <div :class="['smtab', { active: mobileTab === 'settings' }]" @click="mobileTab = 'settings'"><SettingTwo size="14" fill="currentColor"/> 设置</div>
     </div>
 
     <div class="sb-body" v-if="currentProjectId">
@@ -57,7 +57,7 @@
         <!-- 视频预览区 -->
         <div class="preview-area">
           <div v-if="!currentShot" class="preview-empty">
-            <span style="font-size:48px">🎬</span>
+            <Film size="48" fill="var(--primary-300)"/>
             <p>点击下方镜头缩略图预览</p>
           </div>
           <div v-else class="preview-shot">
@@ -70,7 +70,9 @@
               </video>
               <!-- 视频生成中 / 等待中 -->
               <div v-else-if="getShotPollKey() && videoPollingMap[getShotPollKey()]" class="preview-empty">
-                <span style="font-size:48px">{{ videoPollingMap[getShotPollKey()].status === 'queued' ? '📋' : videoPollingMap[getShotPollKey()].status === 'running' ? '🎬' : '⏳' }}</span>
+                <PictureOne v-if="videoPollingMap[getShotPollKey()].status === 'queued'" size="48" fill="var(--primary-300)"/>
+                <Film v-else-if="videoPollingMap[getShotPollKey()].status === 'running'" size="48" fill="var(--primary-300)"/>
+                <AlarmClock v-else size="48" fill="var(--primary-300)"/>
                 <p><strong>{{ statusLabel(videoPollingMap[getShotPollKey()].status) }}</strong></p>
                 <p style="font-size:11px;color:var(--text-200);word-break:break-all">任务ID: {{ videoPollingMap[getShotPollKey()].taskId }}</p>
                 <p style="font-size:11px;color:var(--text-200)">已等待 {{ videoPollingMap[getShotPollKey()].progress }} 秒 · 通常 1~3 分钟</p>
@@ -78,7 +80,7 @@
               </div>
               <!-- 图片预览 -->
               <img v-else-if="currentShot.renderedImage" :src="currentShot.renderedImage" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in" @click="openImgViewer(currentShot.renderedImage)" />
-              <span v-else style="font-size:64px;color:var(--primary-300)">🎞️</span>
+              <Pic v-else size="48" fill="var(--primary-300)"/>
             </div>
             <div class="preview-info">
               <span class="pi-tag">{{ currentShot.shotType }}</span>
@@ -108,7 +110,7 @@
               <div :class="['tl-card', { 'tl-active': currentShot?.shotNumber === s.shotNumber }]" @click="selectShot(s)">
                 <div class="tl-card-header">
                   <span class="tl-shot-num">镜头 {{ s.shotNumber }}</span>
-                  <span class="tl-shot-dur">⏱ {{ s.duration }}s</span>
+                  <span class="tl-shot-dur"><Time size="12" fill="var(--gold)"/> {{ s.duration }}s</span>
                 </div>
                 <div class="tl-img">
                   <img v-if="s.renderedImage" :src="s.renderedImage" @dblclick.stop="openImgViewer(s.renderedImage)" />
@@ -143,7 +145,7 @@
             <div class="tl-card tl-card-end" @click="addBlankShot">
               <div class="tl-card-header">
                 <span class="tl-shot-num">新增</span>
-                <span class="tl-shot-dur">⏱ 3s</span>
+                <span class="tl-shot-dur"><Time size="12" fill="var(--gold)"/> 3s</span>
               </div>
               <div class="tl-img tl-img-add">
                 <span class="tl-add-icon">+</span>
@@ -168,9 +170,28 @@
         <div v-show="rightTab === 'draw'">
           <div class="right-section">
             <label>图片提示词</label>
-            <el-input v-model="currentShotPrompt" type="textarea" :rows="4" placeholder="输入或修改提示词..." size="small" @change="saveCurrentPrompt" />
+            <div class="prompt-editor-wrap" ref="imgPromptEditorWrap">
+              <div
+                ref="imgPromptRef"
+                class="prompt-editor"
+                contenteditable="true"
+                @input="onImgPromptInput"
+                @keydown="onImgPromptKeydown"
+                @blur="saveCurrentPrompt"
+                @click="onImgPromptClick"
+              ></div>
+              <div class="prompt-editor-ph" v-if="!imgEditorHasContent" @click="imgPromptRef?.focus()">输入图片生成提示词，输入 @ 可选择插入角色引用...</div>
+              <div v-if="showImgMentionMenu" class="mention-menu">
+                <div v-for="item in mentionOptions" :key="item.id" class="mention-item" @mousedown.prevent="insertImgMention(item)">
+                  <span class="mention-chip" :style="{ background: item.bg || 'rgba(201,168,76,0.2)', color: item.color || 'var(--gold-dark)' }">{{ item.chip }}</span>
+                  <span class="mention-name">{{ item.name }}</span>
+                  <span class="mention-type">{{ item.type }}</span>
+                </div>
+                <div v-if="mentionOptions.length === 0" class="mention-empty">无匹配结果</div>
+              </div>
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-              <span class="char-count">{{ (currentShotPrompt || '').length }} / 5000</span>
+              <span class="char-count">{{ imgEditorCharCount }} / 5000</span>
               <el-button size="small" type="primary" link @click="generatePromptForShot" :loading="genningPrompt">AI 生成</el-button>
             </div>
           </div>
@@ -187,12 +208,11 @@
 
         <!-- ===== 视频标签页 ===== -->
         <div v-show="rightTab === 'video'">
-          <div class="right-section" style="background:var(--accent-200);padding:10px 12px;border-radius:6px;margin-bottom:12px;font-size:11px;color:var(--text-100);line-height:1.6">
-            <strong>⚠️ Seedance 2.0 真人内容规避</strong><br/>
-            AI 写实人像也会被判定为"真人"拦截。建议：<br/>
-            ① 使用纯场景/道具图片（无人物）<br/>
-            ② 使用卡通、动漫、古风等非写实风格<br/>
-            ③ 用侧面/背影代替正面特写
+          <div class="seedance-marquee" title="Seedance 2.0 真人内容规避：AI 写实人像也会被判定为真人拦截。建议使用纯场景/道具图片（无人物）、卡通/动漫/古风等非写实风格、用侧面/背影代替正面特写">
+            <span class="seedance-marquee-inner">
+              <span class="seedance-marquee-dupe">⚠️ Seedance 2.0 真人内容规避：AI 写实人像也会被判定为"真人"拦截 · 建议① 使用纯场景/道具图片（无人物）· ② 使用卡通、动漫、古风等非写实风格 · ③ 用侧面/背影代替正面特写</span>
+              <span class="seedance-marquee-dupe">⚠️ Seedance 2.0 真人内容规避：AI 写实人像也会被判定为"真人"拦截 · 建议① 使用纯场景/道具图片（无人物）· ② 使用卡通、动漫、古风等非写实风格 · ③ 用侧面/背影代替正面特写</span>
+            </span>
           </div>
           <div class="right-section">
             <label>视频提示词</label>
@@ -238,7 +258,6 @@
               <el-option label="Seedance 2.0" value="doubao_video" />
             </el-select>
             <el-button size="small" type="primary" style="width:100%;margin-top:8px" @click="generateVideoForShot" :loading="genningVideo" :disabled="!currentShot">生成视频</el-button>
-            <!-- 恢复视频任务 -->
             <div style="margin-top:8px;display:flex;gap:4px">
               <el-input v-model="recoverTaskId" size="small" placeholder="粘贴 taskId 恢复视频" clearable style="flex:1" />
               <el-button size="small" @click="recoverVideo" :loading="recovering" :disabled="!recoverTaskId">恢复</el-button>
@@ -254,7 +273,7 @@
               :class="{ active: selectedRefs.includes(c._id), 'has-img': getCharThumb(c) }"
               @click="toggleRef(c._id)"
               :title="getCharThumb(c) ? `${c.name}（有参考图）` : `${c.name}（无参考图）`">
-              {{ c.name }}{{ getCharThumb(c) ? ' 🖼️' : '' }}
+              {{ c.name }}<PictureOne v-if="getCharThumb(c)" size="12" fill="var(--gold)" style="margin-left:2px;vertical-align:middle"/>
             </div>
           </div>
         </div>
@@ -265,7 +284,7 @@
               :class="{ active: selectedSceneRefs.includes(s._id), 'has-img': getSceneThumb(s) }"
               @click="toggleSceneRef(s._id)"
               :title="getSceneThumb(s) ? `${s.sceneName}（有参考图）` : `${s.sceneName}（无参考图）`">
-              {{ s.sceneName }}{{ getSceneThumb(s) ? ' 🖼️' : '' }}
+              {{ s.sceneName }}<PictureOne v-if="getSceneThumb(s)" size="12" fill="var(--gold)" style="margin-left:2px;vertical-align:middle"/>
             </div>
           </div>
         </div>
@@ -296,7 +315,7 @@
                 <span class="mat-play-icon">▶</span>
               </div>
               <img v-else-if="m.url" :src="m.url" @click="openImgViewer(m.url)" />
-              <span class="mat-type">{{ m.type === 'video' ? '🎥' : '🖼️' }}</span>
+              <span class="mat-type"><Video v-if="m.type === 'video'" size="14" fill="var(--gold)"/><Pic v-else size="14" fill="var(--gold)"/></span>
               <span class="mat-ver">v{{ m.version }}</span>
               <span class="mat-set" @click.stop="setMatAsCurrent(m)" title="设为主素材">★</span>
             </div>
@@ -413,7 +432,7 @@
       <template #footer>
         <el-button @click="showTTSDialog = false">取消</el-button>
         <el-button type="primary" @click="handleTTSSynthesize" :loading="synthingShot !== null">
-          {{ ttsTargetShot ? '🎙️ 合成此句' : '🎙️ 批量合成全部' }}
+          {{ ttsTargetShot ? '' : '' }}<Voice size="14" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/>{{ ttsTargetShot ? '合成此句' : '批量合成全部' }}
         </el-button>
       </template>
     </el-dialog>
@@ -423,7 +442,7 @@
 <script setup>
 import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Help, PictureOne, Video, Copy, Plus, Delete, Voice } from '@icon-park/vue-next';
+import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -478,6 +497,109 @@ const currentRefImages = ref([]);
 const tlTrack = ref(null);
 const videoPromptRef = ref(null);
 const promptEditorWrap = ref(null);
+
+// ===== 图片提示词编辑器（复用同一个 mention 系统）=====
+const imgPromptRef = ref(null);
+const imgPromptEditorWrap = ref(null);
+const showImgMentionMenu = ref(false);
+const imgEditorHasContent = ref(false);
+const imgEditorCharCount = ref(0);
+let _imgMentionQuery = '';
+
+function imgEditorEl() { return imgPromptRef.value; }
+
+function onImgPromptInput() {
+  currentShotPrompt.value = editorToPlainTextFor(imgEditorEl());
+  imgEditorHasContent.value = !!imgEditorEl()?.innerText?.trim();
+  imgEditorCharCount.value = imgEditorEl()?.innerText?.length || 0;
+  checkMentionTriggerFor(imgEditorEl(), _imgMentionQuery, showImgMentionMenu);
+}
+function onImgPromptClick() { checkMentionTriggerFor(imgEditorEl(), _imgMentionQuery, showImgMentionMenu); }
+
+function onImgPromptKeydown(e) {
+  if (e.key === 'Escape') { showImgMentionMenu.value = false; }
+  if (e.key === 'Backspace') handleBackspaceInEditor(e, imgEditorEl(), onImgPromptInput);
+}
+
+function insertImgMention(item) {
+  insertTag(item, imgEditorEl(), showImgMentionMenu, onImgPromptInput);
+}
+function renderImgEditor(text) {
+  renderEditorContent(text, imgEditorEl(), onImgPromptInput);
+}
+function loadShotImgEditor(text) {
+  currentShotPrompt.value = text || '';
+  nextTick(() => renderImgEditor(text || ''));
+}
+
+// ===== 通用编辑器工具函数 =====
+function editorToPlainTextFor(editor) { if (!editor) return ''; let t=''; editor.childNodes.forEach(n=>{if(n.nodeType===3)t+=n.textContent;else if(n.classList?.contains('mention-tag'))t+=n.dataset.name?'@'+n.dataset.name:n.textContent;else if(n.nodeName==='BR')t+='\n';else t+=n.textContent||''});return t; }
+
+function checkMentionTriggerFor(editor, queryRef, menuRef) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !sel.focusNode) { menuRef.value = false; return; }
+  const node = sel.focusNode;
+  if (node.nodeType !== Node.TEXT_NODE || !editor?.contains(node)) { menuRef.value = false; return; }
+  const offset = sel.focusOffset;
+  const before = node.textContent.substring(0, offset);
+  const atIdx = before.lastIndexOf('@');
+  if (atIdx === -1) { menuRef.value = false; return; }
+  if (before.substring(atIdx).includes(' ') || before.substring(atIdx).includes('\n')) { menuRef.value = false; return; }
+  mentionQuery.value = before.substring(atIdx + 1);
+  menuRef.value = true;
+}
+
+function insertTag(item, editor, menuRef, afterFn) {
+  menuRef.value = false;
+  if (!editor) return;
+  editor.focus();
+  const sel = window.getSelection(); if (!sel.rangeCount) return;
+  const node = sel.focusNode;
+  if (node?.nodeType === Node.TEXT_NODE) {
+    const offset = sel.focusOffset;
+    const before = node.textContent.substring(0, offset);
+    const atIdx = before.lastIndexOf('@');
+    if (atIdx >= 0) { node.textContent = node.textContent.substring(0, atIdx) + node.textContent.substring(offset); sel.collapse(node, atIdx); }
+  }
+  const span = document.createElement('span');
+  span.className = 'mention-tag'; span.contentEditable = 'false';
+  span.dataset.name = item.name; span.dataset.url = item.url || ''; span.dataset.appearance = item.appearance || '';
+  span.style.background = item.bg; span.style.color = item.color;
+  span.innerText = item.chip;
+  const range = sel.getRangeAt(0); range.insertNode(span);
+  const space = document.createTextNode('\xA0'); range.setStartAfter(span); range.insertNode(space);
+  range.setStartAfter(space); range.collapse(true); sel.removeAllRanges(); sel.addRange(range);
+  afterFn();
+}
+
+function handleBackspaceInEditor(e, editor, afterFn) {
+  const sel = window.getSelection(); if (!sel.rangeCount) return;
+  const node = sel.focusNode;
+  if (node?.nodeType === Node.TEXT_NODE && sel.focusOffset === 0) {
+    const prev = node.previousSibling;
+    if (prev?.classList?.contains('mention-tag')) { e.preventDefault(); prev.remove(); afterFn(); }
+  }
+}
+
+function renderEditorContent(text, editor, afterFn) {
+  if (!editor) return;
+  if (!text) { editor.innerHTML = ''; afterFn(); return; }
+  let html = ''; let last = 0;
+  const re = /@([^\s@,;.，。；]+)/g; let m;
+  while ((m = re.exec(text))) {
+    html += (text.substring(last, m.index)).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const name = m[1];
+    const c = assetStore.characters.find(x => x.name === name);
+    const s = assetStore.scenes.find(x => x.sceneName === name);
+    const bg = (s && !c) ? '#e2f3f5' : 'rgba(201,168,76,0.2)';
+    const color = (s && !c) ? '#02adb5' : 'var(--gold-dark)';
+    html += '<span class="mention-tag" contenteditable="false" data-name="'+name+'" style="background:'+bg+';color:'+color+'">@'+name+'</span>';
+    last = re.lastIndex;
+  }
+  html += (text.substring(last)).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  editor.innerHTML = html;
+  afterFn();
+}
 const screenWidth = ref(window.innerWidth);
 const mobileTab = ref('shots');
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
@@ -798,7 +920,10 @@ function loadShotData(s) {
   currentVideoPrompt.value = s._videoPrompt || '';
   videoDuration.value = s.duration || 5;
   currentRefImages.value = s._refImages || [];
-  nextTick(() => renderEditor(s._videoPrompt || ''));
+  nextTick(() => {
+    renderEditor(s._videoPrompt || '');
+    renderImgEditor(s._imagePrompt || s.imageDescription || '');
+  });
 }
 
 function saveCurrentPrompt() {
@@ -1695,6 +1820,21 @@ async function handleImport() {
   outline: none; cursor: text; word-break: break-word;
 }
 .prompt-editor:focus { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(201,168,76,0.3); }
+.seedance-marquee {
+  overflow: hidden; white-space: nowrap; width: 100%;
+  padding: 6px 0 6px 12px;
+  background: var(--accent-200); border-radius: 6px; margin-bottom: 12px;
+  font-size: 11px; color: var(--text-100); cursor: default;
+}
+.seedance-marquee-text { display: none; } /* 旧类名废弃，保留向后兼容 */
+.seedance-marquee-inner { white-space: nowrap; display: flex; }
+.seedance-marquee-dupe {
+  display: inline-block; flex-shrink: 0; white-space: nowrap;
+  animation: seedance-marquee-scroll 25s linear infinite;
+  padding-right: 48px;
+}
+.seedance-marquee:hover .seedance-marquee-dupe { animation-play-state: paused; }
+@keyframes seedance-marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 .prompt-editor-ph {
   position: absolute; top: 10px; left: 12px; color: var(--text-200);
   font-size: 13px; pointer-events: none;
