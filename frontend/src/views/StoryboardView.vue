@@ -194,27 +194,14 @@
           </div>
           <div class="right-section">
             <label>视频提示词</label>
-            <div class="prompt-hl-wrap">
-              <div class="prompt-hl-backdrop" v-html="highlightedVideoPrompt" aria-hidden="true"></div>
-              <textarea
-                ref="videoPromptRef"
-                :value="currentVideoPrompt"
-                @input="onVideoPromptInput"
-                @keydown="onVideoPromptKeydown"
-                @scroll="onPromptScroll"
-                class="prompt-hl-textarea"
-                :rows="4"
-                placeholder="输入视频生成提示词，点击下方参考图可插入 @角色名 引用..."
-                @change="saveCurrentVideoPrompt"
-              ></textarea>
-            </div>
-            <!-- 参考图快捷插入 -->
+            <el-input ref="videoPromptRef" v-model="currentVideoPrompt" type="textarea" :rows="4" placeholder="输入视频生成提示词，点击下方可插入 @角色名 引用..." size="small" @change="saveCurrentVideoPrompt" @keydown="onVideoPromptKeydown" />
             <div v-if="videoRefChips.length > 0" class="prompt-chips">
               <span style="font-size:11px;color:var(--text-200);margin-right:4px">插入引用：</span>
               <span v-for="(rc, i) in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertAtCursor(rc.tag)" :title="rc.hint">
                 {{ rc.tag }} {{ rc.name }}
               </span>
             </div>
+            <div v-if="hasAtRefs" class="prompt-preview" v-html="highlightedVideoPrompt"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
               <span class="char-count">{{ (currentVideoPrompt || '').length }} / 5000</span>
               <div style="display:flex;gap:4px">
@@ -476,21 +463,11 @@ const screenWidth = ref(window.innerWidth);
 const mobileTab = ref('shots');
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 
-function onVideoPromptInput(e) { currentVideoPrompt.value = e.target.value || ''; }
-function onPromptScroll(e) { const bd = e.target.previousElementSibling; if (bd) { bd.scrollTop = e.target.scrollTop; bd.scrollLeft = e.target.scrollLeft; } }
-const AT_HIGHLIGHT_RE = /@([^\s@,;.，。；]+)/g;
-const highlightedVideoPrompt = computed(() => {
-  const text = currentVideoPrompt.value || '';
-  const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const openSpan = '<span class="at-token">';
-  const closeSpan = '</span>';
-  return safe.replace(AT_HIGHLIGHT_RE, openSpan + '@$1' + closeSpan);
-});
-
-// 智能删除：Backspace 在 @token 内部时整词删除
 function onVideoPromptKeydown(e) {
   if (e.key !== 'Backspace') return;
-  const el = e.target; const sel = el.selectionStart; const text = currentVideoPrompt.value;
+  const el = videoPromptRef.value?.$el?.querySelector('textarea');
+  if (!el) return;
+  const sel = el.selectionStart; const text = currentVideoPrompt.value;
   const before = text.substring(0, sel); const atIdx = before.lastIndexOf('@');
   if (atIdx === -1) return;
   const tokenPart = before.substring(atIdx);
@@ -503,16 +480,12 @@ function onVideoPromptKeydown(e) {
 }
 
 function insertAtCursor(tag) {
-  const el = videoPromptRef.value;
-  if (!el) { currentVideoPrompt.value += ' ' + tag; return; }
-  const start = el.selectionStart || currentVideoPrompt.value.length;
-  const end = el.selectionEnd || start;
-  currentVideoPrompt.value = currentVideoPrompt.value.substring(0, start) + tag + ' ' + currentVideoPrompt.value.substring(end);
-  nextTick(() => {
-    const pos = start + tag.length + 1;
-    el.focus();
-    el.setSelectionRange(pos, pos);
-  });
+  const el = videoPromptRef.value?.$el?.querySelector('textarea');
+  const text = currentVideoPrompt.value;
+  const start = el ? el.selectionStart : text.length;
+  const end = el ? el.selectionEnd : start;
+  currentVideoPrompt.value = text.substring(0, start) + tag + ' ' + text.substring(end);
+  nextTick(() => { if (el) { const pos = start + tag.length + 1; el.focus(); el.setSelectionRange(pos, pos); } });
 }
 
 // 参考图芯片
@@ -1563,26 +1536,11 @@ async function handleImport() {
 }
 .prompt-chip:hover { background: var(--gold); color: var(--navy); transform: translateY(-1px); }
 
-/* @高亮文本框 */
-.prompt-hl-wrap { position: relative; }
-.prompt-hl-backdrop, .prompt-hl-textarea {
-  width: 100%; min-height: 88px; box-sizing: border-box; padding: 10px 12px;
-  font-family: 'DM Sans', 'Microsoft YaHei', monospace; font-size: 13px; line-height: 1.6;
-  letter-spacing: 0.3px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;
-  border: 1px solid var(--bg-300); border-radius: 6px; background: var(--bg-200);
+.prompt-preview {
+  padding: 6px 0; font-size: 12px; line-height: 1.6; color: var(--text-200);
 }
-.prompt-hl-backdrop {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  overflow: hidden; pointer-events: none; color: transparent; z-index: 1;
-}
-.prompt-hl-textarea {
-  position: relative; z-index: 2; color: var(--text-100); resize: vertical;
-  background: transparent; caret-color: var(--text-100);
-}
-.prompt-hl-textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 1px rgba(201,168,76,0.3); }
-.prompt-hl-textarea::placeholder { color: var(--text-200); }
-span.at-token {
-  background: rgba(201,168,76,0.2); color: transparent; border-radius: 3px;
+.prompt-preview mark {
+  background: rgba(201,168,76,0.2); color: var(--gold-dark); border-radius: 3px;
   padding: 1px 3px; font-weight: 600; border-bottom: 2px solid var(--gold);
 }
 
