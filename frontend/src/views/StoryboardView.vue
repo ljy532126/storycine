@@ -69,12 +69,12 @@
                 @loadedmetadata="console.log('[视频] 已加载:', currentShot.renderedVideo)">
               </video>
               <!-- 视频生成中 / 等待中 -->
-              <div v-else-if="videoPollingShot === currentShot?.shotNumber && videoPollingScript === currentScriptId" class="preview-empty">
-                <span style="font-size:48px">{{ videoPollStatus === 'queued' ? '📋' : videoPollStatus === 'running' ? '🎬' : '⏳' }}</span>
-                <p><strong>{{ statusLabel(videoPollStatus) }}</strong></p>
-                <p style="font-size:11px;color:var(--text-200);word-break:break-all">任务ID: {{ videoPollTaskId }}</p>
-                <p style="font-size:11px;color:var(--text-200)">已等待 {{ videoPollProgress }} 秒 · 通常 1~3 分钟</p>
-                <el-progress :percentage="Number(Math.min(videoPollProgress / 1.8, 99).toFixed(2))" style="width:200px;margin-top:4px" :stroke-width="6" />
+              <div v-else-if="getShotPollKey() && videoPollingMap[getShotPollKey()]" class="preview-empty">
+                <span style="font-size:48px">{{ videoPollingMap[getShotPollKey()].status === 'queued' ? '📋' : videoPollingMap[getShotPollKey()].status === 'running' ? '🎬' : '⏳' }}</span>
+                <p><strong>{{ statusLabel(videoPollingMap[getShotPollKey()].status) }}</strong></p>
+                <p style="font-size:11px;color:var(--text-200);word-break:break-all">任务ID: {{ videoPollingMap[getShotPollKey()].taskId }}</p>
+                <p style="font-size:11px;color:var(--text-200)">已等待 {{ videoPollingMap[getShotPollKey()].progress }} 秒 · 通常 1~3 分钟</p>
+                <el-progress :percentage="Number(Math.min((videoPollingMap[getShotPollKey()].progress || 0) / 1.8, 99).toFixed(2))" style="width:200px;margin-top:4px" :stroke-width="6" />
               </div>
               <!-- 图片预览 -->
               <img v-else-if="currentShot.renderedImage" :src="currentShot.renderedImage" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in" @click="openImgViewer(currentShot.renderedImage)" />
@@ -1016,15 +1016,18 @@ if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
   }
 }
 
-const videoPollingShot = ref(null);
-const videoPollingScript = ref(null);
-const videoPollProgress = ref(0);
-const videoPollStatus = ref('');
-const videoPollTaskId = ref('');
+// 视频生成 polling 状态 — key: `${scriptId}_${shotNumber}`
+const videoPollingMap = reactive({});
+const videoPollTimers = {};
 const recoverTaskId = ref('');
 const recovering = ref(false);
-let videoPollTimer = null;
 function isTaskId(url) { return url && /^cgt-/.test(url); }
+function getShotPollKey(shot, scriptId) {
+  const s = shot || currentShot.value;
+  const sid = scriptId || currentScriptId.value;
+  if (!s?.shotNumber || !sid) return null;
+  return `${sid}_${s.shotNumber}`;
+}
 function statusLabel(s) {
   const m = { queued: '排队中', submitted: '已提交', running: '生成中', processing: '处理中', succeeded: '已完成', failed: '失败', cancelled: '已取消', expired: '已过期' };
   return m[s] || s || '处理中';
@@ -1114,61 +1117,66 @@ async function generateVideoForShot() {
 
 function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverride) {
   const shotNum = shotNumOverride || currentShot.value?.shotNumber;
-  const sbId = sbIdOverride || currentStoryboard.value?._id;
   const scriptId = scriptIdOverride || currentScriptId.value;
-  videoPollingShot.value = shotNum; videoPollingScript.value = scriptId;
-  videoPollProgress.value = 0; videoPollStatus.value = 'queued'; videoPollTaskId.value = taskId;
-  clearInterval(videoPollTimer);
+  const key = `${scriptId}_${shotNum}`;
+  const startTime = Date.now();
+  videoPollingMap[key] = { progress: 0, status: 'queued', taskId, shotNum, scriptId };
 
-  videoPollTimer = setInterval(async () => {
+  clearInterval(videoPollTimers[key]);
+  videoPollTimers[key] = setInterval(async () => {
+    if (!videoPollingMap[key]) { clearInterval(videoPollTimers[key]); return; }
+    const e = videoPollingMap[key];
+    e.progress = Math.floor((Date.now() - startTime) / 1000);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`/api/v1/assets/video-task/${taskId}?provider=doubao`, { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       const d = json.data;
-      if ((d.status === 'completed' || d.status === 'succeeded') && d.videoUrl) {
-        clearInterval(videoPollTimer);
-        videoPollingShot.value = null; videoPollingScript.value = null; videoPollStatus.value = ''; videoPollTaskId.value = '';
+      const finalStatuses = ['succeeded', 'completed', 'failed', 'expired', 'cancelled', 'error'];
+      if (finalStatuses.includes(d.status)) {
+        clearInterval(videoPollTimers[key]);
+        delete videoPollTimers[key];
+        e.status = d.status;
         try {
           const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
-          delete tasks[taskId];
-          localStorage.setItem('ad_video_tasks', JSON.stringify(tasks));
+          delete tasks[taskId]; localStorage.setItem('ad_video_tasks', JSON.stringify(tasks));
         } catch {}
-        // 更新对应分镜（使用捕获的 sbId 而非 currentStoryboard，防止切换剧集后串位）
-        const targetSB = (sbId && sbId === currentStoryboard.value?._id) ? currentStoryboard.value : null;
-        const shot = targetSB?.shots?.find(s => s.shotNumber === shotNum);
-        if (shot) { shot.renderedVideo = d.videoUrl; delete shot._videoTaskId; }
-        // 如果当前选中的正好是目标分镜，即时更新预览
-        if (currentStoryboard.value?._id === sbId && currentShot.value?.shotNumber === shotNum && currentScriptId.value === scriptId) {
-          currentShot.value.renderedVideo = d.videoUrl;
-          const mats = currentShot.value.materials || [];
-          mats.push({ version: mats.length + 1, type: 'video', url: d.videoUrl, prompt: currentVideoPrompt.value, createdAt: new Date().toISOString() });
-          currentShot.value.materials = mats;
+        if (d.status === 'succeeded' || d.status === 'completed') {
+          const url = d.videoUrl;
+          if (url) {
+            if (currentStoryboard.value?._id === sbIdOverride && currentShot.value?.shotNumber === shotNum) {
+              currentShot.value.renderedVideo = url;
+              const mats = currentShot.value.materials || [];
+              mats.push({ version: mats.length + 1, type: 'video', url, prompt: currentVideoPrompt.value, createdAt: new Date().toISOString() });
+              currentShot.value.materials = mats;
+            }
+            try {
+              const sb = sbIdOverride ? await storyboardAPI.get(sbIdOverride) : null;
+              if (sb?.data) {
+                const shot = sb.data.shots?.find(s => s.shotNumber === shotNum);
+                if (shot) { shot.renderedVideo = url; shot.status = 'completed'; }
+                if (sbIdOverride === currentStoryboard.value?._id) currentStoryboard.value = sb.data;
+              }
+            } catch {}
+            await storyboardAPI.updateShot(sbIdOverride, shotNum, { renderedVideo: url }).catch(() => {});
+          }
+          ElMessage.success(`镜头 ${shotNum} 视频生成完成 🎉`);
+          window.__addNotification?.(`镜头 ${shotNum} 视频完成`, 'success', '🎥');
+        } else {
+          if (currentStoryboard.value?.shots) {
+            const shot = currentStoryboard.value.shots.find(s => s.shotNumber === shotNum);
+            if (shot && shot.renderedVideo === taskId) { shot.renderedVideo = ''; shot.status = 'failed'; }
+          }
+          ElMessage.warning(`镜头 ${shotNum} 视频失败: ${d.status}`);
         }
-        // 持久化到数据库（用捕获的 sbId）
-        if (sbId) {
-          try { await storyboardAPI.updateShot(sbId, shotNum, { renderedVideo: d.videoUrl }); } catch {}
-        }
-        ElMessage.success('视频生成完成，可在预览区播放 🎉');
-        window.__addNotification?.('视频生成完成', 'success', '🎥');
-      } else if (d.status === 'running' || d.status === 'queued' || d.status === 'processing' || d.status === 'submitted' || d.status === 'pending') {
-        videoPollStatus.value = d.status;
-        const elapsed = d.createdAt ? Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 1000) : videoPollProgress.value + 5;
-        videoPollProgress.value = elapsed;
-      } else if (d.status === 'failed' || d.status === 'expired' || d.status === 'cancelled' || d.status === 'error') {
-        clearInterval(videoPollTimer); videoPollingShot.value = null; videoPollingScript.value = null; videoPollStatus.value = d.status; videoPollTaskId.value = '';
-        try {
-          const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
-          delete tasks[taskId];
-          localStorage.setItem('ad_video_tasks', JSON.stringify(tasks));
-        } catch {}
-        ElMessage.error(d.message || ('任务状态: ' + d.status + '，Seedance 未返回具体错误原因'));
+        delete videoPollingMap[key];
+      } else {
+        e.status = d.status || 'processing';
       }
-    } catch (e) { /* 继续轮询 */ }
+    } catch { /* 继续轮询 */ }
   }, 5000);
 }
 
-// 页面挂载时恢复未完成的视频任务（从 localStorage 读取）
 function resumeVideoTasks() {
   try {
     const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
@@ -1176,15 +1184,12 @@ function resumeVideoTasks() {
     if (entries.length === 0) return;
     console.log('[视频] 恢复未完成任务:', entries.length, '个');
     entries.forEach(t => {
-      videoPollingShot.value = t.shotNumber;
-      videoPollingScript.value = t.scriptId || currentScriptId.value;
-      videoPollProgress.value = Math.floor((Date.now() - (t.startTime || Date.now())) / 1000);
       startVideoPolling(t.taskId, t.shotNumber, t.storyboardId, t.scriptId);
     });
   } catch {}
 }
 
-onUnmounted(() => { clearInterval(videoPollTimer); });
+onUnmounted(() => { Object.values(videoPollTimers).forEach(clearInterval); });
 
 function formatEpLabel(ep) {
   const title = (ep.episodeTitle || '').replace(/^第\d+集[：:]*\s*/, '').trim();
