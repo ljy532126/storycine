@@ -196,14 +196,34 @@
           </div>
           <div class="right-section">
             <label>视频提示词</label>
-            <el-input ref="videoPromptRef" v-model="currentVideoPrompt" type="textarea" :rows="4" placeholder="输入视频生成提示词，点击下方可插入 @角色名 引用..." size="small" @change="saveCurrentVideoPrompt" @keydown="onVideoPromptKeydown" />
+            <div class="prompt-editor-wrap" ref="promptEditorWrap">
+              <div
+                ref="videoPromptRef"
+                class="prompt-editor"
+                contenteditable="true"
+                @input="onPromptInput"
+                @keydown="onPromptKeydown"
+                @blur="saveCurrentVideoPrompt"
+                @click="onPromptClick"
+                placeholder="输入视频生成提示词，输入 @ 可插入角色/场景引用..."
+              ></div>
+              <div class="prompt-editor-placeholder" v-if="!plainPromptText" aria-hidden="true" @click="focusPrompt">输入视频生成提示词，输入 @ 可插入角色/场景引用...</div>
+              <!-- @提及下拉 -->
+              <div v-if="showMentionMenu" class="mention-menu" :style="mentionMenuStyle">
+                <div v-for="item in mentionOptions" :key="item.id" class="mention-item" @mousedown.prevent="insertMention(item)">
+                  <span class="mention-chip" :style="{ background: item.bg || 'rgba(201,168,76,0.2)', color: item.color || 'var(--gold-dark)' }">{{ item.chip }}</span>
+                  <span class="mention-name">{{ item.name }}</span>
+                  <span class="mention-type">{{ item.type }}</span>
+                </div>
+                <div v-if="mentionOptions.length === 0" style="padding:8px 12px;color:var(--text-200);font-size:12px">无匹配结果</div>
+              </div>
+            </div>
             <div v-if="videoRefChips.length > 0" class="prompt-chips">
-              <span style="font-size:11px;color:var(--text-200);margin-right:4px">插入引用：</span>
-              <span v-for="(rc, i) in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertAtCursor(rc.tag)" :title="rc.hint">
+              <span style="font-size:11px;color:var(--text-200);margin-right:4px">点击插入：</span>
+              <span v-for="(rc, i) in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertChip(rc)" :title="rc.hint">
                 {{ rc.tag }} {{ rc.name }}
               </span>
             </div>
-            <div v-if="hasAtRefs" class="prompt-preview" v-html="highlightedVideoPrompt"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
               <span class="char-count">{{ (currentVideoPrompt || '').length }} / 5000</span>
               <div style="display:flex;gap:4px">
@@ -461,33 +481,194 @@ const selectedVideoModel = ref('doubao_video');
 const currentRefImages = ref([]);
 const tlTrack = ref(null);
 const videoPromptRef = ref(null);
-const screenWidth = ref(window.innerWidth);
-const mobileTab = ref('shots');
-window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
+const promptEditorWrap = ref(null);
+const showMentionMenu = ref(false);
+const mentionQuery = ref('');
+const mentionCursorRange = ref(null);
 
-function onVideoPromptKeydown(e) {
-  if (e.key !== 'Backspace') return;
-  const el = videoPromptRef.value?.$el?.querySelector('textarea');
-  if (!el) return;
-  const sel = el.selectionStart; const text = currentVideoPrompt.value;
-  const before = text.substring(0, sel); const atIdx = before.lastIndexOf('@');
-  if (atIdx === -1) return;
-  const tokenPart = before.substring(atIdx);
-  if (tokenPart.includes(' ')) return;
-  const after = text.substring(sel); const spaceIdx = after.search(/[\s,;.，。；]/);
-  const end = spaceIdx === -1 ? text.length : sel + spaceIdx;
-  e.preventDefault();
-  currentVideoPrompt.value = text.substring(0, atIdx) + text.substring(end);
-  nextTick(() => { el.focus(); el.setSelectionRange(atIdx, atIdx); });
+// 纯文本（无标签）用于存到 currentVideoPrompt
+const plainPromptText = computed(() => {
+  const el = videoPromptRef.value; if (!el) return '';
+  return el.innerText || '';
+});
+
+function focusPrompt() { videoPromptRef.value?.focus(); }
+
+// @提及候选项
+const mentionOptions = computed(() => {
+  const q = mentionQuery.value.toLowerCase();
+  if (!q && !showMentionMenu.value) return [];
+  const items = [];
+  // 角色
+  assetStore.characters.forEach(c => {
+    const n = c.name || '';
+    if (!q || n.toLowerCase().includes(q) || c.appearance?.toLowerCase().includes(q)) {
+      items.push({ id: c._id, name: n, type: '角色', chip: '@'+n, bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)', url: getRefUrl(c) || '', appearance: c.appearance || '' });
+    }
+  });
+  // 场景
+  assetStore.scenes.forEach(s => {
+    const n = s.sceneName || '';
+    if (!q || n.toLowerCase().includes(q)) {
+      items.push({ id: s._id, name: n, type: '场景', chip: '@'+n, bg: '#e2f3f5', color: '#02adb5', url: getRefUrl(s) || '' });
+    }
+  });
+  // 当前镜头
+  if (currentShot.value?.renderedImage && (!q || '当前镜头'.includes(q))) {
+    items.push({ id: '__shot__', name: '当前镜头', type: '参考图', chip: '@镜头', bg: '#e8e9f9', color: '#407bff', url: currentShot.value.renderedImage });
+  }
+  return items.slice(0, 20);
+});
+
+const mentionMenuStyle = computed(() => {
+  const r = mentionCursorRange.value;
+  if (!r) return {};
+  const wrap = promptEditorWrap.value;
+  const rect = wrap?.getBoundingClientRect?.() || { left: 20, top: 20 };
+  return { left: '8px', bottom: '100%', marginBottom: '4px' };
+});
+
+function onPromptInput() {
+  syncPromptToText();
+  checkMentionTrigger();
 }
 
-function insertAtCursor(tag) {
-  const el = videoPromptRef.value?.$el?.querySelector('textarea');
-  const text = currentVideoPrompt.value;
-  const start = el ? el.selectionStart : text.length;
-  const end = el ? el.selectionEnd : start;
-  currentVideoPrompt.value = text.substring(0, start) + tag + ' ' + text.substring(end);
-  nextTick(() => { if (el) { const pos = start + tag.length + 1; el.focus(); el.setSelectionRange(pos, pos); } });
+function onPromptClick() { checkMentionTrigger(); }
+
+function syncPromptToText() {
+  const el = videoPromptRef.value; if (!el) return;
+  currentVideoPrompt.value = el.innerText || '';
+}
+
+// 检测是否输入了 @ 触发提及菜单
+function checkMentionTrigger() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) { showMentionMenu.value = false; return; }
+  const node = sel.focusNode;
+  if (!node || node.nodeType !== Node.TEXT_NODE) { showMentionMenu.value = false; return; }
+  const text = node.textContent || '';
+  const offset = sel.focusOffset;
+  // 往前找最近 @
+  const before = text.substring(0, offset);
+  const atIdx = before.lastIndexOf('@');
+  if (atIdx === -1) { showMentionMenu.value = false; return; }
+  // @ 和工作位置之间不能有空格
+  const between = before.substring(atIdx);
+  if (between.includes(' ') || between.includes('\n')) { showMentionMenu.value = false; return; }
+  mentionQuery.value = between.substring(1); // 去掉 @
+  mentionCursorRange.value = sel.getRangeAt(0).cloneRange();
+  showMentionMenu.value = true;
+}
+
+// 插入 @标签 span
+function insertMention(item) {
+  showMentionMenu.value = false;
+  const el = videoPromptRef.value; if (!el) return;
+  el.focus();
+
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+
+  // 找到 @ 的位置并删除 @xxx 文本
+  const node = sel.focusNode;
+  if (node?.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent || '';
+    const offset = sel.focusOffset;
+    const before = text.substring(0, offset);
+    const atIdx = before.lastIndexOf('@');
+    if (atIdx !== -1) {
+      // 删除从 @ 到光标位置的文本
+      const after = text.substring(offset);
+      node.textContent = text.substring(0, atIdx) + after;
+      sel.collapse(node, atIdx);
+    }
+  }
+
+  // 插入 tag span
+  const span = document.createElement('span');
+  span.className = 'mention-tag';
+  span.contentEditable = 'false';
+  span.dataset.name = item.name;
+  span.dataset.type = item.type;
+  span.dataset.url = item.url || '';
+  span.style.background = item.bg || 'rgba(201,168,76,0.2)';
+  span.style.color = item.color || 'var(--gold-dark)';
+  span.innerText = item.chip;
+
+  const range = sel.getRangeAt(0);
+  range.insertNode(span);
+  // 在后面加一个空格
+  const space = document.createTextNode(' ');
+  range.setStartAfter(span);
+  range.insertNode(space);
+  range.setStartAfter(space);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  syncPromptToText();
+}
+
+// 键盘事件
+function onPromptKeydown(e) {
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    // 如果前一个节点是 mention-tag，整体删除
+    if (e.key === 'Backspace') {
+      const node = sel.focusNode;
+      if (node?.nodeType === Node.TEXT_NODE && sel.focusOffset === 0) {
+        const prev = node.previousSibling;
+        if (prev?.classList?.contains('mention-tag')) {
+          e.preventDefault();
+          prev.remove();
+          syncPromptToText();
+          return;
+        }
+      }
+      if (node?.classList?.contains('mention-tag')) {
+        e.preventDefault();
+        node.remove();
+        syncPromptToText();
+        return;
+      }
+    }
+    if (e.key === 'Delete') {
+      const node = sel.focusNode;
+      if (node?.nodeType === Node.TEXT_NODE && sel.focusOffset === (node.textContent?.length || 0)) {
+        const next = node.nextSibling;
+        if (next?.classList?.contains('mention-tag')) {
+          e.preventDefault();
+          next.remove();
+          syncPromptToText();
+          return;
+        }
+      }
+    }
+  }
+  if (e.key === 'Escape') { showMentionMenu.value = false; }
+}
+
+// 芯片插入
+function insertChip(rc) {
+  const item = mentionOptions.value.find(o => o.id === rc.id) || { id: rc.id, name: rc.name, type: '角色', chip: rc.tag, bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)', url: '' };
+  insertMention(item);
+}
+
+// 从 contenteditable 的 mention-tag 解析 @引用
+function parsePromptRefsFromEditor() {
+  const el = videoPromptRef.value; if (!el) return [];
+  const refs = []; const seen = new Set();
+  const tags = el.querySelectorAll('.mention-tag');
+  tags.forEach(tag => {
+    const name = tag.dataset.name;
+    const url = tag.dataset.url;
+    const appearance = tag.dataset.appearance || '';
+    if (!name || !url || seen.has(name)) return;
+    seen.add(name);
+    refs.push({ name, url, appearance });
+  });
+  return refs;
 }
 
 // 参考图芯片
@@ -500,18 +681,18 @@ const videoRefChips = computed(() => {
   return chips;
 });
 
-// 解析提示词中的 @角色名，返回有序的 { name, url, appearance } 数组
-function parsePromptRefs(prompt) {
-  const refs = [];
-  const seen = new Set();
-  const tagRegex = /@([^\s@,;.，。；]+)/g;
-  let match;
-  while ((match = tagRegex.exec(prompt)) !== null) {
+// 解析提示词中的 @角色名（编辑器 DOM 优先，文本 fallback）
+function parsePromptRefs() {
+  const editorRefs = parsePromptRefsFromEditor();
+  if (editorRefs.length > 0) return editorRefs;
+  // fallback: 纯文本解析
+  const refs = []; const seen = new Set();
+  const tagRegex = /@([^\s@,;.，。；]+)/g; let match;
+  const text = plainPromptText.value;
+  while ((match = tagRegex.exec(text)) !== null) {
     const name = match[1];
-    if (seen.has(name)) continue;
-    seen.add(name);
-    const c = assetStore.characters.find(x => x.name === name) ||
-              assetStore.scenes.find(x => x.sceneName === name);
+    if (seen.has(name)) continue; seen.add(name);
+    const c = assetStore.characters.find(x => x.name === name) || assetStore.scenes.find(x => x.sceneName === name);
     const url = c ? getRefUrl(c) : null;
     if (url) refs.push({ name, url, appearance: c?.appearance || '' });
   }
@@ -666,6 +847,40 @@ function saveCurrentPrompt() {
 function saveCurrentVideoPrompt() {
   if (currentShot.value) currentShot.value._videoPrompt = currentVideoPrompt.value;
 }
+
+// 当文本变化时同步到编辑器 DOM（切换镜头 / AI 生成后）
+function populateEditor(text) {
+  const el = videoPromptRef.value; if (!el) return;
+  if (text === el.innerText && el.childNodes.length > 0) return;
+  el.innerHTML = '';
+  let remaining = text || '';
+  const tagRegex = /@([^\s@,;.，。；]+)/g;
+  let lastIdx = 0; let match;
+  while ((match = tagRegex.exec(text || '')) !== null) {
+    if (match.index > lastIdx) {
+      el.appendChild(document.createTextNode(text.substring(lastIdx, match.index)));
+    }
+    const name = match[1];
+    const c = assetStore.characters.find(x => x.name === name);
+    const s = assetStore.scenes.find(x => x.sceneName === name);
+    let bg = 'rgba(201,168,76,0.2)', color = 'var(--gold-dark)';
+    if (s && !c) { bg = '#e2f3f5'; color = '#02adb5'; }
+    const url = c ? getRefUrl(c) : (s ? getRefUrl(s) : '');
+    const span = document.createElement('span');
+    span.className = 'mention-tag'; span.contentEditable = 'false';
+    span.dataset.name = name; span.dataset.type = c ? '角色' : '场景';
+    if (url) span.dataset.url = url;
+    span.style.background = bg; span.style.color = color;
+    span.innerText = '@' + name;
+    el.appendChild(span);
+    lastIdx = tagRegex.lastIndex;
+  }
+  if (lastIdx < (text || '').length) {
+    el.appendChild(document.createTextNode(text.substring(lastIdx)));
+  }
+}
+watch(currentVideoPrompt, (v) => { populateEditor(v); }, { immediate: true });
+
 function saveVideoDuration() {
   if (currentShot.value && videoDuration.value) currentShot.value.duration = videoDuration.value;
 }
@@ -934,7 +1149,7 @@ async function batchGenerateVideos() {
   for (const s of pending) {
     try {
       const prompt = s._videoPrompt || s.imageDescription;
-      const parsedRefs = prompt ? parsePromptRefs(prompt) : [];
+      const parsedRefs = prompt ? parsePromptRefs() : [];
       const refUrls = parsedRefs.length > 0 ? parsedRefs.map(r => r.url) : fallbackUrls;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -1543,6 +1758,51 @@ async function handleImport() {
   font-family: 'DM Sans', 'Microsoft YaHei', sans-serif;
 }
 .prompt-chip:hover { background: var(--gold); color: var(--navy); transform: translateY(-1px); }
+
+/* ===== 富文本 @提及 编辑器 ===== */
+.prompt-editor-wrap { position: relative; }
+.prompt-editor {
+  min-height: 96px; max-height: 280px; overflow-y: auto;
+  padding: 10px 12px; border: 1px solid var(--bg-300); border-radius: 6px;
+  background: var(--bg-200); color: var(--text-100);
+  font-family: 'DM Sans', 'Microsoft YaHei', monospace; font-size: 13px; line-height: 1.7;
+  outline: none; cursor: text; word-break: break-word;
+  transition: border-color 0.2s;
+}
+.prompt-editor:focus { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(201,168,76,0.3); }
+.prompt-editor:empty::before { content: attr(placeholder); color: var(--text-200); pointer-events: none; }
+.prompt-editor-placeholder {
+  position: absolute; top: 10px; left: 12px; right: 12px;
+  color: var(--text-200); pointer-events: none; font-size: 13px;
+  font-family: 'DM Sans', 'Microsoft YaHei', monospace;
+}
+
+/* @标签 (不可编辑) */
+.mention-tag {
+  display: inline-block; padding: 1px 5px; border-radius: 4px;
+  font-size: 12px; font-weight: 600; line-height: 1.5;
+  cursor: default; user-select: all; vertical-align: baseline;
+  margin: 0 1px; border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+/* @提及下拉菜单 */
+.mention-menu {
+  position: absolute; left: 8px; bottom: calc(100% + 4px); z-index: 100;
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 240px; overflow-y: auto;
+  min-width: 240px; padding: 4px 0;
+}
+.mention-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  cursor: pointer; font-size: 13px; transition: background 0.1s;
+}
+.mention-item:hover { background: var(--accent-200); }
+.mention-chip {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.mention-name { flex: 1; color: var(--text-100); font-weight: 500; }
+.mention-type { font-size: 10px; color: var(--text-200); }
 
 .prompt-preview {
   padding: 6px 0; font-size: 12px; line-height: 1.6; color: var(--text-200);
