@@ -121,15 +121,17 @@
                 <div class="tl-desc" v-if="s.imageDescription" :title="s.imageDescription">{{ s.imageDescription }}</div>
                 <div class="tl-actions">
                   <label class="tl-btn" title="上传图片" @click.stop>
-                    <input type="file" accept="image/*" hidden @change="e => uploadShotImage(s, e)" />🖼️
+                    <input type="file" accept="image/*" hidden @change="e => uploadShotImage(s, e)" />
+                    <PictureOne size="14" fill="var(--text-200)"/>
                   </label>
                   <label class="tl-btn" title="上传视频" @click.stop>
-                    <input type="file" accept="video/*" hidden @change="e => uploadShotVideo(s, e)" />🎥
+                    <input type="file" accept="video/*" hidden @change="e => uploadShotVideo(s, e)" />
+                    <Video size="14" fill="var(--text-200)"/>
                   </label>
-                  <span class="tl-btn" title="复制分镜" @click.stop="copyShot(s)">📋</span>
-                  <span class="tl-btn" title="插入新分镜" @click.stop="insertShotAfter(s)">➕</span>
-                  <span class="tl-btn" title="删除分镜" @click.stop="deleteShot(s)">🗑️</span>
-                  <span class="tl-btn" :title="synthingShot === s.shotNumber ? '生成中...' : 'AI 语音合成'" @click.stop="openTTSDialog(s)" :style="synthingShot === s.shotNumber ? 'opacity:0.5' : ''">🎙️</span>
+                  <span class="tl-btn" title="复制分镜" @click.stop="copyShot(s)"><Copy size="14" fill="var(--text-200)"/></span>
+                  <span class="tl-btn" title="插入新分镜" @click.stop="insertShotAfter(s)"><Plus size="14" fill="var(--text-200)"/></span>
+                  <span class="tl-btn" title="删除分镜" @click.stop="deleteShot(s)"><Delete size="14" fill="var(--text-200)"/></span>
+                  <span class="tl-btn" :title="synthingShot === s.shotNumber ? '生成中...' : 'AI 语音合成'" @click.stop="openTTSDialog(s)" :style="synthingShot === s.shotNumber ? 'opacity:0.5' : ''"><Voice size="14" fill="var(--text-200)"/></span>
                 </div>
                 <div class="tl-audio" v-if="s.dialogue?.audioUrl && s.dialogue.audioUrl !== synthingShot">
                   <audio :src="s.dialogue.audioUrl" controls preload="none" style="width:100%;height:28px;margin-top:4px" />
@@ -405,7 +407,7 @@
 <script setup>
 import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Help } from '@icon-park/vue-next';
+import { Help, PictureOne, Video, Copy, Plus, Delete, Voice } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -1170,7 +1172,13 @@ async function generateVideoForShot() {
     }
     const inputImage = currentShot.value.renderedImage || '';
 
-    console.log('[生视频] 参考图数量:', refUrls.length);
+    console.log('[生视频]', JSON.stringify({
+      shot: currentShot.value.shotNumber,
+      prompt: finalPrompt.substring(0, 120),
+      refUrls: refUrls.map(u => u.substring(0, 80)),
+      parsedRefs: parsedRefs.map(r => ({ name: r.name, url: r.url.substring(0, 60) })),
+      inputImage: inputImage.substring(0, 60) || '(none)',
+    }, null, 2));
 
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
