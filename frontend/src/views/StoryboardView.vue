@@ -194,7 +194,14 @@
           </div>
           <div class="right-section">
             <label>视频提示词</label>
-            <el-input v-model="currentVideoPrompt" type="textarea" :rows="4" placeholder="输入视频生成提示词..." size="small" @change="saveCurrentVideoPrompt" />
+            <el-input ref="videoPromptRef" v-model="currentVideoPrompt" type="textarea" :rows="4" placeholder="输入视频生成提示词，点击下方参考图可插入 @角色名 引用..." size="small" @change="saveCurrentVideoPrompt" />
+            <!-- 参考图快捷插入 -->
+            <div v-if="videoRefChips.length > 0" class="prompt-chips">
+              <span style="font-size:11px;color:var(--text-200);margin-right:4px">插入引用：</span>
+              <span v-for="(rc, i) in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertAtCursor(rc.tag)" :title="rc.hint">
+                {{ rc.tag }} {{ rc.name }}
+              </span>
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
               <span class="char-count">{{ (currentVideoPrompt || '').length }} / 5000</span>
               <div style="display:flex;gap:4px">
@@ -396,7 +403,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed, onMounted, onActivated, onUnmounted } from 'vue';
+import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { QuestionFilled } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
@@ -451,9 +458,51 @@ const videoDuration = ref(5);
 const selectedVideoModel = ref('doubao_video');
 const currentRefImages = ref([]);
 const tlTrack = ref(null);
+const videoPromptRef = ref(null);
 const screenWidth = ref(window.innerWidth);
 const mobileTab = ref('shots');
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
+
+// 参考图芯片（显示在提示词框下方，点击可插入 @角色名）
+const videoRefChips = computed(() => {
+  const chips = [];
+  selectedRefs.value.forEach(id => {
+    const c = assetStore.characters.find(x => x._id === id);
+    if (c) chips.push({ id: c._id, name: c.name, tag: `@${c.name}`, hint: c.appearance || c.name });
+  });
+  return chips;
+});
+
+function insertAtCursor(tag) {
+  const el = videoPromptRef.value?.$el?.querySelector('textarea') || videoPromptRef.value?.textarea;
+  if (!el) { currentVideoPrompt.value += ' ' + tag; return; }
+  const start = el.selectionStart || currentVideoPrompt.value.length;
+  const end = el.selectionEnd || start;
+  currentVideoPrompt.value = currentVideoPrompt.value.substring(0, start) + tag + ' ' + currentVideoPrompt.value.substring(end);
+  nextTick(() => {
+    const pos = start + tag.length + 1;
+    el.focus();
+    el.setSelectionRange(pos, pos);
+  });
+}
+
+// 解析提示词中的 @角色名，返回有序的 { name, url, appearance } 数组
+function parsePromptRefs(prompt) {
+  const refs = [];
+  const seen = new Set();
+  const tagRegex = /@([^\s@,;.，。；]+)/g;
+  let match;
+  while ((match = tagRegex.exec(prompt)) !== null) {
+    const name = match[1];
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const c = assetStore.characters.find(x => x.name === name) ||
+              assetStore.scenes.find(x => x.sceneName === name);
+    const url = c ? getRefUrl(c) : null;
+    if (url) refs.push({ name, url, appearance: c?.appearance || '' });
+  }
+  return refs;
+}
 
 watch(noSubtitles, saveNoSubtitles);
 
@@ -863,24 +912,16 @@ async function batchGenerateVideos() {
   window.__videoGenning = true;
   window.__setLoading?.(true);
   let done = 0;
-  // 构建角色提示词（批量生视频复用选中参考角色）
-  const refChars = [];
-  selectedRefs.value.forEach(id => {
-    const c = assetStore.characters.find(x => x._id === id);
-    const url = getRefUrl(c);
-    if (url && c) refChars.push({ name: c.name, gender: c.gender, appearance: c.appearance || '', url });
-  });
-  let charHint = '';
-  if (refChars.length > 0) {
-    charHint = '【角色对应关系】';
-    refChars.forEach((rc, i) => { charHint += ` 参考图${i + 1} = ${rc.name}(${rc.gender || ''}${rc.appearance ? ',' + rc.appearance : ''});`; });
-    charHint += ' ';
-  }
+  // 批量生视频复用选中参考角色作为兜底参考图
+  const fallbackUrls = [];
+  selectedRefs.value.forEach(id => { const url = getRefUrl(assetStore.characters.find(x => x._id === id)); if (url) fallbackUrls.push(url); });
+  selectedSceneRefs.value.forEach(id => { const url = getRefUrl(assetStore.scenes.find(x => x._id === id)); if (url) fallbackUrls.push(url); });
 
   for (const s of pending) {
     try {
-      const prompt = charHint + (s._videoPrompt || s.imageDescription);
-      const refUrls = refChars.map(rc => rc.url);
+      const prompt = s._videoPrompt || s.imageDescription;
+      const parsedRefs = prompt ? parsePromptRefs(prompt) : [];
+      const refUrls = parsedRefs.length > 0 ? parsedRefs.map(r => r.url) : fallbackUrls;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5 })
@@ -1093,38 +1134,35 @@ async function generateVideoForShot() {
   window.__videoGenning = true;
   window.__setLoading?.(true);
   try {
-    const refUrls = [];
-    const refChars = []; // 角色名 + 外貌描述，帮助 Seedance 匹配人脸
-    selectedRefs.value.forEach(id => {
-      const c = assetStore.characters.find(x => x._id === id);
-      const url = getRefUrl(c);
-      if (url) {
-        refUrls.push(url);
-        if (c) refChars.push({ name: c.name, gender: c.gender, appearance: c.appearance || '', url });
-      }
-    });
+    const prompt = currentVideoPrompt.value;
+    // 解析 @角色名 引用 → 有序排列参考图
+    const parsedRefs = parsePromptRefs(prompt);
+    const refUrls = parsedRefs.map(r => r.url);
+    const charDescs = parsedRefs.filter(r => r.appearance).map(r => `${r.name}(${r.appearance})`).join(';');
+    const finalPrompt = charDescs ? charDescs + '。' + prompt : prompt;
+
+    // 兜底：如果 prompt 里没写 @引用，复用右侧选中角色
+    if (refUrls.length === 0) {
+      selectedRefs.value.forEach(id => {
+        const c = assetStore.characters.find(x => x._id === id);
+        const url = getRefUrl(c);
+        if (url) refUrls.push(url);
+      });
+    }
     selectedSceneRefs.value.forEach(id => {
       const s = assetStore.scenes.find(x => x._id === id);
-      const url = getRefUrl(s); if (url) refUrls.push(url);
+      const url = getRefUrl(s); if (url && !refUrls.includes(url)) refUrls.push(url);
     });
-    if (currentShot.value._refImages?.length) refUrls.push(...currentShot.value._refImages);
+    if (currentShot.value._refImages?.length) {
+      currentShot.value._refImages.forEach(u => { if (!refUrls.includes(u)) refUrls.push(u); });
+    }
     const inputImage = currentShot.value.renderedImage || '';
 
-    // 构建角色提示词：告诉 Seedance 每张参考图对应谁
-    let charHint = '';
-    if (refChars.length > 0) {
-      charHint = '【角色对应关系】';
-      refChars.forEach((rc, i) => {
-        charHint += ` 参考图${i + 1} = ${rc.name}(${rc.gender || ''}${rc.appearance ? ',' + rc.appearance : ''});`;
-      });
-      charHint += ' ';
-    }
-
-    console.log('[生视频] 参考图数量:', refUrls.length, '角色:', refChars.map(c => c.name).join(','));
+    console.log('[生视频] 参考图数量:', refUrls.length);
 
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: charHint + currentVideoPrompt.value, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value })
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value })
     });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '视频生成失败'); return; }
@@ -1476,6 +1514,15 @@ async function handleImport() {
 .tl-btn:hover { background: var(--gold); color: var(--navy); }
 .tl-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .tl-btn-del:hover { background: #C44545; color: #fff; }
+
+.prompt-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.prompt-chip {
+  padding: 2px 10px; font-size: 11px; cursor: pointer; user-select: none;
+  border: 1px solid var(--gold); color: var(--gold-dark); background: var(--accent-200);
+  border-radius: 4px; font-weight: 600; transition: all 0.15s;
+  font-family: 'DM Sans', 'Microsoft YaHei', sans-serif;
+}
+.prompt-chip:hover { background: var(--gold); color: var(--navy); transform: translateY(-1px); }
 
 /* ===== RIGHT: Image/Video Panel ===== */
 .sb-right {
