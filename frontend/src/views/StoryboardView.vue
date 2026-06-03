@@ -731,15 +731,23 @@ function uploadShotImage(shot, e) {
   e.target.value = '';
 }
 
-function uploadShotVideo(shot, e) {
+async function uploadShotVideo(shot, e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    shot.renderedVideo = ev.target.result;
+  if (!currentStoryboard.value?._id) { ElMessage.error('请先保存分镜表'); e.target.value = ''; return; }
+
+  const formData = new FormData();
+  formData.append('video', file);
+  try {
+    const res = await storyboardAPI.uploadShotVideo(
+      currentStoryboard.value._id, shot.shotNumber, formData
+    );
+    shot.renderedVideo = res.data.url;
+    shot.status = 'completed';
     ElMessage.success(`分镜 #${shot.shotNumber} 视频已上传`);
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    ElMessage.error(`上传失败: ${err.response?.data?.message || err.message}`);
+  }
   e.target.value = '';
 }
 
@@ -1057,7 +1065,7 @@ async function recoverVideo() {
     } else {
       ElMessage.warning(r?.status === 'running' || r?.status === 'queued' ? '任务仍在生成中，已开始轮询' : `任务状态: ${r?.status || '未知'}`);
       if (r?.status === 'running' || r?.status === 'queued') {
-        startVideoPolling(tid);
+        startVideoPolling(tid, currentShot.value?.shotNumber, currentStoryboard.value?._id, currentScriptId.value);
       }
     }
   } catch (e) { ElMessage.error('恢复失败: ' + (e.message || '')); }
@@ -1106,7 +1114,7 @@ async function generateVideoForShot() {
     ElMessage.success('视频任务已提交，后台生成中（约1-3分钟），可切换页面稍后回来看');
     window.__addNotification?.('视频任务已提交', 'info', '⏳');
 
-    startVideoPolling(taskId);
+    startVideoPolling(taskId, currentShot.value.shotNumber, currentStoryboard.value?._id, currentScriptId.value);
   } catch (e) { ElMessage.error('视频生成失败: ' + (e.message || '')); }
   finally {
     genningVideo.value = false;
