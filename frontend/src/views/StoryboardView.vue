@@ -863,12 +863,27 @@ async function batchGenerateVideos() {
   window.__videoGenning = true;
   window.__setLoading?.(true);
   let done = 0;
+  // 构建角色提示词（批量生视频复用选中参考角色）
+  const refChars = [];
+  selectedRefs.value.forEach(id => {
+    const c = assetStore.characters.find(x => x._id === id);
+    const url = getRefUrl(c);
+    if (url && c) refChars.push({ name: c.name, gender: c.gender, appearance: c.appearance || '', url });
+  });
+  let charHint = '';
+  if (refChars.length > 0) {
+    charHint = '【角色对应关系】';
+    refChars.forEach((rc, i) => { charHint += ` 参考图${i + 1} = ${rc.name}(${rc.gender || ''}${rc.appearance ? ',' + rc.appearance : ''});`; });
+    charHint += ' ';
+  }
+
   for (const s of pending) {
     try {
-      const prompt = s._videoPrompt || s.imageDescription;
+      const prompt = charHint + (s._videoPrompt || s.imageDescription);
+      const refUrls = refChars.map(rc => rc.url);
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', duration: s.duration || 5 })
+        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5 })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
@@ -1079,9 +1094,14 @@ async function generateVideoForShot() {
   window.__setLoading?.(true);
   try {
     const refUrls = [];
+    const refChars = []; // 角色名 + 外貌描述，帮助 Seedance 匹配人脸
     selectedRefs.value.forEach(id => {
       const c = assetStore.characters.find(x => x._id === id);
-      const url = getRefUrl(c); if (url) refUrls.push(url);
+      const url = getRefUrl(c);
+      if (url) {
+        refUrls.push(url);
+        if (c) refChars.push({ name: c.name, gender: c.gender, appearance: c.appearance || '', url });
+      }
     });
     selectedSceneRefs.value.forEach(id => {
       const s = assetStore.scenes.find(x => x._id === id);
@@ -1090,11 +1110,21 @@ async function generateVideoForShot() {
     if (currentShot.value._refImages?.length) refUrls.push(...currentShot.value._refImages);
     const inputImage = currentShot.value.renderedImage || '';
 
-    console.log('[生视频] 参考图数量:', refUrls.length);
+    // 构建角色提示词：告诉 Seedance 每张参考图对应谁
+    let charHint = '';
+    if (refChars.length > 0) {
+      charHint = '【角色对应关系】';
+      refChars.forEach((rc, i) => {
+        charHint += ` 参考图${i + 1} = ${rc.name}(${rc.gender || ''}${rc.appearance ? ',' + rc.appearance : ''});`;
+      });
+      charHint += ' ';
+    }
+
+    console.log('[生视频] 参考图数量:', refUrls.length, '角色:', refChars.map(c => c.name).join(','));
 
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: currentVideoPrompt.value, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value })
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: charHint + currentVideoPrompt.value, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value })
     });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '视频生成失败'); return; }
