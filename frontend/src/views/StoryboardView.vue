@@ -25,7 +25,7 @@
         <span style="font-size:12px;color:var(--text-100)">关闭内嵌字幕</span>
         <el-switch v-model="noSubtitles" size="small" />
         <el-tooltip content="开启后，生成的视频画面不会出现自动字幕、文字、水印，台词请在后期手动添加。" placement="bottom">
-          <el-icon style="color:var(--text-100);cursor:help;margin-left:4px"><QuestionFilled /></el-icon>
+          <Help size="16" fill="var(--text-100)" style="cursor:help;margin-left:4px"/>
         </el-tooltip>
       </div>
     </div>
@@ -194,7 +194,20 @@
           </div>
           <div class="right-section">
             <label>视频提示词</label>
-            <el-input ref="videoPromptRef" v-model="currentVideoPrompt" type="textarea" :rows="4" placeholder="输入视频生成提示词，点击下方参考图可插入 @角色名 引用..." size="small" @change="saveCurrentVideoPrompt" />
+            <div class="prompt-hl-wrap">
+              <div class="prompt-hl-backdrop" v-html="highlightedVideoPrompt" aria-hidden="true"></div>
+              <textarea
+                ref="videoPromptRef"
+                :value="currentVideoPrompt"
+                @input="onVideoPromptInput"
+                @keydown="onVideoPromptKeydown"
+                @scroll="onPromptScroll"
+                class="prompt-hl-textarea"
+                :rows="4"
+                placeholder="输入视频生成提示词，点击下方参考图可插入 @角色名 引用..."
+                @change="saveCurrentVideoPrompt"
+              ></textarea>
+            </div>
             <!-- 参考图快捷插入 -->
             <div v-if="videoRefChips.length > 0" class="prompt-chips">
               <span style="font-size:11px;color:var(--text-200);margin-right:4px">插入引用：</span>
@@ -405,7 +418,7 @@
 <script setup>
 import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { QuestionFilled } from '@element-plus/icons-vue';
+import { Help } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -463,18 +476,34 @@ const screenWidth = ref(window.innerWidth);
 const mobileTab = ref('shots');
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 
-// 参考图芯片（显示在提示词框下方，点击可插入 @角色名）
-const videoRefChips = computed(() => {
-  const chips = [];
-  selectedRefs.value.forEach(id => {
-    const c = assetStore.characters.find(x => x._id === id);
-    if (c) chips.push({ id: c._id, name: c.name, tag: `@${c.name}`, hint: c.appearance || c.name });
-  });
-  return chips;
+function onVideoPromptInput(e) { currentVideoPrompt.value = e.target.value || ''; }
+function onPromptScroll(e) { const bd = e.target.previousElementSibling; if (bd) { bd.scrollTop = e.target.scrollTop; bd.scrollLeft = e.target.scrollLeft; } }
+const AT_HIGHLIGHT_RE = /@([^\s@,;.，。；]+)/g;
+const highlightedVideoPrompt = computed(() => {
+  const text = currentVideoPrompt.value || '';
+  const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const openSpan = '<span class="at-token">';
+  const closeSpan = '</span>';
+  return safe.replace(AT_HIGHLIGHT_RE, openSpan + '@$1' + closeSpan);
 });
 
+// 智能删除：Backspace 在 @token 内部时整词删除
+function onVideoPromptKeydown(e) {
+  if (e.key !== 'Backspace') return;
+  const el = e.target; const sel = el.selectionStart; const text = currentVideoPrompt.value;
+  const before = text.substring(0, sel); const atIdx = before.lastIndexOf('@');
+  if (atIdx === -1) return;
+  const tokenPart = before.substring(atIdx);
+  if (tokenPart.includes(' ')) return;
+  const after = text.substring(sel); const spaceIdx = after.search(/[\s,;.，。；]/);
+  const end = spaceIdx === -1 ? text.length : sel + spaceIdx;
+  e.preventDefault();
+  currentVideoPrompt.value = text.substring(0, atIdx) + text.substring(end);
+  nextTick(() => { el.focus(); el.setSelectionRange(atIdx, atIdx); });
+}
+
 function insertAtCursor(tag) {
-  const el = videoPromptRef.value?.$el?.querySelector('textarea') || videoPromptRef.value?.textarea;
+  const el = videoPromptRef.value;
   if (!el) { currentVideoPrompt.value += ' ' + tag; return; }
   const start = el.selectionStart || currentVideoPrompt.value.length;
   const end = el.selectionEnd || start;
@@ -485,6 +514,16 @@ function insertAtCursor(tag) {
     el.setSelectionRange(pos, pos);
   });
 }
+
+// 参考图芯片
+const videoRefChips = computed(() => {
+  const chips = [];
+  selectedRefs.value.forEach(id => {
+    const c = assetStore.characters.find(x => x._id === id);
+    if (c) chips.push({ id: c._id, name: c.name, tag: `@${c.name}`, hint: c.appearance || c.name });
+  });
+  return chips;
+});
 
 // 解析提示词中的 @角色名，返回有序的 { name, url, appearance } 数组
 function parsePromptRefs(prompt) {
@@ -1523,6 +1562,29 @@ async function handleImport() {
   font-family: 'DM Sans', 'Microsoft YaHei', sans-serif;
 }
 .prompt-chip:hover { background: var(--gold); color: var(--navy); transform: translateY(-1px); }
+
+/* @高亮文本框 */
+.prompt-hl-wrap { position: relative; }
+.prompt-hl-backdrop, .prompt-hl-textarea {
+  width: 100%; min-height: 88px; box-sizing: border-box; padding: 10px 12px;
+  font-family: 'DM Sans', 'Microsoft YaHei', monospace; font-size: 13px; line-height: 1.6;
+  letter-spacing: 0.3px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;
+  border: 1px solid var(--bg-300); border-radius: 6px; background: var(--bg-200);
+}
+.prompt-hl-backdrop {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden; pointer-events: none; color: transparent; z-index: 1;
+}
+.prompt-hl-textarea {
+  position: relative; z-index: 2; color: var(--text-100); resize: vertical;
+  background: transparent; caret-color: var(--text-100);
+}
+.prompt-hl-textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 1px rgba(201,168,76,0.3); }
+.prompt-hl-textarea::placeholder { color: var(--text-200); }
+span.at-token {
+  background: rgba(201,168,76,0.2); color: transparent; border-radius: 3px;
+  padding: 1px 3px; font-weight: 600; border-bottom: 2px solid var(--gold);
+}
 
 /* ===== RIGHT: Image/Video Panel ===== */
 .sb-right {
