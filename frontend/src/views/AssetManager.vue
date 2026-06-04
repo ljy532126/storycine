@@ -135,19 +135,50 @@
           <!-- 资产信息 -->
           <div class="asset-info-header">
             <template v-if="activeTab === 'characters'">
-              <div class="info-title">{{ selectedAsset.name }}</div>
-              <div class="info-sub">{{ selectedAsset.roleType }} · {{ selectedAsset.gender }} · {{ selectedAsset.age }}岁</div>
-              <el-form label-position="top" size="small" style="margin-top:12px">
+              <el-form label-position="top" size="small">
+                <el-form-item label="角色名称">
+                  <el-input v-model="selectedAsset.name" placeholder="角色名称" />
+                </el-form-item>
+                <el-row :gutter="12">
+                  <el-col :span="8">
+                    <el-form-item label="角色类型">
+                      <el-select v-model="selectedAsset.roleType" style="width:100%">
+                        <el-option label="主角" value="主角" />
+                        <el-option label="配角" value="配角" />
+                        <el-option label="反派" value="反派" />
+                        <el-option label="龙套" value="龙套" />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="8">
+                    <el-form-item label="性别">
+                      <el-select v-model="selectedAsset.gender" style="width:100%">
+                        <el-option label="男" value="男" />
+                        <el-option label="女" value="女" />
+                        <el-option label="其他" value="其他" />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="8">
+                    <el-form-item label="年龄">
+                      <el-input-number v-model="selectedAsset.age" :min="0" :max="999" style="width:100%" />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
                 <el-form-item label="外貌描述 👤"><el-input v-model="selectedAsset.appearance" type="textarea" :rows="2" placeholder="描述角色的外貌特征..." /></el-form-item>
                 <el-form-item label="性格特征 💭"><el-input v-model="selectedAsset.personality" placeholder="角色的性格特点..." /></el-form-item>
                 <el-form-item label="背景故事 📖"><el-input v-model="selectedAsset.background" type="textarea" :rows="2" placeholder="角色的背景故事..." /></el-form-item>
               </el-form>
             </template>
             <template v-else-if="activeTab === 'scenes'">
-              <div class="info-title">{{ selectedAsset.sceneName }}</div>
-              <el-form-item label="场景描述 🏞️" size="small" style="margin-top:12px">
-                <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
-              </el-form-item>
+              <el-form label-position="top" size="small">
+                <el-form-item label="场景名称">
+                  <el-input v-model="selectedAsset.sceneName" placeholder="场景名称" />
+                </el-form-item>
+                <el-form-item label="场景描述 🏞️">
+                  <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
+                </el-form-item>
+              </el-form>
               <div class="prompt-section" style="margin-top:12px">
                 <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
                   <el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 生成</el-button>
@@ -173,10 +204,14 @@
               <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成场景图 🖼️</el-button>
             </template>
             <template v-else>
-              <div class="info-title">{{ selectedAsset.propName }}</div>
-              <el-form-item label="道具描述 🔧" size="small" style="margin-top:12px">
-                <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
-              </el-form-item>
+              <el-form label-position="top" size="small">
+                <el-form-item label="道具名称">
+                  <el-input v-model="selectedAsset.propName" placeholder="道具名称" />
+                </el-form-item>
+                <el-form-item label="道具描述 🔧">
+                  <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
+                </el-form-item>
+              </el-form>
               <div class="prompt-section" style="margin-top:12px">
                 <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
                   <el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 生成</el-button>
@@ -253,6 +288,44 @@
 
     <el-empty v-if="!currentProjectId" description="请先在上方选择一个片场 🎬" style="margin-top:80px" />
 
+    <!-- ===== 新建对话框 ===== -->
+    <el-dialog v-model="createDialogVisible" :title="createDialogTitle" width="420px" destroy-on-close>
+      <el-form :model="createForm" label-position="top" size="small">
+        <el-form-item :label="createDialogType === 'character' ? '角色名称 *' : createDialogType === 'scene' ? '场景名称' : '道具名称'" required>
+          <el-input v-model="createForm.name" placeholder="请输入名称" maxlength="20" show-word-limit />
+        </el-form-item>
+        <template v-if="createDialogType === 'character'">
+          <el-form-item label="角色类型">
+            <el-select v-model="createForm.roleType" style="width:100%">
+              <el-option label="主角" value="主角" />
+              <el-option label="配角" value="配角" />
+              <el-option label="反派" value="反派" />
+              <el-option label="龙套" value="龙套" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="性别">
+            <el-radio-group v-model="createForm.gender">
+              <el-radio value="男">男</el-radio>
+              <el-radio value="女">女</el-radio>
+              <el-radio value="其他">其他</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="年龄">
+            <el-input-number v-model="createForm.age" :min="0" :max="999" />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-form-item label="描述">
+            <el-input v-model="createForm.description" type="textarea" :rows="3" placeholder="可选，稍后也可在详情面板中填写" />
+          </el-form-item>
+        </template>
+      </el-form>
+      <template #footer>
+        <el-button @click="createDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitCreate" :loading="creating">确认创建</el-button>
+      </template>
+    </el-dialog>
+
     <!-- ===== 图片查看器 ===== -->
     <el-dialog v-model="viewerVisible" :title="viewerChar?.name || '图片查看'" width="90%" top="2vh" fullscreen class="img-viewer-dialog" destroy-on-close>
       <div class="viewer-toolbar">
@@ -308,6 +381,13 @@ const uploadHeaders = {};
 const selectedCharIds = ref([]);
 const selectedSceneIds = ref([]);
 const selectedPropIds = ref([]);
+
+// 新建对话框
+const createDialogVisible = ref(false);
+const createDialogType = ref('character'); // 'character' | 'scene' | 'prop'
+const createForm = reactive({ name: '', roleType: '配角', gender: '其他', age: 0, description: '' });
+const creating = ref(false);
+const createDialogTitle = computed(() => ({ character: '新建角色', scene: '新建场景', prop: '新建道具' }[createDialogType.value]));
 
 function onAssetCheck() {}
 
@@ -505,16 +585,47 @@ function selectAsset(asset, type) {
 }
 
 function createNew(type) {
-  const defaultName = { character: '新角色', scene: '新场景', prop: '新道具' }[type];
+  createDialogType.value = type;
+  createForm.name = ''; createForm.description = '';
   if (type === 'character') {
-    assetStore.createCharacter({ projectId: currentProjectId.value, name: defaultName, roleType: '配角', gender: '其他', age: 0 })
-      .then(c => { selectAsset(c, 'character'); });
-  } else if (type === 'scene') {
-    assetStore.createScene({ projectId: currentProjectId.value, sceneName: defaultName, description: '' })
-      .then(s => { selectAsset(s, 'scene'); });
-  } else {
-    assetStore.createProp({ projectId: currentProjectId.value, propName: defaultName, description: '' })
-      .then(p => { selectAsset(p, 'prop'); });
+    createForm.roleType = '配角'; createForm.gender = '其他'; createForm.age = 0;
+  }
+  createDialogVisible.value = true;
+}
+
+async function submitCreate() {
+  if (!createForm.name.trim()) { ElMessage.warning('请输入名称'); return; }
+  creating.value = true;
+  try {
+    let asset;
+    if (createDialogType.value === 'character') {
+      asset = await assetStore.createCharacter({
+        projectId: currentProjectId.value,
+        name: createForm.name.trim(),
+        roleType: createForm.roleType,
+        gender: createForm.gender,
+        age: createForm.age,
+      });
+    } else if (createDialogType.value === 'scene') {
+      asset = await assetStore.createScene({
+        projectId: currentProjectId.value,
+        sceneName: createForm.name.trim(),
+        description: createForm.description.trim(),
+      });
+    } else {
+      asset = await assetStore.createProp({
+        projectId: currentProjectId.value,
+        propName: createForm.name.trim(),
+        description: createForm.description.trim(),
+      });
+    }
+    createDialogVisible.value = false;
+    selectAsset(asset, createDialogType.value);
+    ElMessage.success('创建成功 ✨');
+  } catch (e) {
+    ElMessage.error('创建失败: ' + (e.response?.data?.message || e.message));
+  } finally {
+    creating.value = false;
   }
 }
 
@@ -615,6 +726,10 @@ async function saveAssetDetails() {
   try {
     if (selectedAssetType.value === 'character') {
       await assetAPI.updateCharacter(selectedAsset.value._id, {
+        name: selectedAsset.value.name,
+        roleType: selectedAsset.value.roleType,
+        gender: selectedAsset.value.gender,
+        age: selectedAsset.value.age,
         appearance: selectedAsset.value.appearance,
         personality: selectedAsset.value.personality,
         background: selectedAsset.value.background,
@@ -622,11 +737,13 @@ async function saveAssetDetails() {
       });
     } else if (selectedAssetType.value === 'scene') {
       await assetAPI.updateScene(selectedAsset.value._id, {
+        sceneName: selectedAsset.value.sceneName,
         stylePrompt: promptText.value,
         description: selectedAsset.value.description,
       });
     } else {
       await assetAPI.updateProp(selectedAsset.value._id, {
+        propName: selectedAsset.value.propName,
         description: promptText.value || selectedAsset.value.description,
       });
     }
