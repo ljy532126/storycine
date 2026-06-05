@@ -71,7 +71,7 @@
             <el-icon><WarningFilled /></el-icon>
             <template #title>
               <span>错误日志</span>
-              <el-badge v-if="errorUnreadCount > 0" :value="errorUnreadCount" :max="99" style="margin-left:8px;vertical-align:middle" />
+              <span v-if="errorUnreadCount > 0" class="error-badge">{{ errorUnreadCount > 99 ? '99+' : errorUnreadCount }}</span>
             </template>
           </el-menu-item>
           <el-menu-item index="/profile">
@@ -439,6 +439,12 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .sidebar-user-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .sidebar-user-name { font-size: 12px; color: var(--gold-light); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-user-role { font-size: 10px; color: var(--primary-300); }
+.error-badge {
+  display: inline-block; min-width: 16px; height: 16px; line-height: 16px;
+  padding: 0 4px; border-radius: 8px; background: #f56c6c; color: #fff;
+  font-size: 10px; font-weight: 700; text-align: center; margin-left: 6px;
+  vertical-align: middle;
+}
 .sidebar-footer { padding: 8px; border-top: 1px solid var(--gold); margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .github-link {
   display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;
