@@ -69,7 +69,10 @@
           </el-menu-item>
 <el-menu-item index="/error-logs" v-if="isAdmin">
             <el-icon><WarningFilled /></el-icon>
-            <template #title>错误日志</template>
+            <template #title>
+              <span>错误日志</span>
+              <el-badge v-if="errorUnreadCount > 0" :value="errorUnreadCount" :max="99" style="margin-left:8px;vertical-align:middle" />
+            </template>
           </el-menu-item>
           <el-menu-item index="/profile">
             <el-icon><UserFilled /></el-icon>
@@ -186,6 +189,7 @@ import {
 import { useProjectStore } from './stores/project';
 import { useScriptStore } from './stores/script';
 import { useAssetStore } from './stores/asset';
+import { useSocket } from './components/useSocket';
 
 const route = useRoute();
 const router = useRouter();
@@ -225,6 +229,9 @@ async function refreshUser() {
 
 const avatarLetter = computed(() => (currentUser.value.nickname || currentUser.value.username || '?')[0]?.toUpperCase());
 const isAdmin = computed(() => userRole.value === 'admin');
+
+// 错误日志未读计数
+const errorUnreadCount = ref(0);
 
 const activeMenu = computed(() => {
   mobileMenuOpen.value = false;
@@ -293,8 +300,24 @@ function onKeydown(e) {
 // 路由变化时刷新用户信息（解决登录后 App 不重载的问题）
 watch(() => route.path, () => { if (localStorage.getItem('token')) refreshUser(); });
 
-onMounted(() => {
-  refreshUser();
+// 进入错误日志页面时清零红点
+watch(() => route.path, (p) => { if (p === '/error-logs') errorUnreadCount.value = 0; });
+
+onMounted(async () => {
+  await refreshUser();
+  // 管理员：连接 Socket 监听新错误 + 拉取未处理数量
+  if (userRole.value === 'admin') {
+    const { on: sOn, connect: sConnect } = useSocket();
+    sConnect();
+    sOn('error-log:new', () => { errorUnreadCount.value++; });
+    try {
+      const res = await fetch('/api/v1/error-logs/stats/summary', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+      const json = await res.json();
+      if (json.data?.unresolved) errorUnreadCount.value = json.data.unresolved;
+    } catch { /* ignore */ }
+  }
   document.addEventListener('keydown', onKeydown);
   nextTick(() => { if (searchInput.value) searchInput.value.focus(); });
 });
