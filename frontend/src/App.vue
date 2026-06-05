@@ -168,7 +168,7 @@
     <div v-if="annPopupData">
       <div :class="['ann-pop-type', annPopupData.type]">{{ typeLabel(annPopupData.type) }}</div>
       <div class="ann-pop-title">{{ annPopupData.title }}</div>
-      <div class="ann-pop-content">{{ annPopupData.content || '暂无详细内容' }}</div>
+      <div class="ann-pop-content" v-html="linkifyText(annPopupData.content || '暂无详细内容')"></div>
     </div>
     <template #footer>
       <el-button @click="dismissToday">今日不再提示</el-button>
@@ -379,6 +379,22 @@ function formatAnnTime(t) {
 function openAnnounceDetail(a) {
   annPopupData.value = a;
   annPopupVisible.value = true;
+}
+
+// URL 自动识别为可点击链接
+function linkifyText(text) {
+  if (!text) return '';
+  // 先转义 HTML 防止 XSS
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  // 匹配 http/https URL，转为可点击链接（新窗口打开）
+  return escaped.replace(
+    /(https?:\/\/[^\s<>"'，。；]+)/g,
+    '<a href="$1" target="_blank" rel="noopener" class="ann-link">$1</a>'
+  );
 }
 
 const activeMenu = computed(() => {
@@ -646,6 +662,8 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .ann-pop-type.danger { background: #fef0f0; color: #f56c6c; }
 .ann-pop-title { font-size: 17px; font-weight: 700; color: var(--text-100); margin-bottom: 12px; }
 .ann-pop-content { font-size: 14px; color: var(--text-200); line-height: 1.8; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+.ann-link { color: #409eff; text-decoration: underline; word-break: break-all; }
+.ann-link:hover { color: #337ecc; }
 .github-link {
   display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;
   border-radius: 4px; color: var(--gold-light); text-decoration: none;
