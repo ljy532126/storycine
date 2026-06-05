@@ -238,7 +238,7 @@
             </div>
             <div v-if="videoRefChips.length > 0" class="prompt-chips">
               <span style="font-size:11px;color:var(--text-200);margin-right:4px">点击插入：</span>
-              <span v-for="rc in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertChip(rc)" :title="rc.hint">{{ rc.tag }} {{ rc.name }}</span>
+              <span v-for="rc in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertChip(rc)" :title="rc.hint">{{ rc.tag }}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
               <span class="char-count">{{ editorCharCount }} / 5000</span>
