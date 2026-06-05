@@ -18,6 +18,36 @@
             <el-icon :size="18"><component :is="collapsed ? ArrowRight : ArrowLeft" /></el-icon>
           </div>
         </div>
+
+        <!-- 通知铃铛 + 下拉 -->
+        <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
+          <template #reference>
+            <div class="bell-bar" @click="bellPopVisible = !bellPopVisible" :class="{ collapsed: collapsed }">
+              <el-icon :size="collapsed ? 20 : 18"><Bell /></el-icon>
+              <span v-if="!collapsed" class="bell-label">通知</span>
+              <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
+            </div>
+          </template>
+          <div class="bell-pop">
+            <div class="bell-pop-head">
+              <span>公告 & 通知</span>
+              <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
+            </div>
+            <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
+            <div v-for="a in announcements.slice(0, 10)" :key="a._id"
+              :class="['bell-item', a.type]"
+              @click="openAnnounceDetail(a)">
+              <span :class="['bell-item-dot', a.type]"></span>
+              <div class="bell-item-body">
+                <div class="bell-item-title">{{ a.title }}</div>
+                <div class="bell-item-content" v-if="a.content">{{ a.content.substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
+                <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+              </div>
+            </div>
+            <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
+          </div>
+        </el-popover>
+
         <el-menu
           :default-active="activeMenu"
           router
@@ -90,33 +120,6 @@
 
         <!-- 侧边栏底部 -->
         <div class="sidebar-footer">
-          <!-- 通知铃铛 -->
-          <el-popover placement="right-start" :width="340" trigger="click" v-if="currentUser.username">
-            <template #reference>
-              <div class="notif-bell" @click="markAnnouncementsRead">
-                <el-icon :size="18"><Bell /></el-icon>
-                <span v-if="unreadAnnounceCount > 0" class="notif-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
-              </div>
-            </template>
-            <div class="notif-popover">
-              <div class="notif-pop-header">公告 & 通知</div>
-              <div v-if="announcements.length === 0" style="padding:20px;text-align:center;color:var(--text-200);font-size:13px">暂无公告</div>
-              <div v-for="a in announcements.slice(0, 8)" :key="a._id"
-                :class="['notif-item', a.type]"
-                @click="openAnnounceDetail(a)">
-                <span class="notif-dot-type" :class="a.type"></span>
-                <div class="notif-item-body">
-                  <div class="notif-item-title">{{ a.title }}</div>
-                  <div class="notif-item-content" v-if="a.content">{{ a.content.substring(0, 60) }}{{ a.content.length > 60 ? '...' : '' }}</div>
-                  <div class="notif-item-time">{{ formatAnnTime(a.createdAt) }}</div>
-                </div>
-              </div>
-              <div v-if="announcements.length > 8" style="text-align:center;padding:8px;color:var(--text-200);font-size:12px">
-                还有 {{ announcements.length - 8 }} 条公告
-              </div>
-            </div>
-          </el-popover>
-
           <!-- 当前用户 -->
           <div class="sidebar-user-row" v-if="currentUser.username">
             <div class="sidebar-user" @click="$router.push('/profile')" title="点击进入个人中心">
@@ -158,6 +161,19 @@
 
   <!-- 全局加载条 -->
   <div class="global-loading-bar" :class="{ 'loading-active': isLoading }"></div>
+
+  <!-- 新公告弹窗 -->
+  <el-dialog v-model="annPopupVisible" title="📢 新公告" width="480px" :close-on-click-modal="false">
+    <div v-if="annPopupData">
+      <div :class="['ann-pop-type', annPopupData.type]">{{ typeLabel(annPopupData.type) }}</div>
+      <div class="ann-pop-title">{{ annPopupData.title }}</div>
+      <div class="ann-pop-content">{{ annPopupData.content || '暂无详细内容' }}</div>
+    </div>
+    <template #footer>
+      <el-button @click="dismissToday">今日不再提示</el-button>
+      <el-button type="primary" @click="dismissAnnPopup">知道了</el-button>
+    </template>
+  </el-dialog>
 
   <!-- 全局搜索弹窗 -->
   <el-dialog v-model="searchVisible" title="全局搜索" width="550px" :close-on-click-modal="false">
@@ -221,7 +237,6 @@ import { useProjectStore } from './stores/project';
 import { useScriptStore } from './stores/script';
 import { useAssetStore } from './stores/asset';
 import { useSocket } from './components/useSocket';
-import { ElMessageBox } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
@@ -265,10 +280,18 @@ const isAdmin = computed(() => userRole.value === 'admin');
 // 错误日志未读计数
 const errorUnreadCount = ref(0);
 
-// 公告通知
+// ===== 公告通知 =====
 const announcements = ref([]);
 const unreadAnnounceCount = ref(0);
+const bellPopVisible = ref(false);
+const annPopupVisible = ref(false);
+const annPopupData = ref(null);
 let _lastAnnFetch = 0;
+
+function getDismissedToday() {
+  try { return new Set(JSON.parse(localStorage.getItem('ad_dismissed_ann') || '[]')); } catch { return new Set(); }
+}
+function isDismissedToday(id) { return getDismissedToday().has(id); }
 
 async function fetchAnnouncements() {
   try {
@@ -278,14 +301,70 @@ async function fetchAnnouncements() {
     const json = await res.json();
     if (json.data) {
       announcements.value = json.data;
-      // 基于上次获取时间判断新增未读
-      const newOnes = json.data.filter(a => new Date(a.createdAt).getTime() > _lastAnnFetch);
-      if (newOnes.length > 0) unreadAnnounceCount.value += newOnes.length;
       _lastAnnFetch = Date.now();
+      // 统计"今天未被关闭的"
+      const dismissed = getDismissedToday();
+      const fresh = json.data.filter(a => !dismissed.has(a._id));
+      unreadAnnounceCount.value = fresh.length;
+      // 有新公告时自动弹窗（延迟一点等页面渲染完）
+      if (fresh.length > 0) {
+        setTimeout(() => {
+          const first = fresh[0];
+          if (first && !isDismissedToday(first._id)) {
+            annPopupData.value = first;
+            annPopupVisible.value = true;
+          }
+        }, 800);
+      }
     }
   } catch { /* ignore */ }
 }
-function markAnnouncementsRead() { unreadAnnounceCount.value = 0; }
+
+function onBellToggle(v) {
+  bellPopVisible.value = v;
+  if (v) markAnnouncementsRead();
+}
+
+function markAnnouncementsRead() {
+  // 标记为已读（计数归零）
+  const allIds = announcements.value.map(a => a._id);
+  if (allIds.length === 0) return;
+  const dismissed = getDismissedToday();
+  allIds.forEach(id => dismissed.add(id));
+  localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
+  unreadAnnounceCount.value = 0;
+}
+
+function dismissAnnPopup() {
+  if (annPopupData.value) {
+    const dismissed = getDismissedToday();
+    dismissed.add(annPopupData.value._id);
+    localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
+    // 检查是否有下一条未读
+    const next = announcements.value.find(a => !isDismissedToday(a._id));
+    if (next) {
+      annPopupData.value = next;
+      return; // 继续弹下一个
+    }
+  }
+  annPopupVisible.value = false;
+  unreadAnnounceCount.value = 0;
+}
+
+function dismissToday() {
+  // 全部标记为已读，今日不再弹出
+  const dismissed = getDismissedToday();
+  announcements.value.forEach(a => dismissed.add(a._id));
+  localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
+  annPopupVisible.value = false;
+  unreadAnnounceCount.value = 0;
+}
+
+function typeLabel(t) {
+  const m = { info: '通知', warning: '提醒', success: '好消息', danger: '重要' };
+  return m[t] || t;
+}
+
 function formatAnnTime(t) {
   if (!t) return '';
   const diff = Date.now() - new Date(t).getTime();
@@ -295,8 +374,10 @@ function formatAnnTime(t) {
   if (s < 86400) return Math.floor(s / 3600) + '小时前';
   return new Date(t).toLocaleDateString('zh-CN');
 }
+
 function openAnnounceDetail(a) {
-  ElMessageBox.alert(a.content || '暂无详细内容', a.title, { confirmButtonText: '知道了' });
+  annPopupData.value = a;
+  annPopupVisible.value = true;
 }
 
 const activeMenu = computed(() => {
@@ -519,30 +600,49 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   vertical-align: middle;
 }
 .sidebar-footer { padding: 8px; border-top: 1px solid var(--gold); margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.notif-bell {
-  position: relative; cursor: pointer; padding: 6px; border-radius: 8px;
-  color: var(--text-200); transition: all 0.15s;
+
+/* ===== 通知铃铛（logo 下方显眼位置） ===== */
+.bell-bar {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin: 4px 8px;
+  border-radius: 8px; cursor: pointer; background: var(--bg-100); border: 1px solid var(--bg-300);
+  transition: all 0.15s; position: relative; color: var(--text-100);
 }
-.notif-bell:hover { background: var(--bg-100); color: var(--gold); }
-.notif-dot {
-  position: absolute; top: -2px; right: -4px;
-  min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
+.bell-bar:hover { border-color: var(--accent-100); background: var(--accent-200); }
+.bell-bar.collapsed { justify-content: center; padding: 10px 0; }
+.bell-label { font-size: 13px; font-weight: 600; color: var(--text-100); }
+.bell-dot {
+  position: absolute; top: -4px; right: 6px;
+  min-width: 16px; height: 16px; line-height: 16px; padding: 0 5px;
   border-radius: 8px; background: #f56c6c; color: #fff;
   font-size: 10px; font-weight: 700; text-align: center;
 }
-.notif-popover { max-height: 400px; overflow-y: auto; }
-.notif-pop-header { font-size: 14px; font-weight: 700; color: var(--text-100); padding: 8px 12px; border-bottom: 1px solid var(--bg-300); margin-bottom: 4px; }
-.notif-item { display: flex; gap: 8px; padding: 8px 12px; cursor: pointer; transition: background 0.1s; border-radius: 4px; }
-.notif-item:hover { background: var(--bg-100); }
-.notif-dot-type { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-.notif-dot-type.info { background: #409eff; }
-.notif-dot-type.warning { background: #e6a23c; }
-.notif-dot-type.success { background: #67c23a; }
-.notif-dot-type.danger { background: #f56c6c; }
-.notif-item-body { flex: 1; min-width: 0; }
-.notif-item-title { font-size: 13px; font-weight: 600; color: var(--text-100); }
-.notif-item-content { font-size: 11px; color: var(--text-200); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notif-item-time { font-size: 10px; color: var(--primary-300); margin-top: 2px; }
+
+/* 铃铛下拉 */
+.bell-pop { max-height: 380px; overflow-y: auto; }
+.bell-pop-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--bg-300); font-size: 14px; font-weight: 700; color: var(--text-100); }
+.bell-pop-badge { font-size: 11px; color: #f56c6c; font-weight: 600; }
+.bell-pop-empty { padding: 24px; text-align: center; color: var(--text-200); font-size: 13px; }
+.bell-pop-more { text-align: center; padding: 8px; color: var(--text-200); font-size: 11px; border-top: 1px solid var(--bg-300); }
+.bell-item { display: flex; gap: 8px; padding: 10px 14px; cursor: pointer; transition: background 0.1s; }
+.bell-item:hover { background: var(--bg-100); }
+.bell-item-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.bell-item-dot.info { background: #409eff; }
+.bell-item-dot.warning { background: #e6a23c; }
+.bell-item-dot.success { background: #67c23a; }
+.bell-item-dot.danger { background: #f56c6c; }
+.bell-item-body { flex: 1; min-width: 0; }
+.bell-item-title { font-size: 13px; font-weight: 600; color: var(--text-100); }
+.bell-item-content { font-size: 11px; color: var(--text-200); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bell-item-time { font-size: 10px; color: var(--primary-300); margin-top: 3px; }
+
+/* 公告弹窗 */
+.ann-pop-type { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+.ann-pop-type.info { background: #ecf5ff; color: #409eff; }
+.ann-pop-type.warning { background: #fdf6ec; color: #e6a23c; }
+.ann-pop-type.success { background: #f0f9eb; color: #67c23a; }
+.ann-pop-type.danger { background: #fef0f0; color: #f56c6c; }
+.ann-pop-title { font-size: 17px; font-weight: 700; color: var(--text-100); margin-bottom: 12px; }
+.ann-pop-content { font-size: 14px; color: var(--text-200); line-height: 1.8; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
 .github-link {
   display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;
   border-radius: 4px; color: var(--gold-light); text-decoration: none;
