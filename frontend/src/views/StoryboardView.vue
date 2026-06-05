@@ -592,11 +592,8 @@ function renderEditorContent(text, editor, afterFn) {
   while ((m = re.exec(text))) {
     html += (text.substring(last, m.index)).replace(/&/g,'&amp;').replace(/</g,'&lt;');
     const name = m[1];
-    const c = assetStore.characters.find(x => x.name === name);
-    const s = assetStore.scenes.find(x => x.sceneName === name);
-    const bg = (s && !c) ? '#e2f3f5' : 'rgba(201,168,76,0.2)';
-    const color = (s && !c) ? '#02adb5' : 'var(--gold-dark)';
-    html += '<span class="mention-tag" contenteditable="false" data-name="'+name+'" style="background:'+bg+';color:'+color+'">@'+name+'</span>';
+    const colors = getMentionColors(name);
+    html += '<span class="mention-tag" contenteditable="false" data-name="'+name+'" style="background:'+colors.bg+';color:'+colors.color+'">@'+name+'</span>';
     last = re.lastIndex;
   }
   html += (text.substring(last)).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -681,20 +678,40 @@ function updateMentionMenuPos(styleRef, editor, atIdx, offset) {
 
 function onPromptClick() { checkMentionTrigger(); }
 
+// 根据是否有参考图返回对应的 tag 颜色
+function getMentionColors(name) {
+  const c = assetStore.characters.find(x => x.name === name);
+  const s = assetStore.scenes.find(x => x.sceneName === name);
+  const asset = c || s;
+  const hasImg = asset ? !!getRefUrl(asset) : false;
+  if (s && !c) {
+    // 场景：有图=蓝色，无图=灰色
+    return hasImg
+      ? { bg: '#e2f3f5', color: '#02adb5' }
+      : { bg: '#f0f0f0', color: '#999' };
+  }
+  // 角色：有图=金色，无图=灰色
+  return hasImg
+    ? { bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)' }
+    : { bg: '#f0f0f0', color: '#999' };
+}
+
 // 候选项
 const mentionOptions = computed(() => {
   const q = mentionQuery.value.toLowerCase();
   const list = [];
   assetStore.characters.forEach(c => {
     if (!q || c.name?.toLowerCase().includes(q)) {
-      const url = getRefUrl(c); if (!url) return;
-      list.push({ id: c._id, name: c.name, type: '角色', chip: '@'+c.name, bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)', url, appearance: c.appearance || '' });
+      const url = getRefUrl(c);
+      const colors = getMentionColors(c.name);
+      list.push({ id: c._id, name: c.name, type: '角色', chip: '@'+c.name, bg: colors.bg, color: colors.color, url: url || '', appearance: c.appearance || '' });
     }
   });
   assetStore.scenes.forEach(s => {
     if (!q || s.sceneName?.toLowerCase().includes(q)) {
       const url = getRefUrl(s);
-      list.push({ id: s._id, name: s.sceneName, type: '场景', chip: '@'+s.sceneName, bg: '#e2f3f5', color: '#02adb5', url: url || '', appearance: s.description || s.stylePrompt || '' });
+      const colors = getMentionColors(s.sceneName);
+      list.push({ id: s._id, name: s.sceneName, type: '场景', chip: '@'+s.sceneName, bg: colors.bg, color: colors.color, url: url || '', appearance: s.description || s.stylePrompt || '' });
     }
   });
   return list.slice(0, 15);
@@ -749,12 +766,14 @@ function onPromptKeydown(e) {
 function insertChip(rc) {
   const char = assetStore.characters.find(x => x._id === rc.id);
   if (char) {
-    insertMention({ id: rc.id, name: rc.name, type: '角色', chip: rc.tag, bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)', url: getRefUrl(char) || '', appearance: rc.hint || '' });
+    const colors = getMentionColors(char.name);
+    insertMention({ id: rc.id, name: rc.name, type: '角色', chip: rc.tag, bg: colors.bg, color: colors.color, url: getRefUrl(char) || '', appearance: rc.hint || '' });
     return;
   }
   const scene = assetStore.scenes.find(x => x._id === rc.id);
   if (scene) {
-    insertMention({ id: rc.id, name: rc.name, type: '场景', chip: rc.tag, bg: '#e2f3f5', color: '#02adb5', url: getRefUrl(scene) || '', appearance: scene.description || scene.stylePrompt || '' });
+    const colors = getMentionColors(scene.sceneName);
+    insertMention({ id: rc.id, name: rc.name, type: '场景', chip: rc.tag, bg: colors.bg, color: colors.color, url: getRefUrl(scene) || '', appearance: scene.description || scene.stylePrompt || '' });
   }
 }
 
@@ -810,11 +829,8 @@ function renderEditor(text) {
   while ((m = re.exec(text))) {
     html += (text.substring(last, m.index)).replace(/&/g,'&amp;').replace(/</g,'&lt;');
     const name = m[1];
-    const c = assetStore.characters.find(x => x.name === name);
-    const s = assetStore.scenes.find(x => x.sceneName === name);
-    const bg = (s && !c) ? '#e2f3f5' : 'rgba(201,168,76,0.2)';
-    const color = (s && !c) ? '#02adb5' : 'var(--gold-dark)';
-    html += `<span class="mention-tag" contenteditable="false" data-name="${name}" style="background:${bg};color:${color}">@${name}</span>`;
+    const colors = getMentionColors(name);
+    html += `<span class="mention-tag" contenteditable="false" data-name="${name}" style="background:${colors.bg};color:${colors.color}">@${name}</span>`;
     last = re.lastIndex;
   }
   html += (text.substring(last)).replace(/&/g,'&amp;').replace(/</g,'&lt;');
