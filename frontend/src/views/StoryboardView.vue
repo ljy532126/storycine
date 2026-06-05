@@ -181,7 +181,7 @@
                 @click="onImgPromptClick"
               ></div>
               <div class="prompt-editor-ph" v-if="!imgEditorHasContent" @click="imgPromptRef?.focus()">输入图片生成提示词，输入 @ 可选择插入角色引用...</div>
-              <div v-if="showImgMentionMenu" class="mention-menu">
+              <div v-if="showImgMentionMenu" class="mention-menu" :style="imgMentionMenuStyle">
                 <div v-for="item in mentionOptions" :key="item.id" class="mention-item" @mousedown.prevent="insertImgMention(item)">
                   <span class="mention-chip" :style="{ background: item.bg || 'rgba(201,168,76,0.2)', color: item.color || 'var(--gold-dark)' }">{{ item.chip }}</span>
                   <span class="mention-name">{{ item.name }}</span>
@@ -227,7 +227,7 @@
                 @click="onPromptClick"
               ></div>
               <div class="prompt-editor-ph" v-if="!editorHasContent" @click="focusEditor">输入视频生成提示词，输入 @ 可选择插入角色引用...</div>
-              <div v-if="showMentionMenu" class="mention-menu">
+              <div v-if="showMentionMenu" class="mention-menu" :style="mentionMenuStyle">
                 <div v-for="item in mentionOptions" :key="item.id" class="mention-item" @mousedown.prevent="insertMention(item)">
                   <span class="mention-chip" :style="{ background: item.bg || 'rgba(201,168,76,0.2)', color: item.color || 'var(--gold-dark)' }">{{ item.chip }}</span>
                   <span class="mention-name">{{ item.name }}</span>
@@ -497,6 +497,7 @@ const currentRefImages = ref([]);
 const tlTrack = ref(null);
 const videoPromptRef = ref(null);
 const promptEditorWrap = ref(null);
+const mentionMenuStyle = ref({ top: 'auto', left: '8px' });
 
 // ===== 图片提示词编辑器（复用同一个 mention 系统）=====
 const imgPromptRef = ref(null);
@@ -504,6 +505,7 @@ const imgPromptEditorWrap = ref(null);
 const showImgMentionMenu = ref(false);
 const imgEditorHasContent = ref(false);
 const imgEditorCharCount = ref(0);
+const imgMentionMenuStyle = ref({ top: 'auto', left: '8px' });
 let _imgMentionQuery = '';
 
 function imgEditorEl() { return imgPromptRef.value; }
@@ -547,6 +549,7 @@ function checkMentionTriggerFor(editor, queryRef, menuRef) {
   if (before.substring(atIdx).includes(' ') || before.substring(atIdx).includes('\n')) { menuRef.value = false; return; }
   mentionQuery.value = before.substring(atIdx + 1);
   menuRef.value = true;
+  updateMentionMenuPos(menuRef === showImgMentionMenu ? imgMentionMenuStyle : mentionMenuStyle, editor, atIdx, offset);
 }
 
 function insertTag(item, editor, menuRef, afterFn) {
@@ -650,6 +653,30 @@ function checkMentionTrigger() {
   if (before.substring(atIdx).includes(' ') || before.substring(atIdx).includes('\n')) { showMentionMenu.value = false; return; }
   mentionQuery.value = before.substring(atIdx + 1);
   showMentionMenu.value = true;
+  updateMentionMenuPos(mentionMenuStyle, el(), atIdx, offset);
+}
+
+// 根据 @ 符号位置动态计算提及菜单坐标
+function updateMentionMenuPos(styleRef, editor, atIdx, offset) {
+  if (!editor) return;
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  // 把 range 起点移到 @ 字符位置
+  const range = sel.getRangeAt(0).cloneRange();
+  const node = sel.focusNode;
+  if (node && node.nodeType === Node.TEXT_NODE) {
+    range.setStart(node, Math.max(0, atIdx));
+    range.collapse(true);
+  }
+  const caretRect = range.getBoundingClientRect();
+  const wrap = editor.parentElement;
+  if (!wrap) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  // 菜单出现在 @ 下方，左对齐 @ 位置
+  styleRef.value = {
+    top: (caretRect.bottom - wrapRect.top + 4) + 'px',
+    left: (caretRect.left - wrapRect.left) + 'px',
+  };
 }
 
 function onPromptClick() { checkMentionTrigger(); }
@@ -1891,7 +1918,7 @@ async function handleImport() {
   user-select: all; margin: 0 1px; border-bottom: 2px solid rgba(0,0,0,0.1);
 }
 .mention-menu {
-  position: absolute; left: 8px; bottom: 100%; margin-bottom: 4px; z-index: 200;
+  position: absolute; z-index: 200;
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto;
   min-width: 220px; padding: 4px 0;
