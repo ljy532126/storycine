@@ -72,6 +72,7 @@ export function useSocket() {
 
   return {
     connected, connect, disconnect, joinProject, leaveProject,
+    on: _on,
     onScriptGenerationProgress, onScriptGenerationComplete, onScriptGenerationError,
     onScriptContinueComplete, onCompositionProgress, onCompositionComplete,
     offAll,

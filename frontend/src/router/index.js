@@ -20,6 +20,8 @@ const TTSLibrary = () => import('../views/TTSLibrary.vue');
 const UserManagement = () => import('../views/UserManagement.vue');
 const Profile = () => import('../views/Profile.vue');
 
+const ErrorLog = () => import('../views/ErrorLog.vue');
+
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
   { path: '/login', name: 'Login', component: Login },
@@ -38,6 +40,7 @@ const routes = [
   { path: '/media-library', name: 'MediaLibrary', component: MediaLibrary, meta: { requiresAuth: true } },
   { path: '/tts-library', name: 'TTSLibrary', component: TTSLibrary, meta: { requiresAuth: true } },
   { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/error-logs', name: 'ErrorLog', component: ErrorLog, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
 ];
 

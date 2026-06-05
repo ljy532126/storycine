@@ -67,6 +67,10 @@
             <el-icon><UserFilled /></el-icon>
             <template #title>用户管理</template>
           </el-menu-item>
+<el-menu-item index="/error-logs" v-if="isAdmin">
+            <el-icon><WarningFilled /></el-icon>
+            <template #title>错误日志</template>
+          </el-menu-item>
           <el-menu-item index="/profile">
             <el-icon><UserFilled /></el-icon>
             <template #title>个人中心</template>
@@ -176,7 +180,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
-  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset,
+  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset, WarningFilled,
   ArrowLeft, ArrowRight, Menu as MenuIcon, Close,
 } from '@element-plus/icons-vue';
 import { useProjectStore } from './stores/project';
