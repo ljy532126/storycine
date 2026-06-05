@@ -14,6 +14,7 @@
       <span :class="['st-tab', { active: settingsTab === 'image' }]" @click="settingsTab = 'image'">生图设置</span>
       <span :class="['st-tab', { active: settingsTab === 'storage' }]" @click="settingsTab = 'storage'">存储设置</span>
       <span :class="['st-tab', { active: settingsTab === 'tts' }]" @click="settingsTab = 'tts'">火山 TTS 配音</span>
+      <span :class="['st-tab', { active: settingsTab === 'changelog' }]" @click="settingsTab = 'changelog'">📋 更新日志</span>
     </div>
 
     <!-- ===== LLM 配置 ===== -->
@@ -288,6 +289,29 @@
       </div>
     </div>
 
+    <!-- ===== 更新日志 ===== -->
+    <div v-show="settingsTab === 'changelog'" class="st-section">
+      <div class="changelog-timeline">
+        <div v-for="(item, i) in changelog" :key="i" class="cl-item">
+          <div class="cl-dot" :class="{ 'cl-dot-latest': i === 0 }"></div>
+          <div class="cl-line" v-if="i < changelog.length - 1"></div>
+          <div class="cl-body">
+            <div class="cl-header">
+              <span class="cl-version">{{ item.version }}</span>
+              <span class="cl-date">{{ item.date }}</span>
+              <el-tag v-if="i === 0" size="small" type="danger" effect="dark" class="cl-latest-tag">最新</el-tag>
+            </div>
+            <ul class="cl-changes">
+              <li v-for="(change, j) in item.changes" :key="j">
+                <span :class="['cl-tag', change.type]">{{ tagLabel(change.type) }}</span>
+                {{ change.text }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -302,6 +326,69 @@ const saving = ref(false);
 const loading = ref(false);
 const testing = ref('');
 const testResults = reactive({});
+
+// ===== 更新日志 =====
+function tagLabel(t) {
+  const m = { feat: '新功能', fix: '修复', style: '样式', refactor: '优化', docs: '文档', perf: '性能' };
+  return m[t] || t;
+}
+const changelog = [
+  {
+    version: 'v2.7 — 更新日志 & URL 链接',
+    date: '2026-06-06',
+    changes: [
+      { type: 'feat', text: '公告弹窗内容自动识别 URL，转为蓝色下划线可点击链接' },
+      { type: 'feat', text: '系统设置新增「更新日志」模块，时间轴展示版本历史' },
+      { type: 'style', text: '通知铃铛移至侧边栏 logo 行右侧，圆形金色按钮风格统一' },
+      { type: 'fix', text: '修复通知铃铛点击闪烁问题' },
+    ],
+  },
+  {
+    version: 'v2.6 — 公告 & 错误日志系统',
+    date: '2026-06-05',
+    changes: [
+      { type: 'feat', text: '公告通知管理系统：管理员可发布/编辑/删除公告，支持类型(信息/警告/成功/重要)、可见范围、置顶' },
+      { type: 'feat', text: '用户端通知铃铛：新公告自动弹窗，点击铃铛查看公告列表，支持「今日不再提示」' },
+      { type: 'feat', text: '全局错误日志收集：所有接口错误自动写入 MongoDB，30 天自动清理' },
+      { type: 'feat', text: '错误日志管理页：搜索/筛选/详情弹窗/批量处理，Socket.IO 实时推送新错误' },
+      { type: 'feat', text: '侧边栏错误日志红点数字 + 铃铛通知红点，进入页面自动清零' },
+      { type: 'refactor', text: '错误日志页全面优化：统计卡片、相对时间、可折叠详情、自动刷新、全选、清空已处理' },
+      { type: 'fix', text: '@mention 标签按是否有参考图区分颜色：有图=金色/蓝色，无图=灰色' },
+      { type: 'fix', text: '@mention 下拉菜单跟随 @ 符号位置动态定位，限制最大宽度防溢出' },
+    ],
+  },
+  {
+    version: 'v2.5 — 故事板场景引用 & 对话框',
+    date: '2026-06-04',
+    changes: [
+      { type: 'feat', text: '故事板 @mention 支持场景引用：图片/视频提示词均可 @场景名称，AI 生成时注入场景描述' },
+      { type: 'fix', text: '场景 @mention 不再因无参考图被过滤，无图场景也可引用并注入文字描述' },
+      { type: 'fix', text: '演员库角色/场景/道具新建改为对话框，详情面板名称/类型/性别/年龄可编辑' },
+      { type: 'fix', text: '修复新建角色 409 冲突（后端唯一索引 + 默认名重复）' },
+    ],
+  },
+  {
+    version: 'v2.4 — 余额提示 & 参考图优化',
+    date: '2026-06-03',
+    changes: [
+      { type: 'fix', text: '生产环境余额不足/鉴权失败等 API 错误不再显示「服务器内部错误」，直接暴露真实原因' },
+      { type: 'fix', text: '视频生成失败时打印每个参考图 URL 便于排查，区分本地/公网路径给出明确解决方案' },
+      { type: 'docs', text: '.env.example 添加 PUBLIC_URL 配置说明（Seedance 参考图访问）' },
+    ],
+  },
+  {
+    version: 'v2.3 — 初始版本',
+    date: '2026-06-02',
+    changes: [
+      { type: 'feat', text: '全自动 AI 短剧生成平台上线：剧本工坊 → 故事板 → 剪辑室完整工作流' },
+      { type: 'feat', text: '演员库管理：角色/场景/道具 CRUD + AI 生图 + 参考图上上传' },
+      { type: 'feat', text: '故事板分镜：图片/视频提示词编辑器、AI 生图/生视频、@mention 角色引用' },
+      { type: 'feat', text: '火山 TTS 配音：批量配音、音色选择、字幕时间戳' },
+      { type: 'feat', text: 'LLM 多模型支持：DeepSeek / OpenAI / 豆包' },
+      { type: 'feat', text: '存储后端：本地 / 阿里云 OSS / 腾讯云 COS / MinIO' },
+    ],
+  },
+];
 
 function testBtnLabel(p) {
   if (testing.value === p) return '测试中...';
@@ -500,6 +587,35 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); loadStorCfg
 .st-tab.active { color: var(--text-100); font-weight: 700; border-bottom-color: var(--gold); }
 
 .st-section { margin-top: 0; }
+
+/* ===== 更新日志时间轴 ===== */
+.changelog-timeline { padding: 10px 0; max-width: 720px; }
+.cl-item { display: flex; gap: 16px; position: relative; padding-bottom: 20px; }
+.cl-dot {
+  width: 14px; height: 14px; border-radius: 50%; background: var(--bg-300); border: 2px solid var(--primary-300);
+  flex-shrink: 0; margin-top: 4px; position: relative; z-index: 1;
+}
+.cl-dot-latest { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 4px rgba(201,168,76,0.2); }
+.cl-line {
+  position: absolute; left: 6px; top: 22px; bottom: 0; width: 2px; background: var(--bg-300);
+}
+.cl-body { flex: 1; min-width: 0; }
+.cl-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cl-version { font-size: 16px; font-weight: 700; color: var(--text-100); }
+.cl-date { font-size: 12px; color: var(--primary-300); }
+.cl-latest-tag { margin-left: 2px; }
+.cl-changes { list-style: none; padding: 0; margin: 0; }
+.cl-changes li { font-size: 13px; color: var(--text-200); padding: 4px 0; line-height: 1.6; display: flex; align-items: flex-start; gap: 8px; }
+.cl-tag {
+  display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 10px; font-weight: 700;
+  flex-shrink: 0; margin-top: 2px;
+}
+.cl-tag.feat { background: #e1f3d8; color: #67c23a; }
+.cl-tag.fix { background: #fef0f0; color: #f56c6c; }
+.cl-tag.style { background: #f5e6c8; color: #c9a84c; }
+.cl-tag.refactor { background: #e2f3f5; color: #02adb5; }
+.cl-tag.docs { background: #ecf5ff; color: #409eff; }
+.cl-tag.perf { background: #f0e6f6; color: #9b59b6; }
 .ac-grid { display: flex; flex-direction: column; gap: 16px; }
 .ac-card { background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 10px; padding: 18px 20px; transition: border-color 0.2s; }
 .ac-card:hover { border-color: var(--gold); }
