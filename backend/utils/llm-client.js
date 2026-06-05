@@ -333,6 +333,10 @@ async function callVideoGen(prompt, options = {}) {
   }
 
   console.log(`[video-gen] 提交: model=${body.model} ratio=${ratio} duration=${body.duration}s refs=${referenceImages.length}`);
+  referenceImages.forEach((url, i) => {
+    console.log(`[video-gen] 参考图 [${i+1}/${referenceImages.length}] ${url.substring(0, 120)}`);
+  });
+  if (inputAudio) console.log(`[video-gen] 参考音频: ${inputAudio.substring(0, 120)}`);
   try {
     const res = await axios.post(`${imgConfig.baseUrl}/contents/generations/tasks`, body, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${imgConfig.apiKey}` },
@@ -346,15 +350,28 @@ async function callVideoGen(prompt, options = {}) {
     const status = err.response?.status || 0;
     console.error(`[video-gen] 失败 (HTTP ${status}):`, msg);
 
-    // 参考图无法下载 → Seedance 访问不到本地/内网 URL
-    if (msg.includes('resource download failed') || msg.includes('image_url') && msg.includes('not valid')) {
-      const refUrls = referenceImages || [];
+    // 参考图无法下载 / URL 无效 → Seedance 访问不到本地/内网 URL
+    if (msg.includes('resource download failed') || (msg.includes('image_url') && msg.includes('not valid'))) {
+      const refUrls = (referenceImages || []).filter(Boolean);
+      console.error('[video-gen] 参考图下载失败，当前传入的URL列表:');
+      refUrls.forEach((u, i) => console.error(`  [${i+1}] ${u}`));
       const allUrls = refUrls.join('\n');
-      const hasLocal = allUrls.includes('localhost') || allUrls.includes('127.0.0.1') || allUrls.includes('/uploads/');
-      const tip = hasLocal
-        ? `\n⚠️ 检测到参考图使用了本地路径（localhost 或 /uploads/），Seedance 服务器无法访问。\n解决方案：① 在 .env 中设置 PUBLIC_URL=你的公网地址 ② 或在「AI小助手→存储设置」中启用对象存储（OSS/COS/MinIO）`
-        : `\n⚠️ Seedance 无法下载参考图，请检查图片URL是否公网可访问。`;
-      throw new Error(`视频参考图下载失败${tip}\n原始错误: ${msg}`);
+      const hasLocal = allUrls.includes('localhost') || allUrls.includes('127.0.0.1') || allUrls.includes('0.0.0.0');
+      const hasRelative = refUrls.some(u => u.startsWith('/uploads/'));
+      if (hasLocal || hasRelative) {
+        const tip = [
+          '',
+          '⚠️ Seedance 无法访问本地/内网图片地址。',
+          '当前传入的URL为内网地址，Seedance 服务器在公网无法下载。',
+          '',
+          '解决方案（任选其一）：',
+          '① 在 backend/.env 中设置 PUBLIC_URL=https://你的公网域名  （如果有公网服务器/内网穿透）',
+          '② 在「AI小助手 → 存储设置」中启用对象存储（OSS/COS/MinIO），图片会自动上传到云存储',
+          '③ 先用内网穿透工具（如 ngrok/frp）暴露本地 3012 端口，再设置 PUBLIC_URL',
+        ].join('\n');
+        throw new Error(`视频参考图不可访问${tip}\n\n原始错误: ${msg}`);
+      }
+      throw new Error(`视频参考图下载失败\n⚠️ Seedance 无法下载参考图，请检查图片URL是否公网可访问。\n原始错误: ${msg}`);
     }
 
     // 真人/人像内容拦截 — 仅匹配人脸相关关键词
