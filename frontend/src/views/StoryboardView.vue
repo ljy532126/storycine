@@ -1921,16 +1921,17 @@ async function handleImport() {
   position: absolute; z-index: 200;
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto;
-  min-width: 220px; padding: 4px 0;
+  min-width: 180px; max-width: 300px; padding: 4px 0;
 }
 .mention-item {
-  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
   cursor: pointer; font-size: 13px; transition: background 0.1s;
+  overflow: hidden;
 }
 .mention-item:hover { background: var(--accent-200); }
-.mention-chip { padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-.mention-name { flex: 1; color: var(--text-100); font-weight: 500; }
-.mention-type { font-size: 10px; color: var(--text-200); }
+.mention-chip { padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+.mention-name { flex: 1; color: var(--text-100); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mention-type { font-size: 10px; color: var(--text-200); flex-shrink: 0; }
 .mention-empty { padding: 8px 12px; color: var(--text-200); font-size: 12px; }
 
 .prompt-preview {
