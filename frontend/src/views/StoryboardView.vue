@@ -666,8 +666,8 @@ const mentionOptions = computed(() => {
   });
   assetStore.scenes.forEach(s => {
     if (!q || s.sceneName?.toLowerCase().includes(q)) {
-      const url = getRefUrl(s); if (!url) return;
-      list.push({ id: s._id, name: s.sceneName, type: '场景', chip: '@'+s.sceneName, bg: '#e2f3f5', color: '#02adb5', url });
+      const url = getRefUrl(s);
+      list.push({ id: s._id, name: s.sceneName, type: '场景', chip: '@'+s.sceneName, bg: '#e2f3f5', color: '#02adb5', url: url || '', appearance: s.description || s.stylePrompt || '' });
     }
   });
   return list.slice(0, 15);
@@ -720,8 +720,15 @@ function onPromptKeydown(e) {
 
 // ===== 芯片点击 =====
 function insertChip(rc) {
-  const url = getRefUrl(assetStore.characters.find(x => x._id === rc.id));
-  insertMention({ id: rc.id, name: rc.name, type: '角色', chip: rc.tag, bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)', url: url || '', appearance: rc.hint || '' });
+  const char = assetStore.characters.find(x => x._id === rc.id);
+  if (char) {
+    insertMention({ id: rc.id, name: rc.name, type: '角色', chip: rc.tag, bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)', url: getRefUrl(char) || '', appearance: rc.hint || '' });
+    return;
+  }
+  const scene = assetStore.scenes.find(x => x._id === rc.id);
+  if (scene) {
+    insertMention({ id: rc.id, name: rc.name, type: '场景', chip: rc.tag, bg: '#e2f3f5', color: '#02adb5', url: getRefUrl(scene) || '', appearance: scene.description || scene.stylePrompt || '' });
+  }
 }
 
 // ===== 解析引用（editor DOM 优先） =====
@@ -732,7 +739,7 @@ function parsePromptRefs() {
     const refs = []; const seen = new Set();
     tags.forEach(tag => {
       const n = tag.dataset.name, u = tag.dataset.url, a = tag.dataset.appearance || '';
-      if (n && u && !seen.has(n)) { seen.add(n); refs.push({ name: n, url: u, appearance: a }); }
+      if (n && !seen.has(n)) { seen.add(n); refs.push({ name: n, url: u || '', appearance: a }); }
     });
     return refs;
   }
@@ -742,19 +749,29 @@ function parsePromptRefs() {
   const re = /@([^\s@,;.，。；]+)/g; let m;
   while ((m = re.exec(text))) {
     const name = m[1]; if (seen.has(name)) continue; seen.add(name);
-    const c = assetStore.characters.find(x => x.name === name) || assetStore.scenes.find(x => x.sceneName === name);
-    const url = c ? getRefUrl(c) : null;
-    if (url) refs.push({ name, url, appearance: c?.appearance || '' });
+    const c = assetStore.characters.find(x => x.name === name);
+    const s = assetStore.scenes.find(x => x.sceneName === name);
+    if (c) {
+      refs.push({ name, url: getRefUrl(c) || '', appearance: c.appearance || '' });
+    } else if (s) {
+      refs.push({ name, url: getRefUrl(s) || '', appearance: s.description || s.stylePrompt || '' });
+    }
   }
   return refs;
 }
 
-// 参考图芯片
+// 参考图芯片（角色 + 场景）
 const videoRefChips = computed(() => {
-  return selectedRefs.value.map(id => {
+  const chips = [];
+  selectedRefs.value.forEach(id => {
     const c = assetStore.characters.find(x => x._id === id);
-    return c ? { id: c._id, name: c.name, tag: '@'+c.name, hint: c.appearance || c.name } : null;
-  }).filter(Boolean);
+    if (c) chips.push({ id: c._id, name: c.name, tag: '@'+c.name, hint: c.appearance || c.name, type: '角色' });
+  });
+  selectedSceneRefs.value.forEach(id => {
+    const s = assetStore.scenes.find(x => x._id === id);
+    if (s) chips.push({ id: s._id, name: s.sceneName, tag: '@'+s.sceneName, hint: s.description || s.stylePrompt || s.sceneName, type: '场景' });
+  });
+  return chips;
 });
 
 // ===== 加载镜头时渲染编辑器 =====
@@ -1201,10 +1218,16 @@ async function batchGenerateVideos() {
     try {
       const prompt = s._videoPrompt || s.imageDescription;
       const parsedRefs = prompt ? parsePromptRefs(prompt) : [];
-      const refUrls = parsedRefs.length > 0 ? parsedRefs.map(r => r.url) : fallbackUrls;
+      const refUrls = parsedRefs.length > 0 ? parsedRefs.filter(r => r.url).map(r => r.url) : fallbackUrls;
+      // 注入场景/角色描述到 prompt 中
+      let batchPrompt = prompt;
+      const sceneDescsBatch = parsedRefs.filter(r => r.appearance && !assetStore.characters.some(c => c.name === r.name)).map(r => `【场景:${r.name}】${r.appearance}`).join('；');
+      if (sceneDescsBatch) batchPrompt = sceneDescsBatch + '。' + batchPrompt;
+      const charDescsBatch = parsedRefs.filter(r => r.appearance && assetStore.characters.some(c => c.name === r.name)).map(r => `【${r.name}外貌】${r.appearance}`).join('；');
+      if (charDescsBatch) batchPrompt = charDescsBatch + '。' + batchPrompt;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5 })
+        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5 })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
@@ -1317,6 +1340,7 @@ async function generateImageForShot() {
     // 收集参考图：选中角色 + 选中场景 + 当前分镜已上传的参考图
     const refUrls = [];
     const charAppearances = [];
+    const sceneDescs = [];
     selectedRefs.value.forEach(id => {
       const c = assetStore.characters.find(x => x._id === id);
       if (!c) return;
@@ -1327,8 +1351,10 @@ async function generateImageForShot() {
     });
     selectedSceneRefs.value.forEach(id => {
       const s = assetStore.scenes.find(x => x._id === id);
+      if (!s) return;
       const url = getRefUrl(s);
       if (url) refUrls.push(url);
+      if (s.description || s.stylePrompt) sceneDescs.push(`【场景:${s.sceneName}】${s.description || s.stylePrompt}`);
     });
     if (currentShot.value._refImages?.length) refUrls.push(...currentShot.value._refImages);
 
@@ -1336,7 +1362,10 @@ async function generateImageForShot() {
     if (charAppearances.length > 0) {
       enrichedPrompt += '；【角色外貌约束·必须遵守】严格按照以下角色设定生成，保持人物五官、发型、服饰100%一致：' + charAppearances.join('；') + '；注意：面部特征、发型发色、服饰风格必须与以上设定完全吻合，不得改变';
     }
-    console.log('[生图] 参考图数量:', refUrls.length, '角色外貌描述:', charAppearances.length, 'URLs:', refUrls);
+    if (sceneDescs.length > 0) {
+      enrichedPrompt += '；【场景约束·必须遵守】严格按照以下场景设定生成画面环境，保持场景建筑、室内布局、光影色调100%一致：' + sceneDescs.join('；') + '；注意：场景的建筑风格、室内设计、灯光氛围必须与以上设定完全吻合';
+    }
+    console.log('[生图] 参考图数量:', refUrls.length, '角色外貌描述:', charAppearances.length, '场景描述:', sceneDescs.length, 'URLs:', refUrls);
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt: enrichedPrompt, model: selectedModel.value, referenceImages: refUrls })
@@ -1415,13 +1444,29 @@ async function generateVideoForShot() {
   window.__setLoading?.(true);
   try {
     const prompt = currentVideoPrompt.value;
-    // 解析 @角色名 引用 → 有序排列参考图
+    // 解析 @引用 → 有序排列参考图 + 外貌/场景描述
     const parsedRefs = parsePromptRefs(prompt);
-    const refUrls = parsedRefs.map(r => r.url);
-    const charDescs = parsedRefs.filter(r => r.appearance).map(r => `${r.name}(${r.appearance})`).join(';');
-    const finalPrompt = charDescs ? charDescs + '。' + prompt : prompt;
+    const refUrls = parsedRefs.filter(r => r.url).map(r => r.url);
+    // 区分角色和场景的描述信息
+    const charDescs = [];
+    const sceneDescs = [];
+    parsedRefs.forEach(r => {
+      if (!r.appearance) return;
+      // 通过名字查找是角色还是场景
+      const isChar = assetStore.characters.some(c => c.name === r.name);
+      if (isChar) {
+        charDescs.push(`【${r.name}外貌】${r.appearance}`);
+      } else {
+        sceneDescs.push(`【场景:${r.name}】${r.appearance}`);
+      }
+    });
+    const promptParts = [];
+    if (charDescs.length) promptParts.push(charDescs.join('；'));
+    if (sceneDescs.length) promptParts.push(sceneDescs.join('；'));
+    if (promptParts.length) promptParts.push(prompt);
+    const finalPrompt = promptParts.length ? promptParts.join('。') : prompt;
 
-    // 兜底：如果 prompt 里没写 @引用，复用右侧选中角色
+    // 兜底：如果 prompt 里没写 @引用，复用右侧选中角色 + 场景
     if (refUrls.length === 0) {
       selectedRefs.value.forEach(id => {
         const c = assetStore.characters.find(x => x._id === id);
