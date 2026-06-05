@@ -10,43 +10,40 @@
     <el-container>
       <el-aside v-if="!['Landing','Login','Register'].includes($route.name)" :width="collapsed ? '64px' : '220px'" :class="['app-sidebar', { 'mobile-open': mobileMenuOpen }]">
         <div class="logo">
-          <div v-show="!collapsed" class="logo-full">
-            <h2>StoryCine</h2>
-            <p>全自动AI短剧生成</p>
-          </div>
-          <div class="collapse-btn" @click="collapsed = !collapsed" :title="collapsed ? '展开导航' : '收缩导航'">
-            <el-icon :size="18"><component :is="collapsed ? ArrowRight : ArrowLeft" /></el-icon>
+          <div class="logo-row">
+            <div v-show="!collapsed" class="logo-full">
+              <h2>StoryCine</h2>
+              <p>全自动AI短剧生成</p>
+            </div>
+            <!-- 通知铃铛（logo行右侧） -->
+            <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
+              <template #reference>
+                <div class="bell-icon" :class="{ 'bell-collapsed': collapsed }">
+                  <el-icon :size="19"><Bell /></el-icon>
+                  <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
+                </div>
+              </template>
+              <div class="bell-pop">
+                <div class="bell-pop-head">
+                  <span>公告 & 通知</span>
+                  <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
+                </div>
+                <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
+                <div v-for="a in announcements.slice(0, 10)" :key="a._id"
+                  :class="['bell-item', a.type]"
+                  @click="openAnnounceDetail(a)">
+                  <span :class="['bell-item-dot', a.type]"></span>
+                  <div class="bell-item-body">
+                    <div class="bell-item-title">{{ a.title }}</div>
+                    <div class="bell-item-content" v-if="a.content">{{ a.content.substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
+                    <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+                  </div>
+                </div>
+                <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
+              </div>
+            </el-popover>
           </div>
         </div>
-
-        <!-- 通知铃铛 + 下拉 -->
-        <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
-          <template #reference>
-            <div class="bell-bar" :class="{ collapsed: collapsed }">
-              <el-icon :size="collapsed ? 20 : 18"><Bell /></el-icon>
-              <span v-if="!collapsed" class="bell-label">通知</span>
-              <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
-            </div>
-          </template>
-          <div class="bell-pop">
-            <div class="bell-pop-head">
-              <span>公告 & 通知</span>
-              <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
-            </div>
-            <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
-            <div v-for="a in announcements.slice(0, 10)" :key="a._id"
-              :class="['bell-item', a.type]"
-              @click="openAnnounceDetail(a)">
-              <span :class="['bell-item-dot', a.type]"></span>
-              <div class="bell-item-body">
-                <div class="bell-item-title">{{ a.title }}</div>
-                <div class="bell-item-content" v-if="a.content">{{ a.content.substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
-                <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
-              </div>
-            </div>
-            <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
-          </div>
-        </el-popover>
 
         <el-menu
           :default-active="activeMenu"
@@ -141,6 +138,10 @@
             </svg>
             <span v-show="!collapsed">GitHub</span>
           </a>
+          <div class="sidebar-footer-row" @click="collapsed = !collapsed" :title="collapsed ? '展开导航' : '收缩导航'">
+            <el-icon :size="16"><component :is="collapsed ? ArrowRight : ArrowLeft" /></el-icon>
+            <span v-show="!collapsed" style="font-size:11px;color:var(--text-200)">{{ collapsed ? '展开' : '收起导航' }}</span>
+          </div>
           <div class="copyright" v-show="!collapsed">
             <p>&copy; {{ new Date().getFullYear() }} StoryCine</p>
             <p>MIT License · 开源项目</p>
@@ -565,21 +566,24 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   display: flex !important; align-items: center !important; justify-content: center !important;
 }
 .app-sidebar .logo {
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px 0; border-bottom: 1px solid var(--gold); min-height: 56px;
-  transition: all 0.3s; position: relative;
+  padding: 14px 12px 12px; border-bottom: 1px solid var(--gold);
+  transition: all 0.3s;
 }
-.app-sidebar .logo::after { content: ''; position: absolute; bottom: -3px; left: 12px; right: 12px; height: 1px; background: var(--gold); opacity: 0.5; }
-.logo-full { overflow: hidden; white-space: nowrap; flex: 1; text-align: center; }
-.logo-full h2 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 18px; margin-bottom: 2px; letter-spacing: 1px; text-align: center; }
-.logo-full p { color: var(--primary-300); font-size: 10px; text-align: center; letter-spacing: 2px; text-transform: uppercase; }
-.collapse-btn {
+.logo-row { display: flex; align-items: center; justify-content: space-between; }
+.logo-full { overflow: hidden; white-space: nowrap; text-align: center; flex: 1; }
+.logo-full h2 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 18px; margin-bottom: 2px; letter-spacing: 1px; }
+.logo-full p { color: var(--primary-300); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+
+/* 铃铛图标 */
+.bell-icon {
   flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: var(--gold); background: transparent; border: 1px solid var(--gold);
-  transition: all 0.3s;
+  transition: all 0.2s; position: relative;
 }
-.collapse-btn:hover { background: var(--gold); color: var(--navy); }
+.bell-icon:hover { background: var(--gold); color: var(--navy); }
+.bell-icon .bell-dot { top: -3px; right: -4px; }
+.bell-collapsed { margin: 0 auto; }
 .app-main { background: var(--bg-100); min-height: 100vh; padding: 28px; transition: padding 0.3s; }
 .app-main-landing { padding: 0 !important; min-height: 100vh; background: var(--bg-100); overflow-x: hidden; }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
@@ -601,18 +605,17 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 }
 .sidebar-footer { padding: 8px; border-top: 1px solid var(--gold); margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 
-/* ===== 通知铃铛（logo 下方显眼位置） ===== */
-.bell-bar {
-  display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin: 4px 8px;
-  border-radius: 8px; cursor: pointer; background: var(--bg-100); border: 1px solid var(--bg-300);
-  transition: all 0.15s; position: relative; color: var(--text-100);
+/* 收缩/展开按钮 */
+.sidebar-footer-row {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border-radius: 6px; cursor: pointer; color: var(--text-200);
+  transition: all 0.15s; width: 100%; justify-content: center;
 }
-.bell-bar:hover { border-color: var(--accent-100); background: var(--accent-200); }
-.bell-bar.collapsed { justify-content: center; padding: 10px 0; }
-.bell-label { font-size: 13px; font-weight: 600; color: var(--text-100); }
+.sidebar-footer-row:hover { background: var(--bg-100); color: var(--gold); }
+
 .bell-dot {
-  position: absolute; top: -4px; right: 6px;
-  min-width: 16px; height: 16px; line-height: 16px; padding: 0 5px;
+  position: absolute; top: -4px; right: -4px;
+  min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
   border-radius: 8px; background: #f56c6c; color: #fff;
   font-size: 10px; font-weight: 700; text-align: center;
 }
