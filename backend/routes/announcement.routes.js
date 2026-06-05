@@ -1,0 +1,84 @@
+const express = require('express');
+const router = express.Router();
+const Announcement = require('../models/announcement.model');
+const { authRequired, adminRequired } = require('../middleware/auth.middleware');
+router.use(authRequired);
+
+// ===== 公共接口：获取生效中的公告（所有已登录用户） =====
+router.get('/active', async (req, res, next) => {
+  try {
+    const filter = { isActive: true };
+    // 非管理员只看 target=all 的公告
+    if (req.user.role !== 'admin') filter.target = 'all';
+    const announcements = await Announcement.find(filter)
+      .sort({ isPinned: -1, createdAt: -1 })
+      .limit(20)
+      .select('-createdBy')
+      .lean();
+    // 计算未读数量（基于 createdAt > 上次查看时间，简单实现）
+    const unreadCount = announcements.length;
+    res.json({ data: announcements, unreadCount });
+  } catch (e) { next(e); }
+});
+
+// ===== 管理接口：CRUD（仅管理员） =====
+
+router.get('/', adminRequired, async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, type, target } = req.query;
+    const filter = {};
+    if (type) filter.type = type;
+    if (target) filter.target = target;
+    const total = await Announcement.countDocuments(filter);
+    const list = await Announcement.find(filter)
+      .sort({ isPinned: -1, createdAt: -1 })
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .lean();
+    res.json({ data: list, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) });
+  } catch (e) { next(e); }
+});
+
+router.post('/', adminRequired, async (req, res, next) => {
+  try {
+    const { title, content, type, target, isPinned, isActive } = req.body;
+    if (!title?.trim()) return res.status(400).json({ message: '标题不能为空' });
+    const ann = await Announcement.create({
+      title: title.trim(),
+      content: content || '',
+      type: type || 'info',
+      target: target || 'all',
+      isPinned: !!isPinned,
+      isActive: isActive !== false,
+      createdBy: req.user.username || req.user._id,
+    });
+    // Socket 推送
+    const io = req.app.get('io');
+    if (io && ann.isActive) {
+      const event = ann.target === 'all' ? 'announcement:new' : 'announcement:admin';
+      io.emit(event, { _id: ann._id, title: ann.title, type: ann.type, createdAt: ann.createdAt });
+    }
+    res.status(201).json({ message: '公告发布成功', data: ann });
+  } catch (e) { next(e); }
+});
+
+router.put('/:id', adminRequired, async (req, res, next) => {
+  try {
+    const allowed = ['title', 'content', 'type', 'target', 'isPinned', 'isActive'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    const ann = await Announcement.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!ann) return res.status(404).json({ message: '公告不存在' });
+    res.json({ message: '更新成功', data: ann });
+  } catch (e) { next(e); }
+});
+
+router.delete('/:id', adminRequired, async (req, res, next) => {
+  try {
+    const ann = await Announcement.findByIdAndDelete(req.params.id);
+    if (!ann) return res.status(404).json({ message: '公告不存在' });
+    res.json({ message: '已删除' });
+  } catch (e) { next(e); }
+});
+
+module.exports = router;

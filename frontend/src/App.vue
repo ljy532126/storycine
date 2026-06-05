@@ -74,6 +74,10 @@
               <span v-if="errorUnreadCount > 0" class="error-badge">{{ errorUnreadCount > 99 ? '99+' : errorUnreadCount }}</span>
             </template>
           </el-menu-item>
+<el-menu-item index="/announcements" v-if="isAdmin">
+            <el-icon><Bell /></el-icon>
+            <template #title>公告管理</template>
+          </el-menu-item>
           <el-menu-item index="/profile">
             <el-icon><UserFilled /></el-icon>
             <template #title>个人中心</template>
@@ -86,6 +90,33 @@
 
         <!-- 侧边栏底部 -->
         <div class="sidebar-footer">
+          <!-- 通知铃铛 -->
+          <el-popover placement="right-start" :width="340" trigger="click" v-if="currentUser.username">
+            <template #reference>
+              <div class="notif-bell" @click="markAnnouncementsRead">
+                <el-icon :size="18"><Bell /></el-icon>
+                <span v-if="unreadAnnounceCount > 0" class="notif-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
+              </div>
+            </template>
+            <div class="notif-popover">
+              <div class="notif-pop-header">公告 & 通知</div>
+              <div v-if="announcements.length === 0" style="padding:20px;text-align:center;color:var(--text-200);font-size:13px">暂无公告</div>
+              <div v-for="a in announcements.slice(0, 8)" :key="a._id"
+                :class="['notif-item', a.type]"
+                @click="openAnnounceDetail(a)">
+                <span class="notif-dot-type" :class="a.type"></span>
+                <div class="notif-item-body">
+                  <div class="notif-item-title">{{ a.title }}</div>
+                  <div class="notif-item-content" v-if="a.content">{{ a.content.substring(0, 60) }}{{ a.content.length > 60 ? '...' : '' }}</div>
+                  <div class="notif-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+                </div>
+              </div>
+              <div v-if="announcements.length > 8" style="text-align:center;padding:8px;color:var(--text-200);font-size:12px">
+                还有 {{ announcements.length - 8 }} 条公告
+              </div>
+            </div>
+          </el-popover>
+
           <!-- 当前用户 -->
           <div class="sidebar-user-row" v-if="currentUser.username">
             <div class="sidebar-user" @click="$router.push('/profile')" title="点击进入个人中心">
@@ -183,13 +214,14 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
-  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset, WarningFilled,
+  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset, WarningFilled, Bell,
   ArrowLeft, ArrowRight, Menu as MenuIcon, Close,
 } from '@element-plus/icons-vue';
 import { useProjectStore } from './stores/project';
 import { useScriptStore } from './stores/script';
 import { useAssetStore } from './stores/asset';
 import { useSocket } from './components/useSocket';
+import { ElMessageBox } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
@@ -232,6 +264,40 @@ const isAdmin = computed(() => userRole.value === 'admin');
 
 // 错误日志未读计数
 const errorUnreadCount = ref(0);
+
+// 公告通知
+const announcements = ref([]);
+const unreadAnnounceCount = ref(0);
+let _lastAnnFetch = 0;
+
+async function fetchAnnouncements() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const res = await fetch('/api/v1/announcements/active', { headers: { Authorization: `Bearer ${token}` } });
+    const json = await res.json();
+    if (json.data) {
+      announcements.value = json.data;
+      // 基于上次获取时间判断新增未读
+      const newOnes = json.data.filter(a => new Date(a.createdAt).getTime() > _lastAnnFetch);
+      if (newOnes.length > 0) unreadAnnounceCount.value += newOnes.length;
+      _lastAnnFetch = Date.now();
+    }
+  } catch { /* ignore */ }
+}
+function markAnnouncementsRead() { unreadAnnounceCount.value = 0; }
+function formatAnnTime(t) {
+  if (!t) return '';
+  const diff = Date.now() - new Date(t).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return '刚刚';
+  if (s < 3600) return Math.floor(s / 60) + '分钟前';
+  if (s < 86400) return Math.floor(s / 3600) + '小时前';
+  return new Date(t).toLocaleDateString('zh-CN');
+}
+function openAnnounceDetail(a) {
+  ElMessageBox.alert(a.content || '暂无详细内容', a.title, { confirmButtonText: '知道了' });
+}
 
 const activeMenu = computed(() => {
   mobileMenuOpen.value = false;
@@ -305,11 +371,13 @@ watch(() => route.path, (p) => { if (p === '/error-logs') errorUnreadCount.value
 
 onMounted(async () => {
   await refreshUser();
-  // 管理员：连接 Socket 监听新错误 + 拉取未处理数量
+  fetchAnnouncements();
+  // 管理员：连接 Socket 监听新错误 + 新公告
   if (userRole.value === 'admin') {
     const { on: sOn, connect: sConnect } = useSocket();
     sConnect();
     sOn('error-log:new', () => { errorUnreadCount.value++; });
+    sOn('announcement:new', () => { fetchAnnouncements(); });
     try {
       const res = await fetch('/api/v1/error-logs/stats/summary', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
@@ -317,6 +385,11 @@ onMounted(async () => {
       const json = await res.json();
       if (json.data?.unresolved) errorUnreadCount.value = json.data.unresolved;
     } catch { /* ignore */ }
+  }
+  // 普通用户也监听公告推送
+  if (userRole.value && userRole.value !== 'admin') {
+    const { connect: sConnect2 } = useSocket();
+    sConnect2();
   }
   document.addEventListener('keydown', onKeydown);
   nextTick(() => { if (searchInput.value) searchInput.value.focus(); });
@@ -446,6 +519,30 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   vertical-align: middle;
 }
 .sidebar-footer { padding: 8px; border-top: 1px solid var(--gold); margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.notif-bell {
+  position: relative; cursor: pointer; padding: 6px; border-radius: 8px;
+  color: var(--text-200); transition: all 0.15s;
+}
+.notif-bell:hover { background: var(--bg-100); color: var(--gold); }
+.notif-dot {
+  position: absolute; top: -2px; right: -4px;
+  min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
+  border-radius: 8px; background: #f56c6c; color: #fff;
+  font-size: 10px; font-weight: 700; text-align: center;
+}
+.notif-popover { max-height: 400px; overflow-y: auto; }
+.notif-pop-header { font-size: 14px; font-weight: 700; color: var(--text-100); padding: 8px 12px; border-bottom: 1px solid var(--bg-300); margin-bottom: 4px; }
+.notif-item { display: flex; gap: 8px; padding: 8px 12px; cursor: pointer; transition: background 0.1s; border-radius: 4px; }
+.notif-item:hover { background: var(--bg-100); }
+.notif-dot-type { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.notif-dot-type.info { background: #409eff; }
+.notif-dot-type.warning { background: #e6a23c; }
+.notif-dot-type.success { background: #67c23a; }
+.notif-dot-type.danger { background: #f56c6c; }
+.notif-item-body { flex: 1; min-width: 0; }
+.notif-item-title { font-size: 13px; font-weight: 600; color: var(--text-100); }
+.notif-item-content { font-size: 11px; color: var(--text-200); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-item-time { font-size: 10px; color: var(--primary-300); margin-top: 2px; }
 .github-link {
   display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;
   border-radius: 4px; color: var(--gold-light); text-decoration: none;

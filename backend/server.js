@@ -97,6 +97,7 @@ app.use('/api/v1/media-library', require('./routes/media.routes'));
 app.use('/api/v1/tts', require('./routes/tts.routes'));
 app.use('/api/v1/auth', require('./routes/auth.routes'));
 app.use('/api/v1/error-logs', require('./routes/error-log.routes'));
+app.use('/api/v1/announcements', require('./routes/announcement.routes'));
 
 app.get('/api/health', (req, res) => {
   const appConfig = require('./config/app.config');
