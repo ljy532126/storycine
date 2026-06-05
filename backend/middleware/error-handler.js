@@ -26,9 +26,12 @@ function errorHandler(err, req, res, _next) {
     return res.status(409).json({ message: '数据已存在，违反唯一约束' });
   }
 
+  // 余额/额度/鉴权相关 — 生产环境也要暴露，否则用户不知道原因是 Key 没钱了
+  const isBalanceError = /balance|余额|额度|quota|billing|insufficient|credit|充值|扣费|payment required/i.test(err.message);
+  const isAuthError = /api.?key|unauthorized|鉴权|认证|密钥|invalid.*key|token/i.test(err.message);
+
   const statusCode = err.statusCode || 500;
-  // 客户端错误（4xx）返回实际消息帮助用户排查；服务端错误（5xx）仅在生产环境隐藏细节
-  const showDetail = isDev || statusCode < 500;
+  const showDetail = isDev || statusCode < 500 || isBalanceError || isAuthError;
   res.status(statusCode).json({
     message: showDetail ? err.message : '服务器内部错误，请稍后重试',
   });

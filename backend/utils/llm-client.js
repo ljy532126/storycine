@@ -195,8 +195,12 @@ async function callLLM(systemPrompt, userPrompt, options = {}) {
     return content;
   } catch (error) {
     const errMsg = error.response?.data?.error?.message || error.message;
-    console.error(`LLM call failed [${llm.provider}]:`, errMsg);
-    throw new Error(`LLM调用失败: ${errMsg}`);
+    const httpStatus = error.response?.status || 0;
+    console.error(`LLM call failed [${llm.provider}] HTTP ${httpStatus}:`, errMsg);
+    const wrapped = new Error(`LLM调用失败 (${llm.provider}): ${errMsg}`);
+    // 保留 HTTP 状态码，让 error-handler 区分客户端/服务端错误
+    if (httpStatus >= 400 && httpStatus < 500) wrapped.statusCode = httpStatus;
+    throw wrapped;
   }
 }
 
@@ -281,8 +285,11 @@ async function callImageGen(prompt, options = {}) {
     return imageUrl;
   } catch (error) {
     const errMsg = error.response?.data?.error?.message || error.message;
-    console.error(`Image generation failed [${provider}]:`, errMsg);
-    throw new Error(`图像生成失败: ${errMsg}`);
+    const httpStatus = error.response?.status || 0;
+    console.error(`Image generation failed [${provider}] HTTP ${httpStatus}:`, errMsg);
+    const wrapped = new Error(`图像生成失败 (${provider}): ${errMsg}`);
+    if (httpStatus >= 400 && httpStatus < 500) wrapped.statusCode = httpStatus;
+    throw wrapped;
   }
 }
 
@@ -368,7 +375,9 @@ async function callVideoGen(prompt, options = {}) {
       err.statusCode = 400;
       throw err;
     }
-    throw new Error(`视频生成失败 (HTTP ${status}): ${msg}`);
+    const wrapped = new Error(`视频生成失败 (HTTP ${status}): ${msg}`);
+    if (status >= 400 && status < 500) wrapped.statusCode = status;
+    throw wrapped;
   }
 }
 
@@ -406,7 +415,9 @@ async function callVideoTaskQuery(taskId, options = {}) {
       return { status: 'failed' };
     }
     console.error(`[video-query] 查询失败:`, msg);
-    throw new Error(`视频任务查询失败: ${msg}`);
+    const wrapped = new Error(`视频任务查询失败: ${msg}`);
+    if (statusCode >= 400 && statusCode < 500) wrapped.statusCode = statusCode;
+    throw wrapped;
   }
 }
 
