@@ -22,7 +22,7 @@
         <!-- 通知铃铛 + 下拉 -->
         <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
           <template #reference>
-            <div class="bell-bar" @click="bellPopVisible = !bellPopVisible" :class="{ collapsed: collapsed }">
+            <div class="bell-bar" :class="{ collapsed: collapsed }">
               <el-icon :size="collapsed ? 20 : 18"><Bell /></el-icon>
               <span v-if="!collapsed" class="bell-label">通知</span>
               <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
