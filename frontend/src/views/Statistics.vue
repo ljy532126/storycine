@@ -420,6 +420,7 @@ import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
+import * as echarts from 'echarts';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -469,15 +470,7 @@ async function fetchUserRegions() {
     const json = await res.json();
     if (json.data) {
       Object.assign(userRegion, json.data);
-      // 延迟重试确保 CDN 加载完成
-      nextTick(() => {
-        const tryRender = (retry) => {
-          if (retry > 5) return;
-          if (window.echarts && window.__chinaMapReady) { drawUserCharts(); return; }
-          setTimeout(() => tryRender(retry + 1), 1200);
-        };
-        tryRender(0);
-      });
+      nextTick(() => { drawUserCharts(); });
     }
   } catch { /* ignore */ }
 }
@@ -497,7 +490,7 @@ async function drawUserCharts() {
   const maxVal = Math.max(...provinces.map(p => p.value), 1);
 
   // 中国地图
-  uaMapInstance = window.echarts.init(mapDom);
+  uaMapInstance = echarts.init(mapDom);
   uaMapInstance.setOption({
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item', formatter: function(p) { return (p.name||'') + '<br/>访问IP：' + (p.value||0) + '个'; } },
@@ -518,7 +511,7 @@ async function drawUserCharts() {
   });
 
   // TOP10 柱状图
-  uaBarInstance = window.echarts.init(barDom);
+  uaBarInstance = echarts.init(barDom);
   const top10 = [...provinces].sort((a, b) => b.value - a.value).slice(0, 10);
   uaBarInstance.setOption({
     backgroundColor: 'transparent',
@@ -530,28 +523,20 @@ async function drawUserCharts() {
   });
 }
 
-let echartsLoadPromise = null;
+let mapReady = false;
+let mapLoadPromise = null;
 function ensureEcharts() {
-  if (window.echarts && window.__chinaMapReady) return Promise.resolve(true);
-  if (echartsLoadPromise) return echartsLoadPromise;
-  echartsLoadPromise = new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
-    script.onload = () => {
-      // 从本地 public/china.json 加载中国地图 GeoJSON（无 CDN 依赖）
-      fetch('/china.json')
-        .then(r => r.json())
-        .then(geoJson => {
-          window.echarts.registerMap('china', geoJson);
-          window.__chinaMapReady = true;
-          resolve(true);
-        })
-        .catch(() => resolve(false));
-    };
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
-  return echartsLoadPromise;
+  if (mapReady) return Promise.resolve(true);
+  if (mapLoadPromise) return mapLoadPromise;
+  mapLoadPromise = fetch('/china.json')
+    .then(r => r.json())
+    .then(geoJson => {
+      echarts.registerMap('china', geoJson);
+      mapReady = true;
+      return true;
+    })
+    .catch(() => false);
+  return mapLoadPromise;
 }
 
 function onResize() {
@@ -719,10 +704,9 @@ async function refreshAll() {
       fetchUserActivity(),
       fetchDistribution(),
       fetchEndpoints(),
+      fetchUserRegions(),
     ]);
     lastUpdated.value = new Date().toLocaleTimeString();
-    // IP 查询较慢，延迟 2 秒再请求（不影响主数据展示）
-    setTimeout(() => fetchUserRegions(), 2000);
   } catch (e) {
     fetchError.value = '部分数据加载失败，请检查网络连接';
   } finally {
