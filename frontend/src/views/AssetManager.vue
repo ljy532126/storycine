@@ -671,6 +671,17 @@ async function generateImage() {
   window.__assetGenning = true;
   window.__setLoading?.(true);
   try {
+    // 收集参考图：角色的 morphs 图片 + referenceImage
+    const refImages = [];
+    if (targetType === 'character') {
+      const morph = targetAsset.morphs?.[0];
+      if (morph?.referenceImage) refImages.push(morph.referenceImage);
+      if (targetAsset.referenceImage && !refImages.includes(targetAsset.referenceImage)) refImages.push(targetAsset.referenceImage);
+    } else if (targetType === 'scene') {
+      if (targetAsset.referenceImage) refImages.push(targetAsset.referenceImage);
+    }
+    console.log('[AssetManager-生图] 参考图数量:', refImages.length, 'URLs:', refImages.map(u => u.substring(0, 60)));
+
     const res = await assetAPI.generateImage({
       projectId: currentProjectId.value,
       assetId: targetAsset._id,
@@ -678,6 +689,7 @@ async function generateImage() {
       prompt: promptText.value,
       model: selectedModel.value,
       ratio: genRatio.value,
+      referenceImages: refImages,
     });
     if (res.data?.imageUrl) {
       const url = res.data.imageUrl;
