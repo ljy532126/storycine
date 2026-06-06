@@ -279,37 +279,6 @@
         </div>
       </div>
     </section>
-
-    <!-- 用户分布 -->
-    <section class="st-section" v-show="statTab === 'trend'">
-      <div class="st-grid-3">
-        <div class="st-card">
-          <div class="st-card-head"><h3 class="st-card-title"><CheckOne theme="outline" size="16" fill="var(--gold)" /> 地区</h3></div>
-          <div class="st-bar-chart" v-if="distribution.regions.length > 0">
-            <div v-for="r in distribution.regions" :key="r.name" class="bar-row">
-              <span class="bar-label">{{ r.name }}</span>
-              <div class="bar-fill" :style="{ width: r.pct+'%', background: r.color }"></div>
-              <span class="bar-val">{{ r.pct }}%</span>
-            </div>
-          </div>
-          <div v-else class="st-empty-hint">收集中...</div>
-        </div>
-        <div class="st-card">
-          <div class="st-card-head"><h3 class="st-card-title"><FolderOpen theme="outline" size="16" fill="var(--gold)" /> 平台</h3></div>
-          <div class="st-pie-simple" v-if="distribution.platforms.length > 0">
-            <div v-for="p in distribution.platforms" :key="p.name" class="pie-row"><span class="pie-dot" :style="{ background: p.color }"></span><span>{{ p.name }}</span><span class="pie-val">{{ p.pct }}%</span></div>
-          </div>
-          <div v-else class="st-empty-hint">收集中...</div>
-        </div>
-        <div class="st-card">
-          <div class="st-card-head"><h3 class="st-card-title"><Data theme="outline" size="16" fill="var(--gold)" /> 浏览器</h3></div>
-          <div class="st-pie-simple" v-if="distribution.browsers.length > 0">
-            <div v-for="b in distribution.browsers" :key="b.name" class="pie-row"><span class="pie-dot" :style="{ background: b.color }"></span><span>{{ b.name }}</span><span class="pie-val">{{ b.pct }}%</span></div>
-          </div>
-          <div v-else class="st-empty-hint">收集中...</div>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -749,6 +718,16 @@ onUnmounted(() => {
 .rank-bar-wrap { flex: 1; height: 10px; background: var(--bg-300); border-radius: 5px; overflow: hidden; }
 .rank-bar { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
 .rank-val { font-size: 11px; color: var(--text-200); width: 36px; text-align: right; flex-shrink: 0; }
+
+/* 用户活跃 */
+.st-user-stats { display: flex; flex-direction: column; gap: 8px; }
+.user-stat-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border-radius: 10px; background: var(--bg-100); font-size: 13px;
+}
+.usr-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.usr-label { flex: 1; font-weight: 500; color: var(--text-100); }
+.usr-val { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; flex-shrink: 0; }
 
 /* 服务器监控 */
 .st-monitor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
