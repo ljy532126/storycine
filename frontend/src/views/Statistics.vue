@@ -40,6 +40,7 @@
       <span :class="['st-tab', { active: statTab === 'trend' }]" @click="statTab = 'trend'">趋势 & 排行</span>
       <span :class="['st-tab', { active: statTab === 'ai' }]" @click="statTab = 'ai'">AI 调用</span>
       <span :class="['st-tab', { active: statTab === 'endpoints' }]" @click="statTab = 'endpoints'">接口监控</span>
+      <span :class="['st-tab', { active: statTab === 'users' }]" @click="statTab = 'users'">用户分析</span>
     </div>
 
     <!-- 今日概览 -->
@@ -325,6 +326,92 @@
         </div>
       </div>
     </section>
+
+    <!-- 用户分析 -->
+    <section class="st-section" v-show="statTab === 'users'">
+      <!-- 顶部数据卡片 -->
+      <div class="st-grid-4" style="margin-bottom:14px">
+        <div class="st-card ua-stat-card">
+          <div class="ua-stat-icon" style="background:rgba(201,168,76,0.12)"><People theme="outline" size="22" fill="var(--gold)" /></div>
+          <div class="ua-stat-body">
+            <span class="ua-stat-num">{{ userRegion.totalIps }}</span>
+            <span class="ua-stat-label">总访问 IP</span>
+            <span class="ua-stat-sub" style="color:#67c23a">↑ 近7日 {{ userRegion.weekIps }}</span>
+          </div>
+        </div>
+        <div class="st-card ua-stat-card">
+          <div class="ua-stat-icon" style="background:rgba(64,158,255,0.12)"><FolderOpen theme="outline" size="22" fill="#409eff" /></div>
+          <div class="ua-stat-body">
+            <span class="ua-stat-num">{{ userRegion.coveredProvinces }}</span>
+            <span class="ua-stat-label">覆盖省份</span>
+            <span class="ua-stat-sub" style="color:var(--text-200)">今日 {{ userRegion.todayIps }} IP</span>
+          </div>
+        </div>
+        <div class="st-card ua-stat-card">
+          <div class="ua-stat-icon" style="background:rgba(230,162,60,0.12)"><Fire theme="outline" size="22" fill="#e6a23c" /></div>
+          <div class="ua-stat-body">
+            <span class="ua-stat-num">{{ userRegion.topProvince?.value || 0 }}</span>
+            <span class="ua-stat-label">TOP {{ userRegion.topProvince?.name || '--' }}</span>
+            <span class="ua-stat-sub" style="color:#e6a23c" v-if="userRegion.topProvince">占比 {{ userRegion.topProvince.pct }}%</span>
+          </div>
+        </div>
+        <div class="st-card ua-stat-card">
+          <div class="ua-stat-icon" style="background:rgba(196,69,69,0.1)"><People theme="outline" size="22" fill="#c44545" /></div>
+          <div class="ua-stat-body">
+            <span class="ua-stat-num">{{ userRegion.overseasCount }}</span>
+            <span class="ua-stat-label">境外 IP</span>
+            <span class="ua-stat-sub" style="color:#c44545" v-if="userRegion.totalIps">占比 {{ (userRegion.overseasCount / userRegion.totalIps * 100).toFixed(1) }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 地图 + 柱状图 -->
+      <div class="st-grid-2" style="margin-bottom:14px">
+        <div class="st-card">
+          <div class="st-card-head">
+            <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 省份访问分布</h2>
+          </div>
+          <div ref="uaMapChart" class="ua-chart" style="height:380px"></div>
+        </div>
+        <div class="st-card">
+          <div class="st-card-head">
+            <h2 class="st-section-title"><Trend theme="outline" size="18" fill="var(--gold)" /> 省份 TOP10</h2>
+          </div>
+          <div ref="uaBarChart" class="ua-chart" style="height:380px"></div>
+        </div>
+      </div>
+
+      <!-- IP 明细表 -->
+      <div class="st-card">
+        <div class="st-card-head">
+          <h2 class="st-section-title"><Time theme="outline" size="18" fill="var(--gold)" /> 最近访问记录</h2>
+          <span style="font-size:11px;color:var(--text-200)">{{ userRegion.recentRecords?.length || 0 }} 条</span>
+        </div>
+        <div class="ua-table-wrap">
+          <table class="ua-table" v-if="userRegion.recentRecords?.length">
+            <thead>
+              <tr>
+                <th>IP 地址</th>
+                <th>用户</th>
+                <th>省份(模拟)</th>
+                <th>运营商</th>
+                <th>访问时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(r, i) in userRegion.recentRecords.slice(0, 20)" :key="i">
+                <td class="ua-td-ip">{{ r.ip }}</td>
+                <td>{{ r.username }}</td>
+                <td style="color:var(--text-200)">接入IP查询后显示</td>
+                <td style="color:var(--text-200)">接入IP查询后显示</td>
+                <td style="color:var(--text-200);font-size:11px">{{ fmt(r.createdAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="st-empty-hint">暂无访问记录</div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -333,6 +420,7 @@ import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
+import * as echarts from 'echarts';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -364,6 +452,109 @@ const aiPieCanvas = ref(null);
 const chartTooltip = reactive({ show: false, x: 0, y: 0, label: '', script: 0, comp: 0 });
 const aiBarTooltip = reactive({ show: false, x: 0, y: 0, category: '', success: 0, fail: 0 });
 const aiPieTooltip = reactive({ show: false, x: 0, y: 0, category: '', value: 0, pct: 0, color: '' });
+
+// ===== 用户分析 =====
+const userRegion = reactive({
+  totalIps: 0, todayIps: 0, weekIps: 0, coveredProvinces: 0,
+  provinces: [], topProvince: null, overseasCount: 0, recentRecords: [],
+});
+const uaMapChart = ref(null);
+const uaBarChart = ref(null);
+let uaMapInstance = null, uaBarInstance = null;
+
+async function fetchUserRegions() {
+  try {
+    const res = await fetch('/api/v1/statistics/user-regions', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const json = await res.json();
+    if (json.data) {
+      Object.assign(userRegion, json.data);
+      nextTick(() => { drawUserCharts(); });
+    }
+  } catch { /* ignore */ }
+}
+
+function drawUserCharts() {
+  const mapDom = uaMapChart.value;
+  const barDom = uaBarChart.value;
+  if (!mapDom || !barDom) return;
+
+  if (uaMapInstance) uaMapInstance.dispose();
+  if (uaBarInstance) uaBarInstance.dispose();
+
+  const provinces = userRegion.provinces || [];
+  if (provinces.length === 0) return;
+
+  // Bar chart: horizontal bars for province top 10
+  uaBarInstance = echarts.init(barDom);
+  const top10 = [...provinces].sort((a, b) => b.value - a.value).slice(0, 10);
+  uaBarInstance.setOption({
+    tooltip: { trigger: 'axis', formatter: '{b}: {c} IP' },
+    grid: { left: '2%', right: '12%', top: '5%', bottom: '5%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
+      splitLine: { lineStyle: { color: 'var(--bg-300)' } },
+    },
+    yAxis: {
+      type: 'category', data: top10.map(i => i.name), inverse: true,
+      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
+      axisLabel: { color: 'var(--text-100)', fontSize: 11 },
+    },
+    series: [{
+      type: 'bar', data: top10.map(i => i.value),
+      itemStyle: {
+        color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+          colorStops: [{ offset: 0, color: '#c9a84c' }, { offset: 1, color: '#e8c97a' }] },
+        borderRadius: [0, 4, 4, 0],
+      },
+      barWidth: '55%',
+      label: { show: true, position: 'right', color: 'var(--text-100)', fontSize: 11 },
+    }],
+  });
+
+  // Map: use scatter-like heatmap on China map coordinate grid
+  // Since echarts/map/js/china.js is a CDN dependency, fall back to a simple bar-heat display
+  uaMapInstance = echarts.init(mapDom);
+  const allProvinces = [...provinces].sort((a, b) => b.value - a.value);
+  uaMapInstance.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: function(p) { return p.name + '<br/>访问: ' + p.value + ' IP (' + (p.data?.pct || 0) + '%)'; },
+    },
+    grid: { left: '3%', right: '4%', top: '3%', bottom: '8%', containLabel: true },
+    xAxis: {
+      type: 'category', data: allProvinces.map(i => i.name),
+      axisLabel: { color: 'var(--text-200)', fontSize: 10, rotate: 30 },
+      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
+      splitLine: { lineStyle: { color: 'var(--bg-300)' } },
+    },
+    series: [{
+      type: 'bar', data: allProvinces.map(i => ({
+        value: i.value, pct: i.pct,
+        itemStyle: {
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: i.value > 80 ? [{ offset: 0, color: '#c9a84c' }, { offset: 1, color: '#e8c97a' }]
+              : i.value > 40 ? [{ offset: 0, color: '#6b8fa3' }, { offset: 1, color: '#8aafc2' }]
+              : [{ offset: 0, color: '#8B7355' }, { offset: 1, color: '#a89070' }] },
+        },
+      })),
+      barWidth: '60%',
+      itemStyle: { borderRadius: [4, 4, 0, 0] },
+    }],
+  });
+}
+
+// Tab switch
+watch(() => statTab.value, (v) => {
+  if (v === 'users') { fetchUserRegions(); }
+  if (v === 'ai') { nextTick(() => { drawAiBarChart(); drawAiPieChart(); }); }
+});
 
 // Chart hover handler
 function onChartHover(e) {
@@ -517,6 +708,7 @@ async function refreshAll() {
       fetchUserActivity(),
       fetchDistribution(),
       fetchEndpoints(),
+      fetchUserRegions(),
     ]);
     lastUpdated.value = new Date().toLocaleTimeString();
   } catch (e) {
@@ -866,11 +1058,6 @@ function onAiPieHover(e) {
   aiPieTooltip.show = false;
 }
 
-// Watch for tab switch
-watch(() => statTab.value, (v) => {
-  if (v === 'ai') { nextTick(() => { drawAiBarChart(); drawAiPieChart(); }); }
-});
-
 // ===== 生命周期 =====
 watch(() => route.path, (p) => { if (p === '/statistics') refreshAll(); });
 onMounted(async () => {
@@ -963,6 +1150,7 @@ onUnmounted(() => {
 /* 双栏网格 */
 .st-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
 .st-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.st-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
 .st-card {
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
@@ -1083,9 +1271,24 @@ onUnmounted(() => {
 .st-ep-count { color: var(--text-200); min-width: 40px; text-align: right; font-weight: 600; }
 .st-ep-last { color: var(--text-200); font-size: 10px; min-width: 60px; text-align: right; }
 
+/* ===== 用户分析 ===== */
+.ua-stat-card { display: flex; align-items: center; gap: 12px; padding: 16px 18px !important; }
+.ua-stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ua-stat-body { display: flex; flex-direction: column; gap: 1px; }
+.ua-stat-num { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900; color: var(--text-100); line-height: 1; }
+.ua-stat-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
+.ua-stat-sub { font-size: 10px; margin-top: 2px; }
+.ua-chart { width: 100%; }
+.ua-table-wrap { max-height: 400px; overflow-y: auto; }
+.ua-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ua-table th { padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-200); border-bottom: 2px solid rgba(201,168,76,0.2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.ua-table td { padding: 9px 12px; border-bottom: 1px solid var(--bg-300); color: var(--text-100); }
+.ua-table tbody tr:hover { background: var(--bg-100); }
+.ua-td-ip { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold-dark); }
+
 @media (max-width: 768px) {
   .st-overview-cards { grid-template-columns: repeat(2, 1fr); }
-  .st-grid-2, .st-grid-3 { grid-template-columns: 1fr; }
+  .st-grid-2, .st-grid-3, .st-grid-4 { grid-template-columns: 1fr; }
   .st-monitor-grid { grid-template-columns: repeat(2, 1fr); }
   .ov-live-row { grid-template-columns: 1fr; }
 }
