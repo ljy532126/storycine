@@ -206,12 +206,10 @@ router.get('/all', async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const storageConfig = { ...(settings.storageConfig || {}) };
-    // 非管理员仅返回存储状态，不暴露 AccessKey
+    // AccessKey 脱敏显示：无论管理员还是普通用户，都不暴露明文
+    storageConfig.accessKeyId = maskKey(storageConfig.accessKeyId);
+    storageConfig.accessKeySecret = maskKey(storageConfig.accessKeySecret);
     const isAdmin = req.user.role === 'admin';
-    if (!isAdmin) {
-      storageConfig.accessKeyId = storageConfig.accessKeyId ? '****' : '';
-      storageConfig.accessKeySecret = storageConfig.accessKeySecret ? '****' : '';
-    }
     res.json({ data: { aiConfig: settings.aiConfig || {}, storageConfig, isAdmin } });
   } catch (e) { next(e); }
 });
@@ -226,8 +224,8 @@ router.get('/storage', async (req, res, next) => {
     res.json({ data: {
       enabled: cfg.enabled || false, provider: cfg.provider || 'minio',
       endpoint: cfg.endpoint || '',
-      accessKeyId: isAdmin ? (cfg.accessKeyId || '') : (cfg.accessKeyId ? '****' : ''),
-      accessKeySecret: maskSecret(cfg.accessKeySecret),
+      accessKeyId: maskKey(cfg.accessKeyId),
+      accessKeySecret: maskKey(cfg.accessKeySecret),
       bucket: cfg.bucket || '', prefix: cfg.prefix || '/autodrama/uploads/',
       _hasSecret: !!cfg.accessKeySecret,
       isAdmin,
@@ -244,13 +242,13 @@ router.put('/storage', async (req, res, next) => {
     if (typeof enabled === 'boolean') cfg.enabled = enabled;
     if (provider) cfg.provider = provider;
     if (endpoint !== undefined) cfg.endpoint = endpoint;
-    if (accessKeyId !== undefined) cfg.accessKeyId = accessKeyId;
-    if (accessKeySecret && accessKeySecret !== maskSecret(cfg.accessKeySecret)) cfg.accessKeySecret = accessKeySecret;
+    if (accessKeyId !== undefined && accessKeyId !== maskKey(cfg.accessKeyId) && accessKeyId !== '****') cfg.accessKeyId = accessKeyId;
+    if (accessKeySecret && accessKeySecret !== maskSecret(cfg.accessKeySecret) && accessKeySecret !== '****') cfg.accessKeySecret = accessKeySecret;
     if (bucket !== undefined) cfg.bucket = bucket;
     if (prefix !== undefined) cfg.prefix = prefix;
 
     await Settings.updateSettings(req.user._id, { storageConfig: cfg });
-    res.json({ message: '对象存储配置已保存', data: { ...cfg, accessKeySecret: maskSecret(cfg.accessKeySecret) } });
+    res.json({ message: '对象存储配置已保存', data: { ...cfg, accessKeyId: maskKey(cfg.accessKeyId), accessKeySecret: maskSecret(cfg.accessKeySecret) } });
   } catch (e) { next(e); }
 });
 
@@ -276,6 +274,12 @@ function maskSecret(secret) {
   if (!secret) return '';
   if (secret.length <= 8) return '****';
   return secret.substring(0, 4) + '****' + secret.substring(secret.length - 4);
+}
+
+function maskKey(key) {
+  if (!key) return '';
+  if (key.length <= 8) return '****';
+  return key.substring(0, 6) + '********' + key.substring(key.length - 4);
 }
 
 // ===== TTS 配音配置 =====
