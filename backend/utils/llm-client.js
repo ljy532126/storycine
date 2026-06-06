@@ -198,21 +198,26 @@ async function callLLM(systemPrompt, userPrompt, options = {}) {
     const httpStatus = error.response?.status || 0;
     console.error(`LLM call failed [${llm.provider}] HTTP ${httpStatus}:`, errMsg);
 
-    // 友好错误提示：引导用户去系统设置配置/充值 Key
+    // Provider 中文名映射
+    const providerNames = { deepseek:'DeepSeek', doubao:'豆包/火山引擎', tongyi:'通义千问', openai:'OpenAI' };
+    const pvName = providerNames[llm.provider] || llm.provider;
+
+    // 友好错误提示：根据实际使用的 provider 给出准确指引
     const friendlyMap = [
-      { match: /overdue balance|balance/i, hint: '您的 API Key 账户欠费余额不足，请前往火山引擎控制台充值。' },
-      { match: /not enough quota|quota|limit exceeded/i, hint: '您的 API 调用额度已用完，请前往火山引擎/DeepSeek 控制台购买更多配额。' },
-      { match: /invalid.*api.?key|unauthorized|authentication|auth/i, hint: 'API Key 无效或未配置，请前往「系统设置 → LLM配置」填写正确的密钥后保存。' },
-      { match: /timeout|ECONNABORTED|ETIMEDOUT/i, hint: '请求超时，请检查网络连接或 API 服务是否可访问。' },
+      { match: /overdue balance|balance/i, hint: `您的 ${pvName} API 账户欠费或余额不足，请前往 ${pvName} 控制台充值。` },
+      { match: /not enough quota|quota|limit exceeded/i, hint: `您的 ${pvName} API 调用额度已用完，请前往 ${pvName} 控制台购买更多配额。` },
+      { match: /invalid.*api.?key|unauthorized|authentication|auth/i, hint: `您的 ${pvName} API Key 无效或未配置，请前往「系统设置 → LLM配置」填写正确的 Key 后保存。` },
+      { match: /timeout|ECONNABORTED|ETIMEDOUT/i, hint: '请求超时，请检查网络连接或 API Base URL 是否正确。' },
     ];
     const friendly = friendlyMap.find(f => f.match.test(errMsg));
 
     let finalMsg;
     if (friendly) {
-      finalMsg = `LLM 调用失败：${friendly.hint}\n\n原始错误: ${errMsg}`;
+      finalMsg = `LLM 调用失败 (${pvName})：${friendly.hint}\n\n原始错误: ${errMsg}`;
     } else {
-      finalMsg = `LLM 调用失败 (${llm.provider}): ${errMsg}`;
+      finalMsg = `LLM 调用失败 (${pvName}): ${errMsg}\n\n请检查「系统设置 → LLM配置」中 ${pvName} 的 Key 和余额是否正常。`;
     }
+    // 所有错误都追加配置指引
 
     const wrapped = new Error(finalMsg);
     if (httpStatus >= 400 && httpStatus < 500) wrapped.statusCode = httpStatus;
