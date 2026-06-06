@@ -44,12 +44,64 @@
     <!-- 今日概览 -->
     <section class="st-section" v-show="statTab === 'overview'">
       <div class="st-overview-cards">
-        <div v-for="(c, idx) in overviewCards" :key="c.label" class="st-ov-card" :style="{ animationDelay: idx * 60 + 'ms' }">
-          <div class="ov-icon" :style="{ background: c.color }">{{ c.icon }}</div>
+        <div v-for="(c, idx) in overviewCards" :key="c.label" class="st-ov-card" :style="{ animationDelay: idx * 80 + 'ms' }">
+          <div class="ov-icon" :style="{ background: c.gradient }">
+            <component :is="c.icon" theme="outline" size="22" :fill="c.iconFill" />
+          </div>
           <div class="ov-body">
-            <span class="ov-value" :style="{ color: c.color }">{{ c.value }}</span>
+            <span class="ov-value">{{ c.value }}</span>
             <span class="ov-label">{{ c.label }}</span>
-            <span class="ov-change" :class="c.up ? 'up' : 'down'">{{ c.changeText }}</span>
+          </div>
+          <div class="ov-change" :class="{ 'ov-up': c.up, 'ov-down': !c.up }" v-if="c.changeText">
+            <span class="ov-change-arrow">{{ c.up ? '↑' : '↓' }}</span>
+            {{ c.changeText.replace(/[↑↓]\s*/, '') }}
+          </div>
+          <div class="ov-bg-icon">{{ c.pattern }}</div>
+        </div>
+      </div>
+
+      <!-- 实时数据流 -->
+      <div class="ov-live-row">
+        <div class="ov-live-card">
+          <div class="ov-live-head">
+            <Time theme="outline" size="16" fill="var(--gold)" />
+            <span>实时调用</span>
+            <span class="ov-live-dot"></span>
+          </div>
+          <div class="ov-live-items">
+            <div class="ov-live-item">
+              <span class="ov-li-label">AI 生图</span>
+              <span class="ov-li-bar"><span class="ov-li-fill" :style="{ width: endpoints.ai?.image ? Math.min((endpoints.ai.image.success / Math.max(endpoints.ai.image.total, 1)) * 100, 100) + '%' : '0%' }"></span></span>
+              <span class="ov-li-num">{{ endpoints.ai?.image?.total || 0 }}</span>
+            </div>
+            <div class="ov-live-item">
+              <span class="ov-li-label">AI 生视频</span>
+              <span class="ov-li-bar"><span class="ov-li-fill ov-li-fill-video" :style="{ width: endpoints.ai?.video ? Math.min((endpoints.ai.video.success / Math.max(endpoints.ai.video.total, 1)) * 100, 100) + '%' : '0%' }"></span></span>
+              <span class="ov-li-num">{{ endpoints.ai?.video?.total || 0 }}</span>
+            </div>
+            <div class="ov-live-item">
+              <span class="ov-li-label">LLM 文本</span>
+              <span class="ov-li-bar"><span class="ov-li-fill ov-li-fill-llm" :style="{ width: endpoints.ai?.llm ? Math.min((endpoints.ai.llm.success / Math.max(endpoints.ai.llm.total, 1)) * 100, 100) + '%' : '0%' }"></span></span>
+              <span class="ov-li-num">{{ endpoints.ai?.llm?.total || 0 }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="ov-live-card">
+          <div class="ov-live-head">
+            <Data theme="outline" size="16" fill="var(--gold)" />
+            <span>接口健康</span>
+          </div>
+          <div class="ov-health-ring">
+            <svg viewBox="0 0 100 100" width="90" height="90">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="var(--bg-300)" stroke-width="8" />
+              <circle cx="50" cy="50" r="40" fill="none" :stroke="endpoints.health > 90 ? '#67c23a' : endpoints.health > 70 ? '#e6a23c' : '#f56c6c'" stroke-width="8"
+                stroke-dasharray="251.2" :stroke-dashoffset="251.2 - (251.2 * (endpoints.health || 100) / 100)"
+                stroke-linecap="round" transform="rotate(-90 50 50)" style="transition: stroke-dashoffset 0.8s" />
+            </svg>
+            <div class="ov-health-text">
+              <span class="ov-health-pct">{{ endpoints.health || 100 }}%</span>
+              <span class="ov-health-sub">健康度</span>
+            </div>
           </div>
         </div>
       </div>
@@ -221,6 +273,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data } from '@icon-park/vue-next';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -232,11 +285,11 @@ const autoRefresh = ref(false);
 let refreshTimer = null;
 
 const overviewCards = ref([
-  { label: '新增用户', value: '-', icon: '👤', color: 'var(--gold)', change: 0, up: true, changeText: '' },
-  { label: '新增项目', value: '-', icon: '📁', color: 'var(--navy)', change: 0, up: true, changeText: '' },
-  { label: '剧本生成', value: '-', icon: '📝', color: 'var(--primary-100)', change: 0, up: true, changeText: '' },
-  { label: '成片合成', value: '-', icon: '🎥', color: 'var(--accent-100)', change: 0, up: true, changeText: '' },
-  { label: '成功率', value: '-', icon: '✅', color: 'var(--primary-100)', change: 0, up: true, changeText: '' },
+  { label: '新增用户', value: '-', icon: People, iconFill: '#fff', gradient: 'linear-gradient(135deg, #c9a84c, #e0b860)', pattern: '👤', delay: '0ms' },
+  { label: '新增项目', value: '-', icon: FolderOpen, iconFill: '#fff', gradient: 'linear-gradient(135deg, #1A1A2E, #2d2d4a)', pattern: '📁', delay: '80ms' },
+  { label: '剧本生成', value: '-', icon: EditTwo, iconFill: '#fff', gradient: 'linear-gradient(135deg, #8B7355, #a89070)', pattern: '📝', delay: '160ms' },
+  { label: '成片合成', value: '-', icon: PlayTwo, iconFill: '#fff', gradient: 'linear-gradient(135deg, #6b8fa3, #8aafc2)', pattern: '🎥', delay: '240ms' },
+  { label: '成功率', value: '-', icon: CheckOne, iconFill: '#fff', gradient: 'linear-gradient(135deg, #67a35c, #7bc06e)', pattern: '✅', delay: '320ms' },
 ]);
 
 const topGenres = ref([]);
@@ -491,20 +544,60 @@ onUnmounted(() => {
 .st-section-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--text-100); margin: 0 0 14px; letter-spacing: 0.5px; }
 
 /* 概览卡片 */
-.st-overview-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.st-overview-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 16px; }
 .st-ov-card {
-  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 10px;
-  padding: 18px; display: flex; gap: 14px; align-items: center;
-  animation: fadeIn 0.4s ease-out both; transition: all 0.2s;
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
+  padding: 18px 20px; display: flex; gap: 14px; align-items: center;
+  position: relative; overflow: hidden;
+  animation: fadeIn 0.4s ease-out both; transition: all 0.25s;
 }
-.st-ov-card:hover { border-color: var(--gold); transform: translateY(-1px); }
-.ov-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.ov-body { display: flex; flex-direction: column; gap: 2px; }
-.ov-value { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900; line-height: 1; }
-.ov-label { font-size: 11px; color: var(--text-200); letter-spacing: 0.5px; }
-.ov-change { font-size: 11px; margin-top: 1px; }
-.ov-change.up { color: var(--primary-100); }
-.ov-change.down { color: #C44545; }
+.st-ov-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139,105,20,0.08); }
+.ov-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ov-body { display: flex; flex-direction: column; gap: 2px; position: relative; z-index: 1; }
+.ov-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 900; color: var(--text-100); line-height: 1; }
+.ov-label { font-size: 11px; color: var(--text-200); letter-spacing: 0.5px; text-transform: uppercase; }
+.ov-change {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+}
+.ov-up { background: rgba(103,194,58,0.1); color: #67c23a; }
+.ov-down { background: rgba(196,69,69,0.08); color: #C44545; }
+.ov-change-arrow { margin-right: 1px; }
+.ov-bg-icon {
+  position: absolute; right: -6px; bottom: -10px; font-size: 44px; opacity: 0.04;
+  pointer-events: none; user-select: none;
+}
+
+/* 实时数据流 */
+.ov-live-row { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+.ov-live-card {
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
+  padding: 18px 20px;
+}
+.ov-live-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--text-100); margin-bottom: 14px;
+  padding-bottom: 10px; border-bottom: 2px solid rgba(201,168,76,0.2);
+}
+.ov-live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #67c23a;
+  margin-left: auto; animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.ov-live-items { display: flex; flex-direction: column; gap: 10px; }
+.ov-live-item { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-200); }
+.ov-li-label { width: 62px; flex-shrink: 0; font-weight: 500; color: var(--text-100); }
+.ov-li-bar { flex: 1; height: 6px; background: var(--bg-300); border-radius: 3px; overflow: hidden; }
+.ov-li-fill { display: block; height: 100%; border-radius: 3px; background: #67c23a; transition: width 0.5s; }
+.ov-li-fill-video { background: var(--gold); }
+.ov-li-fill-llm { background: #409eff; }
+.ov-li-num { width: 32px; text-align: right; font-weight: 700; font-size: 13px; color: var(--text-100); flex-shrink: 0; }
+
+/* 健康度环形图 */
+.ov-health-ring { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 10px 0; }
+.ov-health-text { display: flex; flex-direction: column; align-items: center; }
+.ov-health-pct { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 900; color: var(--text-100); }
+.ov-health-sub { font-size: 11px; color: var(--text-200); letter-spacing: 1px; text-transform: uppercase; }
 
 /* 双栏网格 */
 .st-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
