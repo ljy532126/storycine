@@ -276,8 +276,8 @@
                   <span class="vp-pop-title">分辨率</span>
                   <div class="vp-resolution-row">
                     <span v-for="r in videoResolutions" :key="r"
-                      :class="['vp-res-item', { active: videoResolution === r }]"
-                      @click="videoResolution = r">{{ r }}</span>
+                      :class="['vp-res-item', { active: videoResolution === r, disabled: isResolutionLocked(r) }]"
+                      @click="selectResolution(r)" :title="resolutionTooltip(r)">{{ r }}</span>
                   </div>
                 </div>
                 <div class="vp-pop-section">
@@ -532,6 +532,18 @@ const currentVideoPrompt = ref('');
 const videoDuration = ref(5);
 const videoRatio = ref('9:16');
 const videoResolutions = ['480p', '720p', '1080p'];
+
+function isResolutionLocked(r) {
+  return selectedVideoModel.value === 'doubao_video_fast' && r === '1080p';
+}
+function resolutionTooltip(r) {
+  if (isResolutionLocked(r)) return 'Seedance Fast 不支持 1080p，最高 720p';
+  return r;
+}
+function selectResolution(r) {
+  if (isResolutionLocked(r)) return;
+  videoResolution.value = r;
+}
 const videoRatios = [
   { label: '21:9', value: '21:9', icon: '<svg viewBox="0 0 42 18" width="28" height="12"><rect x="0" y="0" width="42" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
   { label: '16:9', value: '16:9', icon: '<svg viewBox="0 0 32 18" width="24" height="14"><rect x="0" y="0" width="32" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
@@ -2090,4 +2102,5 @@ async function handleImport() {
 }
 .vp-res-item:hover { border-color: var(--gold); color: var(--gold); }
 .vp-res-item.active { border-color: var(--gold); background: rgba(201,168,76,0.12); color: var(--gold); }
+.vp-res-item.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 </style>
