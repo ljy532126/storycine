@@ -535,53 +535,23 @@ function ensureEcharts() {
   if (window.echarts && window.__chinaMapReady) return Promise.resolve(true);
   if (echartsLoadPromise) return echartsLoadPromise;
   echartsLoadPromise = new Promise((resolve) => {
-    // 先加载 echarts 核心
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
     script.onload = () => {
-      // 加载中国地图 GeoJSON（阿里 DataV 稳定源）
-      _loadChinaGeo(resolve, 0);
+      // 从本地 public/china.json 加载中国地图 GeoJSON（无 CDN 依赖）
+      fetch('/china.json')
+        .then(r => r.json())
+        .then(geoJson => {
+          window.echarts.registerMap('china', geoJson);
+          window.__chinaMapReady = true;
+          resolve(true);
+        })
+        .catch(() => resolve(false));
     };
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
   return echartsLoadPromise;
-}
-
-function _loadChinaGeo(resolve, retry) {
-  fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-    .then(r => r.json())
-    .then(geoJson => {
-      window.echarts.registerMap('china', geoJson);
-      window.__chinaMapReady = true;
-      resolve(true);
-    })
-    .catch(() => {
-      if (retry < 2) {
-        // 重试回退源
-        const urls = [
-          'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
-          'https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/json/china.json',
-        ];
-        fetch(urls[retry + 1])
-          .then(r => r.json())
-          .then(geoJson => {
-            window.echarts.registerMap('china', geoJson);
-            window.__chinaMapReady = true;
-            resolve(true);
-          })
-          .catch(() => {
-            if (retry < 1) {
-              _loadChinaGeo(resolve, retry + 1);
-            } else {
-              console.warn('[ChinaMap] 地图 GeoJSON 加载失败，使用离线echo');
-              resolve(false);
-            }
-          });
-      } else {
-        resolve(false);
-      }
-    });
 }
 
 function onResize() {
