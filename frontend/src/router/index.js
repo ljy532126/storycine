@@ -37,7 +37,7 @@ const routes = [
   { path: '/settings', name: 'Settings', component: Settings, meta: { requiresAuth: true } },
   { path: '/statistics', name: 'Statistics', component: Statistics, meta: { requiresAuth: true } },
   { path: '/ai-config', name: 'AIConfig', component: AIConfig, meta: { requiresAuth: true } },
-  { path: '/ai-storage', name: 'AIStorageConfig', component: AIStorageConfig, meta: { requiresAuth: true } },
+  { path: '/ai-storage', name: 'AIStorageConfig', component: AIStorageConfig, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/media-library', name: 'MediaLibrary', component: MediaLibrary, meta: { requiresAuth: true } },
   { path: '/tts-library', name: 'TTSLibrary', component: TTSLibrary, meta: { requiresAuth: true } },
   { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },

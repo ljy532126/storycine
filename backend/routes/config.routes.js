@@ -205,7 +205,14 @@ router.put('/ai', async (req, res, next) => {
 router.get('/all', async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
-    res.json({ data: { aiConfig: settings.aiConfig || {}, storageConfig: settings.storageConfig || {} } });
+    const storageConfig = { ...(settings.storageConfig || {}) };
+    // 非管理员仅返回存储状态，不暴露 AccessKey
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin) {
+      storageConfig.accessKeyId = storageConfig.accessKeyId ? '****' : '';
+      storageConfig.accessKeySecret = storageConfig.accessKeySecret ? '****' : '';
+    }
+    res.json({ data: { aiConfig: settings.aiConfig || {}, storageConfig, isAdmin } });
   } catch (e) { next(e); }
 });
 
@@ -215,18 +222,22 @@ router.get('/storage', async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const cfg = settings.storageConfig || {};
+    const isAdmin = req.user.role === 'admin';
     res.json({ data: {
       enabled: cfg.enabled || false, provider: cfg.provider || 'minio',
-      endpoint: cfg.endpoint || '', accessKeyId: cfg.accessKeyId || '',
+      endpoint: cfg.endpoint || '',
+      accessKeyId: isAdmin ? (cfg.accessKeyId || '') : (cfg.accessKeyId ? '****' : ''),
       accessKeySecret: maskSecret(cfg.accessKeySecret),
       bucket: cfg.bucket || '', prefix: cfg.prefix || '/autodrama/uploads/',
       _hasSecret: !!cfg.accessKeySecret,
+      isAdmin,
     }});
   } catch (e) { next(e); }
 });
 
 router.put('/storage', async (req, res, next) => {
   try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: '仅管理员可修改存储配置' });
     const settings = await Settings.getSettings(req.user._id);
     const cfg = { ...(settings.storageConfig || {}) };
     const { enabled, provider, endpoint, accessKeyId, accessKeySecret, bucket, prefix } = req.body;
