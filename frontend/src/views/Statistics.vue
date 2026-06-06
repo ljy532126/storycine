@@ -494,13 +494,14 @@ async function drawUserCharts() {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item', formatter: function(p) { return (p.name||'') + '<br/>访问IP：' + (p.value||0) + '个'; } },
     visualMap: {
-      min: 0, max: maxVal, left: 'left', bottom: '5%',
+      min: 0, max: maxVal, left: 8, bottom: 20,
       text: ['高', '低'], calculable: true,
       textStyle: { color: '#8B7355' },
       inRange: { color: ['#e8f0fe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
     },
     geo: {
-      map: 'china', zoom: 1.15, center: [105, 35],
+      map: 'china', zoom: 1.35, center: [104.5, 36],
+      roam: true,
       label: { show: true, fontSize: 9, color: '#8B7355' },
       itemStyle: { areaColor: '#f5f0eb', borderColor: '#d4c5c0', borderWidth: 1 },
       emphasis: { label: { color: '#1A1A2E', fontSize: 12 }, itemStyle: { areaColor: '#f5e6c8' } },
@@ -1294,10 +1295,10 @@ onUnmounted(() => {
 .ua-stat-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
 .ua-stat-sub { font-size: 10px; margin-top: 2px; }
 .ua-chart { width: 100%; }
-.ua-chart-map { height: 480px; }
-.ua-chart-bar { height: 480px; }
+.ua-chart-map { height: 560px; }
+.ua-chart-bar { height: 560px; }
 .st-grid-ua-map { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px; }
-.st-ua-map-card { min-width: 0; }
+.st-ua-map-card { min-width: 0; padding: 14px 16px !important; }
 .ua-table-wrap { max-height: 400px; overflow-y: auto; }
 .ua-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ua-table th { padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-200); border-bottom: 2px solid rgba(201,168,76,0.2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
