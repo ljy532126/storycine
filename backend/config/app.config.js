@@ -122,6 +122,10 @@ const appConfig = {
       const d = appConfig.llm.doubao;
       return { apiKey: d.apiKey || '', baseUrl: d.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3', model: d.imageModel || 'doubao-seedream-4-5-251128' };
     },
+    get doubao_fast() {
+      // Seedance Fast 共用豆包同一个 AK/SK + Base URL，区别只在 model
+      return this.doubao;
+    },
     get openai() {
       const o = appConfig.llm.openai;
       return { apiKey: o.apiKey || '', baseUrl: o.baseUrl || 'https://api.openai.com/v1', model: o.imageModel || o.model || 'gpt-image-2' };

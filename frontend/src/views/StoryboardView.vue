@@ -253,10 +253,27 @@
             <el-input-number v-model="videoDuration" :min="1" :max="30" size="small" style="width:100%" @change="saveVideoDuration" />
           </div>
           <div class="right-section">
+            <label>分辨率</label>
+            <el-select v-model="videoResolution" size="small" style="width:100%">
+              <el-option label="720p" value="720p" />
+              <el-option label="1080p" value="1080p" />
+              <el-option label="2K (1440p)" value="2K" />
+            </el-select>
+          </div>
+          <div class="right-section">
             <label>视频模型</label>
             <el-select v-model="selectedVideoModel" size="small" style="width:100%">
               <el-option label="Seedance 2.0" value="doubao_video" />
+              <el-option label="Seedance 2.0 Fast" value="doubao_video_fast" />
             </el-select>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+              <label style="font-size:12px;color:var(--text-200)">禁用水印</label>
+              <el-switch v-model="videoNoWatermark" size="small" />
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+              <label style="font-size:12px;color:var(--text-200)">生成音频</label>
+              <el-switch v-model="videoGenAudio" size="small" />
+            </div>
             <el-button size="small" type="primary" style="width:100%;margin-top:8px" @click="generateVideoForShot" :loading="genningVideo" :disabled="!currentShot">生成视频</el-button>
             <div style="margin-top:8px;display:flex;gap:4px">
               <el-input v-model="recoverTaskId" size="small" placeholder="粘贴 taskId 恢复视频" clearable style="flex:1" />
@@ -492,6 +509,9 @@ const rightTab = ref('draw');
 const currentShotPrompt = ref('');
 const currentVideoPrompt = ref('');
 const videoDuration = ref(5);
+const videoResolution = ref('720p');
+const videoNoWatermark = ref(true);
+const videoGenAudio = ref(false);
 const selectedVideoModel = ref('doubao_video');
 const currentRefImages = ref([]);
 const tlTrack = ref(null);
@@ -1270,7 +1290,7 @@ async function batchGenerateVideos() {
       if (charDescsBatch) batchPrompt = charDescsBatch + '。' + batchPrompt;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5 })
+        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
@@ -1536,7 +1556,7 @@ async function generateVideoForShot() {
 
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value })
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
     });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '视频生成失败'); return; }

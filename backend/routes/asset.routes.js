@@ -703,11 +703,13 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
     if (assetType === 'video') {
       let provider = 'wan27';
       if (model === 'doubao_video') provider = 'doubao';
+      else if (model === 'doubao_video_fast') provider = 'doubao_fast';
       else if (model === 'jimeng_video') provider = 'jimeng';
 
-      const videoModel = provider === 'doubao'
-        ? (appConfig.llm.doubao.model || 'doubao-seedance-2-0-260128')
-        : undefined;
+      let videoModel;
+      if (provider === 'doubao') videoModel = appConfig.llm.doubao.model || 'doubao-seedance-2-0-260128';
+      else if (provider === 'doubao_fast') videoModel = 'doubao-seedance-2-0-fast-260128';
+      else videoModel = undefined;
 
       // 合并前端传来的参考图列表 + 主图(inputImage)，去重
       // 只有用户明确选了参考图时才把主图也加入，避免无意中触发 Seedance 人脸审核
@@ -735,8 +737,10 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
         model: videoModel,
         ratio,
         duration: req.body.duration || 5,
+        resolution: req.body.resolution || '720p',
         referenceImages: refs,
-        watermark: false,
+        watermark: req.body.watermark !== undefined ? req.body.watermark : false,
+        generateAudio: req.body.generateAudio || false,
         safetyId: projectId ? String(projectId).substring(0, 16) : 'autodrama_user',
       });
       console.log(`[video-gen] 任务ID: ${videoUrl}`);

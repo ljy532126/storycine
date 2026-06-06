@@ -531,7 +531,7 @@ const form = reactive({
 const deepseekModels = ['deepseek-v4-pro', 'deepseek-v4-flash'];
 const openaiModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
 const openaiImageModels = ['gpt-image-2', 'dall-e-3', 'dall-e-2'];
-const doubaoModels = ['doubao-seedance-2-0-260128', 'doubao-pro-32k', 'doubao-lite-32k'];
+const doubaoModels = ['doubao-seedance-2-0-260128', 'doubao-seedance-2-0-fast-260128', 'doubao-pro-32k', 'doubao-lite-32k'];
 const seedreamModels = ['doubao-seedream-4-5-251128', 'doubao-seedream-4-0-250828'];
 const tongyiModels = ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen2.5-72b-instruct'];
 
