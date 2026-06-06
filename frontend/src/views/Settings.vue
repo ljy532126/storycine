@@ -786,22 +786,22 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
 .ac-key-link:hover { text-decoration: underline; }
 .ac-llm-actions { display: flex; gap: 10px; margin-top: 8px; }
 .ac-llm-actions .el-button {
-  flex: 1; max-width: 180px; height: 40px; border-radius: 10px;
-  font-size: 13px; font-weight: 600; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 5px;
-  padding: 0 20px !important; letter-spacing: 0.3px;
+  flex: 1; max-width: 180px; height: 42px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+  padding: 0 18px !important; line-height: 1;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ac-llm-actions .el-button--primary {
-  background: linear-gradient(135deg, #c9a84c, #e0b860) !important;
-  border: 1px solid rgba(201,168,76,0.5) !important; color: var(--navy) !important;
-  box-shadow: 0 2px 8px rgba(201,168,76,0.15);
+  background: linear-gradient(135deg, #2d4a22, #3d6430) !important;
+  border: 1px solid #4a7a3a !important; color: #d4e8c0 !important;
+  box-shadow: 0 2px 8px rgba(61,100,48,0.25);
 }
 .ac-llm-actions .el-button--primary:hover {
-  transform: translateY(-2px); box-shadow: 0 6px 20px rgba(201,168,76,0.3);
-  background: linear-gradient(135deg, #d4b860, #e8c97a) !important;
+  transform: translateY(-2px); box-shadow: 0 6px 20px rgba(61,100,48,0.4);
+  background: linear-gradient(135deg, #36782a, #4a8a3a) !important;
+  color: #fff !important;
 }
-.ac-llm-actions .el-button--primary:active { transform: translateY(0) scale(0.98); }
-.ac-llm-actions .el-button .el-icon { margin: 0 !important; }
+.ac-llm-actions .el-button--primary:active { transform: translateY(0) scale(0.97); }
 .ac-llm-actions .el-button--default {
   background: var(--bg-100) !important; border: 2px solid var(--bg-300) !important; color: var(--text-100) !important;
 }
@@ -810,11 +810,11 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
   transform: translateY(-1px); box-shadow: 0 4px 12px rgba(201,168,76,0.1);
 }
 .ac-llm-actions .el-button--success {
-  background: rgba(103,194,58,0.1) !important; border: 2px solid #67c23a !important; color: #67c23a !important;
+  background: rgba(103,194,58,0.1) !important; border: 2px solid #67c23a !important; color: #3d8e2c !important;
   font-weight: 700 !important;
 }
 .ac-llm-actions .el-button--danger {
-  background: rgba(245,108,108,0.08) !important; border: 2px solid #f56c6c !important; color: #f56c6c !important;
+  background: rgba(245,108,108,0.08) !important; border: 2px solid #f56c6c !important; color: #d43a3a !important;
   font-weight: 700 !important;
 }
 
