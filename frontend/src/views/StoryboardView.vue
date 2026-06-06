@@ -257,12 +257,13 @@
             <!-- 高级参数 popover -->
             <el-popover placement="bottom" :width="260" trigger="click">
               <template #reference>
-                <el-button size="small" style="flex:1">⚙️ 高级设置</el-button>
+                <el-button size="small" style="flex:1"><SettingTwo theme="outline" size="14" fill="currentColor" /> 高级</el-button>
               </template>
               <div class="vp-pop">
                 <div class="vp-row">
                   <span>分辨率</span>
                   <el-select v-model="videoResolution" size="small" style="width:120px">
+                    <el-option label="480p" value="480p" />
                     <el-option label="720p" value="720p" />
                     <el-option label="1080p" value="1080p" />
                     <el-option label="2K (1440p)" value="2K" />
