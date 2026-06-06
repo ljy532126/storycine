@@ -469,7 +469,15 @@ async function fetchUserRegions() {
     const json = await res.json();
     if (json.data) {
       Object.assign(userRegion, json.data);
-      nextTick(() => { drawUserCharts(); });
+      // 延迟重试确保 CDN 加载完成
+      nextTick(() => {
+        const tryRender = (retry) => {
+          if (retry > 5) return;
+          if (window.echarts && window.__chinaMapReady) { drawUserCharts(); return; }
+          setTimeout(() => tryRender(retry + 1), 1200);
+        };
+        tryRender(0);
+      });
     }
   } catch { /* ignore */ }
 }
@@ -485,7 +493,7 @@ async function drawUserCharts() {
   if (uaBarInstance) uaBarInstance.dispose();
 
   const provinces = userRegion.provinces || [];
-  if (provinces.length === 0) return;
+  if (provinces.length === 0) return; // 等后端返回数据再渲染
   const maxVal = Math.max(...provinces.map(p => p.value), 1);
 
   // 中国地图
@@ -532,26 +540,48 @@ function ensureEcharts() {
     script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
     script.onload = () => {
       // 加载中国地图 GeoJSON（阿里 DataV 稳定源）
-      fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-        .then(r => r.json())
-        .then(geoJson => {
-          window.echarts.registerMap('china', geoJson);
-          window.__chinaMapReady = true;
-          resolve(true);
-        })
-        .catch(() => {
-          // 回退：尝试旧版 jsdelivr china.js
-          const mapScript = document.createElement('script');
-          mapScript.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/js/china.js';
-          mapScript.onload = () => { window.__chinaMapReady = true; resolve(true); };
-          mapScript.onerror = () => resolve(false);
-          document.head.appendChild(mapScript);
-        });
+      _loadChinaGeo(resolve, 0);
     };
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
   return echartsLoadPromise;
+}
+
+function _loadChinaGeo(resolve, retry) {
+  fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+    .then(r => r.json())
+    .then(geoJson => {
+      window.echarts.registerMap('china', geoJson);
+      window.__chinaMapReady = true;
+      resolve(true);
+    })
+    .catch(() => {
+      if (retry < 2) {
+        // 重试回退源
+        const urls = [
+          'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
+          'https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/json/china.json',
+        ];
+        fetch(urls[retry + 1])
+          .then(r => r.json())
+          .then(geoJson => {
+            window.echarts.registerMap('china', geoJson);
+            window.__chinaMapReady = true;
+            resolve(true);
+          })
+          .catch(() => {
+            if (retry < 1) {
+              _loadChinaGeo(resolve, retry + 1);
+            } else {
+              console.warn('[ChinaMap] 地图 GeoJSON 加载失败，使用离线echo');
+              resolve(false);
+            }
+          });
+      } else {
+        resolve(false);
+      }
+    });
 }
 
 function onResize() {
