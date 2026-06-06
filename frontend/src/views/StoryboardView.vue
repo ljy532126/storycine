@@ -250,31 +250,42 @@
           </div>
           <div class="right-section">
             <label>时长设置 (秒)</label>
-            <el-input-number v-model="videoDuration" :min="1" :max="30" size="small" style="width:100%" @change="saveVideoDuration" />
+            <el-input-number v-model="videoDuration" :min="4" :max="15" size="small" style="width:100%" @change="saveVideoDuration" />
+            <div style="font-size:10px;color:var(--text-200);margin-top:2px">范围 4-15 秒</div>
           </div>
-          <div class="right-section">
-            <label>分辨率</label>
-            <el-select v-model="videoResolution" size="small" style="width:100%">
-              <el-option label="720p" value="720p" />
-              <el-option label="1080p" value="1080p" />
-              <el-option label="2K (1440p)" value="2K" />
-            </el-select>
-          </div>
-          <div class="right-section">
-            <label>视频模型</label>
-            <el-select v-model="selectedVideoModel" size="small" style="width:100%">
-              <el-option label="Seedance 2.0" value="doubao_video" />
-              <el-option label="Seedance 2.0 Fast" value="doubao_video_fast" />
-            </el-select>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-              <label style="font-size:12px;color:var(--text-200)">禁用水印</label>
-              <el-switch v-model="videoNoWatermark" size="small" />
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-              <label style="font-size:12px;color:var(--text-200)">生成音频</label>
-              <el-switch v-model="videoGenAudio" size="small" />
-            </div>
-            <el-button size="small" type="primary" style="width:100%;margin-top:8px" @click="generateVideoForShot" :loading="genningVideo" :disabled="!currentShot">生成视频</el-button>
+          <div class="right-section" style="display:flex;gap:8px;align-items:flex-end">
+            <!-- 高级参数 popover -->
+            <el-popover placement="bottom" :width="260" trigger="click">
+              <template #reference>
+                <el-button size="small" style="flex:1">⚙️ 高级设置</el-button>
+              </template>
+              <div class="vp-pop">
+                <div class="vp-row">
+                  <span>分辨率</span>
+                  <el-select v-model="videoResolution" size="small" style="width:120px">
+                    <el-option label="720p" value="720p" />
+                    <el-option label="1080p" value="1080p" />
+                    <el-option label="2K (1440p)" value="2K" />
+                  </el-select>
+                </div>
+                <div class="vp-row">
+                  <span>视频模型</span>
+                  <el-select v-model="selectedVideoModel" size="small" style="width:130px">
+                    <el-option label="Seedance 2.0" value="doubao_video" />
+                    <el-option label="Seedance 2.0 Fast" value="doubao_video_fast" />
+                  </el-select>
+                </div>
+                <div class="vp-row">
+                  <span>禁用水印</span>
+                  <el-switch v-model="videoNoWatermark" size="small" />
+                </div>
+                <div class="vp-row">
+                  <span>生成音频</span>
+                  <el-switch v-model="videoGenAudio" size="small" />
+                </div>
+              </div>
+            </el-popover>
+            <el-button size="small" type="primary" style="flex:1" @click="generateVideoForShot" :loading="genningVideo" :disabled="!currentShot">生成视频</el-button>
             <div style="margin-top:8px;display:flex;gap:4px">
               <el-input v-model="recoverTaskId" size="small" placeholder="粘贴 taskId 恢复视频" clearable style="flex:1" />
               <el-button size="small" @click="recoverVideo" :loading="recovering" :disabled="!recoverTaskId">恢复</el-button>
@@ -511,7 +522,7 @@ const currentVideoPrompt = ref('');
 const videoDuration = ref(5);
 const videoResolution = ref('720p');
 const videoNoWatermark = ref(true);
-const videoGenAudio = ref(false);
+const videoGenAudio = ref(true);
 const selectedVideoModel = ref('doubao_video');
 const currentRefImages = ref([]);
 const tlTrack = ref(null);
@@ -2062,4 +2073,9 @@ async function handleImport() {
 .btn-danger-delete { background: #e74c3c !important; border-color: #e74c3c !important; color: #fff !important; font-weight: 600 !important; }
 .btn-danger-delete:hover { background: #c0392b !important; border-color: #c0392b !important; color: #fff !important; }
 .btn-danger-delete.is-disabled { background: #ebc9c6 !important; border-color: #ebc9c6 !important; color: rgba(255,255,255,0.7) !important; }
+
+/* 视频高级参数 popover */
+.vp-pop { display: flex; flex-direction: column; gap: 10px; }
+.vp-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-100); }
+.vp-row span { font-weight: 500; }
 </style>
