@@ -175,7 +175,7 @@
           </div>
         </div>
         <div class="st-chart-container">
-          <canvas ref="trendCanvas" width="900" height="200"></canvas>
+          <canvas ref="trendCanvas" width="900" height="240"></canvas>
         </div>
         <div class="st-chart-empty" v-if="!trendData.labels || trendData.labels.length === 0">暂无趋势数据</div>
       </div>
@@ -496,55 +496,80 @@ function drawTrendChart() {
   const canvas = trendCanvas.value;
   if (!canvas || !trendData.labels.length) return;
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.width = 900 * dpr, H = canvas.height = 240 * dpr;
+  canvas.style.width = '100%';
+  canvas.style.height = '240px';
+  ctx.scale(dpr, dpr);
 
   const labels = trendData.labels;
   const scripts = trendData.scripts;
   const comps = trendData.compositions;
-  const maxVal = Math.max(...scripts, ...comps, 1) + 5;
+  const maxVal = Math.max(...scripts, ...comps, 1) * 1.2;
 
-  const pad = { top: 20, right: 20, bottom: 30, left: 35 };
-  const pw = W - pad.left - pad.right;
-  const ph = H - pad.top - pad.bottom;
+  const pad = { top: 24, right: 24, bottom: 32, left: 40 };
+  const pw = 900 - pad.left - pad.right;
+  const ph = 240 - pad.top - pad.bottom;
 
-  // Grid
-  ctx.strokeStyle = '#E8D5C4';
+  function x(i) { return pad.left + (pw / (labels.length - 1 || 1)) * i; }
+  function y(v) { return pad.top + ph - (v / maxVal) * ph; }
+
+  // Background
+  ctx.fillStyle = 'rgba(26,26,46,0.06)';
+  ctx.fillRect(pad.left - 4, pad.top - 4, pw + 8, ph + 8);
+
+  // Grid lines
+  ctx.strokeStyle = '#E8D5C480';
   ctx.lineWidth = 0.5;
   for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (ph / 4) * i;
-    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-    ctx.fillStyle = '#8B7355'; ctx.font = '10px DM Sans'; ctx.textAlign = 'right';
-    ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), pad.left - 6, y + 4);
+    const gy = pad.top + (ph / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(900 - pad.right, gy); ctx.stroke();
+    ctx.fillStyle = '#8B7355'; ctx.font = '10px "DM Sans", sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), pad.left - 8, gy + 4);
   }
 
   // X labels
   ctx.textAlign = 'center';
-  labels.forEach((d, i) => {
-    const x = pad.left + (pw / (labels.length - 1 || 1)) * i;
-    ctx.fillStyle = '#8B7355'; ctx.fillText(d, x, H - 8);
-  });
+  ctx.fillStyle = '#8B7355'; ctx.font = '11px "DM Sans", sans-serif';
+  labels.forEach((d, i) => ctx.fillText(d, x(i), 240 - 10));
 
-  // Draw lines
-  [
-    { data: scripts, color: '#C9A84C' },
-    { data: comps, color: '#8B7355' },
-  ].forEach(series => {
+  // Draw series with area fill
+  const series = [
+    { data: scripts, color: '#c9a84c', glow: '#c9a84c60', label: '剧本生成' },
+    { data: comps, color: '#8B7355', glow: '#8B735540', label: '成片合成' },
+  ];
+
+  series.forEach((ser) => {
+    // Area fill
     ctx.beginPath();
-    ctx.strokeStyle = series.color; ctx.lineWidth = 2.5;
-    series.data.forEach((v, i) => {
-      const x = pad.left + (pw / (labels.length - 1 || 1)) * i;
-      const y = pad.top + ph - (v / maxVal) * ph;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    ser.data.forEach((v, i) => {
+      i === 0 ? ctx.moveTo(x(i), y(v)) : ctx.lineTo(x(i), y(v));
     });
+    ctx.lineTo(x(ser.data.length - 1), pad.top + ph);
+    ctx.lineTo(x(0), pad.top + ph);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + ph);
+    grad.addColorStop(0, ser.glow);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ser.data.forEach((v, i) => {
+      i === 0 ? ctx.moveTo(x(i), y(v)) : ctx.lineTo(x(i), y(v));
+    });
+    ctx.strokeStyle = ser.color;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.stroke();
 
-    series.data.forEach((v, i) => {
-      const x = pad.left + (pw / (labels.length - 1 || 1)) * i;
-      const y = pad.top + ph - (v / maxVal) * ph;
-      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = series.color; ctx.fill();
-      ctx.fillStyle = '#FFFDF9'; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+    // Data points
+    ser.data.forEach((v, i) => {
+      ctx.beginPath(); ctx.arc(x(i), y(v), 4, 0, Math.PI * 2);
+      ctx.fillStyle = ser.color; ctx.fill();
+      ctx.beginPath(); ctx.arc(x(i), y(v), 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
     });
   });
 }
@@ -581,7 +606,6 @@ onUnmounted(() => {
 .st-tab.active { color: var(--text-100); font-weight: 700; border-bottom-color: var(--gold); }
 
 .st-section { margin-bottom: 24px; }
-.st-section-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--text-100); margin: 0 0 14px; letter-spacing: 0.5px; }
 
 /* 概览卡片 */
 .st-overview-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 16px; }
