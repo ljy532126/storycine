@@ -384,10 +384,18 @@ router.get('/user-regions', async (req, res, next) => {
       { name: '湖南', value: 58, pct: 4.5 }, { name: '河北', value: 51, pct: 4.0 },
       { name: '安徽', value: 44, pct: 3.4 }, { name: '陕西', value: 38, pct: 3.0 },
     ];
+    // 补充全部省份（无数据的补0，确保地图不报 NaN）
+    const allProvinceNames = ['广东','江苏','浙江','山东','上海','北京','四川','河南','湖北','福建','湖南','河北','安徽','陕西','广西','云南','贵州','江西','山西','辽宁','吉林','黑龙江','内蒙古','新疆','西藏','甘肃','青海','宁夏','海南','重庆','天津','香港','澳门','台湾'];
+    const provinceMap = {};
+    baseProvinces.forEach(p => { provinceMap[p.name] = p.value; });
     const scale = Math.min(1, Math.max(0.15, totalIps.length / 300));
-    const provinces = baseProvinces.map(p => ({
-      ...p, value: Math.max(1, Math.round(p.value * scale)),
-    })).filter(p => p.value > 0);
+    const provinces = allProvinceNames.map(name => {
+      const rawVal = provinceMap[name] || 0;
+      const val = Math.max(0, Math.round(rawVal * scale));
+      return { name, value: val };
+    }).filter(p => p.value > 0 || provinceMap[p.name] !== undefined || baseProvinces.some(b => b.name === p.name));
+    // 确保有数据的省份排前面
+    provinces.sort((a, b) => b.value - a.value);
     const totalVal = provinces.reduce((s, p) => s + p.value, 0) || 1;
     provinces.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
 

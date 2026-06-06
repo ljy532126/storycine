@@ -366,18 +366,18 @@
       </div>
 
       <!-- 地图 + 柱状图 -->
-      <div class="st-grid-2" style="margin-bottom:14px">
-        <div class="st-card">
+      <div class="st-grid-ua-map">
+        <div class="st-card st-ua-map-card">
           <div class="st-card-head">
-            <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 省份访问分布</h2>
+            <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 全国省份IP热力分布图</h2>
           </div>
-          <div ref="uaMapChart" class="ua-chart" style="height:380px"></div>
+          <div ref="uaMapChart" class="ua-chart ua-chart-map"></div>
         </div>
         <div class="st-card">
           <div class="st-card-head">
-            <h2 class="st-section-title"><Trend theme="outline" size="18" fill="var(--gold)" /> 省份 TOP10</h2>
+            <h2 class="st-section-title"><Trend theme="outline" size="18" fill="var(--gold)" /> 省份 TOP10 排行</h2>
           </div>
-          <div ref="uaBarChart" class="ua-chart" style="height:380px"></div>
+          <div ref="uaBarChart" class="ua-chart ua-chart-bar"></div>
         </div>
       </div>
 
@@ -420,7 +420,6 @@ import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
-import * as echarts from 'echarts';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -475,79 +474,76 @@ async function fetchUserRegions() {
   } catch { /* ignore */ }
 }
 
-function drawUserCharts() {
+async function drawUserCharts() {
   const mapDom = uaMapChart.value;
   const barDom = uaBarChart.value;
   if (!mapDom || !barDom) return;
+  const ready = await ensureEcharts();
+  if (!ready) return;
 
   if (uaMapInstance) uaMapInstance.dispose();
   if (uaBarInstance) uaBarInstance.dispose();
 
   const provinces = userRegion.provinces || [];
   if (provinces.length === 0) return;
+  const maxVal = Math.max(...provinces.map(p => p.value), 1);
 
-  // Bar chart: horizontal bars for province top 10
-  uaBarInstance = echarts.init(barDom);
+  // 中国地图
+  uaMapInstance = window.echarts.init(mapDom);
+  uaMapInstance.setOption({
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'item', formatter: function(p) { return (p.name||'') + '<br/>访问IP：' + (p.value||0) + '个'; } },
+    visualMap: {
+      min: 0, max: maxVal, left: 'left', bottom: '5%',
+      text: ['高', '低'], calculable: true,
+      textStyle: { color: '#8B7355' },
+      inRange: { color: ['#e8f0fe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
+    },
+    geo: {
+      map: 'china', zoom: 1.15, center: [105, 35],
+      label: { show: true, fontSize: 9, color: '#8B7355' },
+      itemStyle: { areaColor: '#f5f0eb', borderColor: '#d4c5c0', borderWidth: 1 },
+      emphasis: { label: { color: '#1A1A2E', fontSize: 12 }, itemStyle: { areaColor: '#f5e6c8' } },
+    },
+    series: [{ name: 'IP数量', type: 'map', map: 'china', geoIndex: 0, data: provinces.map(p => ({ name: p.name, value: p.value })) }],
+  });
+
+  // TOP10 柱状图
+  uaBarInstance = window.echarts.init(barDom);
   const top10 = [...provinces].sort((a, b) => b.value - a.value).slice(0, 10);
   uaBarInstance.setOption({
-    tooltip: { trigger: 'axis', formatter: '{b}: {c} IP' },
-    grid: { left: '2%', right: '12%', top: '5%', bottom: '5%', containLabel: true },
-    xAxis: {
-      type: 'value',
-      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
-      splitLine: { lineStyle: { color: 'var(--bg-300)' } },
-    },
-    yAxis: {
-      type: 'category', data: top10.map(i => i.name), inverse: true,
-      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
-      axisLabel: { color: 'var(--text-100)', fontSize: 11 },
-    },
-    series: [{
-      type: 'bar', data: top10.map(i => i.value),
-      itemStyle: {
-        color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
-          colorStops: [{ offset: 0, color: '#c9a84c' }, { offset: 1, color: '#e8c97a' }] },
-        borderRadius: [0, 4, 4, 0],
-      },
-      barWidth: '55%',
-      label: { show: true, position: 'right', color: 'var(--text-100)', fontSize: 11 },
-    }],
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br/>访问IP：' + p[0].value + '个'; } },
+    grid: { left: '2%', right: '14%', top: '5%', bottom: '8%', containLabel: true },
+    xAxis: { type: 'value', axisLine: { lineStyle: { color: '#d4c5c0' } }, splitLine: { lineStyle: { color: '#f0ebe3' } }, axisLabel: { color: '#8B7355', fontSize: 10 } },
+    yAxis: { type: 'category', data: top10.map(i => i.name).reverse(), inverse: true, axisLine: { lineStyle: { color: '#d4c5c0' } }, axisLabel: { color: '#1A1A2E', fontSize: 11, fontWeight: 600 }, axisTick: { show: false } },
+    series: [{ type: 'bar', data: top10.map(i => i.value).reverse(), itemStyle: { borderRadius: [0, 4, 4, 0], color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#c9a84c' }, { offset: 1, color: '#f5e6c8' }] } }, barWidth: '50%', label: { show: true, position: 'right', color: '#8B7355', fontSize: 11, fontWeight: 700 } }],
   });
+}
 
-  // Map: use scatter-like heatmap on China map coordinate grid
-  // Since echarts/map/js/china.js is a CDN dependency, fall back to a simple bar-heat display
-  uaMapInstance = echarts.init(mapDom);
-  const allProvinces = [...provinces].sort((a, b) => b.value - a.value);
-  uaMapInstance.setOption({
-    tooltip: {
-      trigger: 'item',
-      formatter: function(p) { return p.name + '<br/>访问: ' + p.value + ' IP (' + (p.data?.pct || 0) + '%)'; },
-    },
-    grid: { left: '3%', right: '4%', top: '3%', bottom: '8%', containLabel: true },
-    xAxis: {
-      type: 'category', data: allProvinces.map(i => i.name),
-      axisLabel: { color: 'var(--text-200)', fontSize: 10, rotate: 30 },
-      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { lineStyle: { color: 'var(--bg-300)' } },
-      splitLine: { lineStyle: { color: 'var(--bg-300)' } },
-    },
-    series: [{
-      type: 'bar', data: allProvinces.map(i => ({
-        value: i.value, pct: i.pct,
-        itemStyle: {
-          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: i.value > 80 ? [{ offset: 0, color: '#c9a84c' }, { offset: 1, color: '#e8c97a' }]
-              : i.value > 40 ? [{ offset: 0, color: '#6b8fa3' }, { offset: 1, color: '#8aafc2' }]
-              : [{ offset: 0, color: '#8B7355' }, { offset: 1, color: '#a89070' }] },
-        },
-      })),
-      barWidth: '60%',
-      itemStyle: { borderRadius: [4, 4, 0, 0] },
-    }],
+let echartsLoadPromise = null;
+function ensureEcharts() {
+  if (window.echarts) return Promise.resolve(true);
+  if (echartsLoadPromise) return echartsLoadPromise;
+  echartsLoadPromise = new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
+    script.onload = () => {
+      const mapScript = document.createElement('script');
+      mapScript.src = 'https://cdn.jsdelivr.net/npm/echarts/map/js/china.js';
+      mapScript.onload = () => resolve(true);
+      mapScript.onerror = () => resolve(false);
+      document.head.appendChild(mapScript);
+    };
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
   });
+  return echartsLoadPromise;
+}
+
+function onResize() {
+  if (uaMapInstance) uaMapInstance.resize();
+  if (uaBarInstance) uaBarInstance.resize();
 }
 
 // Tab switch
@@ -1064,11 +1060,15 @@ function onAiPieHover(e) {
 watch(() => route.path, (p) => { if (p === '/statistics') refreshAll(); });
 onMounted(async () => {
   await refreshAll();
+  window.addEventListener('resize', onResize);
   trackEvent('page_view');
 });
 
 onUnmounted(() => {
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  window.removeEventListener('resize', onResize);
+  if (uaMapInstance) uaMapInstance.dispose();
+  if (uaBarInstance) uaBarInstance.dispose();
 });
 </script>
 
@@ -1281,6 +1281,10 @@ onUnmounted(() => {
 .ua-stat-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
 .ua-stat-sub { font-size: 10px; margin-top: 2px; }
 .ua-chart { width: 100%; }
+.ua-chart-map { height: 480px; }
+.ua-chart-bar { height: 480px; }
+.st-grid-ua-map { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px; }
+.st-ua-map-card { min-width: 0; }
 .ua-table-wrap { max-height: 400px; overflow-y: auto; }
 .ua-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ua-table th { padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-200); border-bottom: 2px solid rgba(201,168,76,0.2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -1293,5 +1297,7 @@ onUnmounted(() => {
   .st-grid-2, .st-grid-3, .st-grid-4 { grid-template-columns: 1fr; }
   .st-monitor-grid { grid-template-columns: repeat(2, 1fr); }
   .ov-live-row { grid-template-columns: 1fr; }
+  .st-grid-ua-map { grid-template-columns: 1fr; }
+  .ua-chart-map, .ua-chart-bar { height: 320px; }
 }
 </style>
