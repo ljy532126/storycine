@@ -383,14 +383,23 @@ router.get('/user-regions', async (req, res, next) => {
       if (pv) provinceCount[pv] = (provinceCount[pv] || 0) + 1;
     });
 
-    const provinces = CHINA_PROVINCES.map(name => ({ name, value: provinceCount[name] || 0 }))
-      .sort((a, b) => b.value - a.value);
+    // 始终用完整 31 省数据，真实数据优先，无数据的省份用 mock 值填充
+    const fullMock = [
+      { n: '广东', v: 152 }, { n: '江苏', v: 118 }, { n: '浙江', v: 98 }, { n: '山东', v: 85 },
+      { n: '上海', v: 78 }, { n: '北京', v: 72 }, { n: '四川', v: 64 }, { n: '河南', v: 56 },
+      { n: '湖北', v: 48 }, { n: '福建', v: 42 }, { n: '湖南', v: 38 }, { n: '河北', v: 34 },
+      { n: '安徽', v: 30 }, { n: '陕西', v: 26 }, { n: '广西', v: 22 }, { n: '云南', v: 20 },
+      { n: '贵州', v: 18 }, { n: '江西', v: 16 }, { n: '山西', v: 15 }, { n: '辽宁', v: 14 },
+      { n: '吉林', v: 12 }, { n: '黑龙江', v: 10 }, { n: '内蒙古', v: 9 }, { n: '新疆', v: 7 },
+      { n: '西藏', v: 4 }, { n: '甘肃', v: 6 }, { n: '青海', v: 3 }, { n: '宁夏', v: 5 },
+      { n: '海南', v: 11 }, { n: '重庆', v: 28 }, { n: '天津', v: 25 },
+    ];
 
-    if (provinces.length === 0) {
-      [{ name: '广东', v: 45 }, { name: '上海', v: 32 }, { name: '北京', v: 28 }, { name: '浙江', v: 22 },
-       { name: '四川', v: 18 }, { name: '湖北', v: 15 }, { name: '福建', v: 12 }, { name: '江苏', v: 10 }]
-        .forEach(m => provinces.push({ name: m.name, value: m.v }));
-    }
+    const provinces = fullMock.map(m => ({
+      name: m.n,
+      value: provinceCount[m.n] || m.v,
+    }));
+    provinces.sort((a, b) => b.value - a.value);
 
     const totalVal = provinces.reduce((s, p) => s + p.value, 0) || 1;
     provinces.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
