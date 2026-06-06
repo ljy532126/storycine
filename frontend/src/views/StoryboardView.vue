@@ -270,6 +270,17 @@
                   </el-select>
                 </div>
                 <div class="vp-row">
+                  <span>画幅比例</span>
+                  <el-select v-model="videoRatio" size="small" style="width:120px">
+                    <el-option label="9:16 竖屏" value="9:16" />
+                    <el-option label="16:9 横屏" value="16:9" />
+                    <el-option label="4:3" value="4:3" />
+                    <el-option label="1:1" value="1:1" />
+                    <el-option label="3:4" value="3:4" />
+                    <el-option label="21:9" value="21:9" />
+                  </el-select>
+                </div>
+                <div class="vp-row">
                   <span>视频模型</span>
                   <el-select v-model="selectedVideoModel" size="small" style="width:130px">
                     <el-option label="Seedance 2.0" value="doubao_video" />
@@ -517,6 +528,7 @@ const rightTab = ref('draw');
 const currentShotPrompt = ref('');
 const currentVideoPrompt = ref('');
 const videoDuration = ref(5);
+const videoRatio = ref('9:16');
 const videoResolution = ref('720p');
 const videoNoWatermark = ref(true);
 const videoGenAudio = ref(true);
@@ -1298,7 +1310,7 @@ async function batchGenerateVideos() {
       if (charDescsBatch) batchPrompt = charDescsBatch + '。' + batchPrompt;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
+        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
@@ -1533,7 +1545,7 @@ async function generateVideoForShot() {
 
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
     });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '视频生成失败'); return; }
