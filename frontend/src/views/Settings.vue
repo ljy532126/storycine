@@ -19,187 +19,201 @@
     </div>
 
     <!-- ===== LLM 配置 ===== -->
-    <div v-show="settingsTab === 'llm'">
-    <el-row :gutter="24">
-      <el-col :span="14">
-        <el-card class="section-card" shadow="never">
-          <template #header><span class="card-title">LLM 大模型配置</span></template>
-          <el-alert v-if="llmStatus.configured" :title="`当前活跃: ${llmStatus.activeProvider} (${llmStatus.model})`" type="success" :closable="false" show-icon style="margin-bottom:20px" />
-          <el-alert v-else title="尚未配置任何LLM，请至少配置一个provider的API密钥" type="warning" :closable="false" show-icon style="margin-bottom:20px" />
+    <div v-show="settingsTab === 'llm'" class="st-section">
+      <div class="ac-grid">
+        <!-- 状态卡片：当前活跃 -->
+        <div class="ac-card ac-llm-status" :class="{ 'ac-llm-ready': llmStatus.configured }">
+          <div class="ac-llm-status-left">
+            <span class="ac-llm-status-icon">{{ llmStatus.configured ? '✓' : '⚡' }}</span>
+            <div>
+              <div class="ac-llm-status-title">{{ llmStatus.configured ? '已连接' : '未配置' }}</div>
+              <div class="ac-llm-status-sub" v-if="llmStatus.configured">{{ llmStatus.activeProvider }} · {{ llmStatus.model }}</div>
+              <div class="ac-llm-status-sub" v-else>请至少配置一个 Provider 的 API Key</div>
+            </div>
+          </div>
+          <el-button size="small" @click="refreshStatus" :loading="loading" class="ac-llm-refresh">刷新</el-button>
+        </div>
 
-          <el-tabs v-model="activeProvider">
-            <el-tab-pane label="DeepSeek" name="deepseek">
-              <el-form label-position="top">
-                <el-form-item>
-                  <template #label><span>API Key</span></template>
-                  <el-input v-model="form.deepseek.apiKey" type="password" show-password placeholder="sk-..." />
-                  <div style="margin-top:2px"><a href="https://platform.deepseek.com/api_keys" target="_blank" class="key-link">🔑 获取 Key →</a></div>
-                </el-form-item>
-                <el-form-item label="Base URL"><el-input v-model="form.deepseek.baseUrl" placeholder="https://api.deepseek.com/v1" /></el-form-item>
-                <el-form-item label="Model">
-                  <el-select v-model="form.deepseek.model" filterable allow-create>
+        <!-- Provider 选项卡 -->
+        <div class="ac-card ac-llm-providers">
+          <el-tabs v-model="activeProvider" class="ac-llm-tabs">
+            <el-tab-pane name="deepseek">
+              <template #label>
+                <span class="ac-llm-tab-label">
+                  <span class="ac-llm-tab-dot" style="background:#409eff"></span> DeepSeek
+                </span>
+              </template>
+              <div class="ac-llm-form">
+                <div class="ac-llm-row">
+                  <label>API Key</label>
+                  <el-input v-model="form.deepseek.apiKey" type="password" show-password placeholder="sk-..." size="default" />
+                  <a href="https://platform.deepseek.com/api_keys" target="_blank" class="ac-key-link">获取 Key →</a>
+                </div>
+                <div class="ac-llm-row">
+                  <label>Base URL</label>
+                  <el-input v-model="form.deepseek.baseUrl" placeholder="https://api.deepseek.com/v1" size="default" />
+                </div>
+                <div class="ac-llm-row">
+                  <label>Model</label>
+                  <el-select v-model="form.deepseek.model" filterable allow-create style="width:100%">
                     <el-option v-for="m in deepseekModels" :key="m" :label="m" :value="m" />
                   </el-select>
-                </el-form-item>
-                <div style="display:flex;gap:8px">
-                  <el-button type="primary" @click="saveConfig('deepseek')" :loading="saving">保存</el-button>
+                </div>
+                <div class="ac-llm-actions">
+                  <el-button type="primary" @click="saveConfig('deepseek')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
                   <el-button @click="testConnection('deepseek')" :loading="testing === 'deepseek'" :type="testResults['deepseek'] === true ? 'success' : testResults['deepseek'] === false ? 'danger' : ''">{{ testBtnLabel('deepseek') }}</el-button>
                 </div>
-              </el-form>
+              </div>
             </el-tab-pane>
-            <el-tab-pane label="OpenAI" name="openai">
-              <el-form label-position="top">
-                <el-form-item>
-                  <template #label><span>API Key</span></template>
-                  <el-input v-model="form.openai.apiKey" type="password" show-password placeholder="sk-..." />
-                  <div style="margin-top:2px"><a href="https://platform.openai.com/api-keys" target="_blank" class="key-link">🔑 获取 Key →</a></div>
-                </el-form-item>
-                <el-form-item label="Base URL"><el-input v-model="form.openai.baseUrl" placeholder="https://api.openai.com/v1" /></el-form-item>
-                <el-form-item label="Chat Model">
-                  <el-select v-model="form.openai.model" filterable allow-create>
+            <el-tab-pane name="openai">
+              <template #label>
+                <span class="ac-llm-tab-label">
+                  <span class="ac-llm-tab-dot" style="background:#67c23a"></span> OpenAI
+                </span>
+              </template>
+              <div class="ac-llm-form">
+                <div class="ac-llm-row">
+                  <label>API Key</label>
+                  <el-input v-model="form.openai.apiKey" type="password" show-password placeholder="sk-..." size="default" />
+                  <a href="https://platform.openai.com/api-keys" target="_blank" class="ac-key-link">获取 Key →</a>
+                </div>
+                <div class="ac-llm-row">
+                  <label>Base URL</label>
+                  <el-input v-model="form.openai.baseUrl" placeholder="https://api.openai.com/v1" size="default" />
+                </div>
+                <div class="ac-llm-row">
+                  <label>Chat Model</label>
+                  <el-select v-model="form.openai.model" filterable allow-create style="width:100%">
                     <el-option v-for="m in openaiModels" :key="m" :label="m" :value="m" />
                   </el-select>
-                </el-form-item>
-                <el-form-item label="Image Model (生图)">
-                  <el-select v-model="form.openai.imageModel" filterable allow-create>
+                </div>
+                <div class="ac-llm-row">
+                  <label>Image Model</label>
+                  <el-select v-model="form.openai.imageModel" filterable allow-create style="width:100%">
                     <el-option v-for="m in openaiImageModels" :key="m" :label="m" :value="m" />
                   </el-select>
-                </el-form-item>
-                <div style="display:flex;gap:8px">
-                  <el-button type="primary" @click="saveConfig('openai')" :loading="saving">保存</el-button>
+                </div>
+                <div class="ac-llm-actions">
+                  <el-button type="primary" @click="saveConfig('openai')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
                   <el-button @click="testConnection('openai')" :loading="testing === 'openai'" :type="testResults['openai'] === true ? 'success' : testResults['openai'] === false ? 'danger' : ''">{{ testBtnLabel('openai') }}</el-button>
                 </div>
-              </el-form>
+              </div>
             </el-tab-pane>
-            <el-tab-pane label="豆包 / Seedance" name="doubao">
-              <el-form label-position="top">
-                <el-form-item>
-                  <template #label><span>API Key</span></template>
-                  <el-input v-model="form.doubao.apiKey" type="password" show-password placeholder="输入火山方舟 API Key" />
-                  <div style="margin-top:2px"><a href="https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey" target="_blank" class="key-link">🔑 获取 Key →</a></div>
-                </el-form-item>
-                <el-form-item label="Base URL"><el-input v-model="form.doubao.baseUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3" /></el-form-item>
-                <el-form-item label="视频/聊天模型 (Seedance/Chat)">
-                  <el-select v-model="form.doubao.model" filterable allow-create>
+            <el-tab-pane name="doubao">
+              <template #label>
+                <span class="ac-llm-tab-label">
+                  <span class="ac-llm-tab-dot" style="background:#e6a23c"></span> 豆包 / Seedance
+                </span>
+              </template>
+              <div class="ac-llm-form">
+                <div class="ac-llm-row">
+                  <label>API Key</label>
+                  <el-input v-model="form.doubao.apiKey" type="password" show-password placeholder="输入火山方舟 API Key" size="default" />
+                  <a href="https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey" target="_blank" class="ac-key-link">获取 Key →</a>
+                </div>
+                <div class="ac-llm-row">
+                  <label>Base URL</label>
+                  <el-input v-model="form.doubao.baseUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3" size="default" />
+                </div>
+                <div class="ac-llm-row">
+                  <label>视频/聊天模型</label>
+                  <el-select v-model="form.doubao.model" filterable allow-create style="width:100%">
                     <el-option v-for="m in doubaoModels" :key="m" :label="m" :value="m" />
                   </el-select>
-                </el-form-item>
-                <el-form-item label="生图模型 (Seedream)">
-                  <el-select v-model="form.doubao.imageModel" filterable allow-create>
+                </div>
+                <div class="ac-llm-row">
+                  <label>生图模型</label>
+                  <el-select v-model="form.doubao.imageModel" filterable allow-create style="width:100%">
                     <el-option v-for="m in seedreamModels" :key="m" :label="m" :value="m" />
                   </el-select>
-                </el-form-item>
-                <div style="display:flex;gap:8px">
-                  <el-button type="primary" @click="saveConfig('doubao')" :loading="saving">保存</el-button>
+                </div>
+                <div class="ac-llm-actions">
+                  <el-button type="primary" @click="saveConfig('doubao')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
                   <el-button @click="testConnection('doubao')" :loading="testing === 'doubao'" :type="testResults['doubao'] === true ? 'success' : testResults['doubao'] === false ? 'danger' : ''">{{ testBtnLabel('doubao') }}</el-button>
                 </div>
-              </el-form>
-
-              <!-- Seedance 用量 -->
-              <el-divider />
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                <span style="font-weight:600;font-size:14px">Seedance 2.0 用量</span>
-                <el-button size="small" @click="fetchUsage" :loading="usageLoading">刷新</el-button>
-              </div>
-              <el-alert type="warning" :closable="false" show-icon style="margin-bottom:12px">
-                <template #title>
-                  火山引擎规则：视频生成后 <b>24 小时内</b>需下载，超时链接自动失效。已下载的视频可在 <router-link to="/media-library" style="color:#E6A23C;text-decoration:underline">素材库 → 视频</router-link> 中查看。
-                </template>
-              </el-alert>
-              <div v-if="usageError" style="color:#E17373;margin-bottom:8px">{{ usageError }}</div>
-              <div v-if="usage" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-                <div style="background:#f5f7fa;border-radius:8px;padding:12px 16px;min-width:100px">
-                  <div style="font-size:12px;color:#909399">总 Token</div>
-                  <div style="font-size:20px;font-weight:700;color:#303133">{{ (usage.totalTokens / 1000).toFixed(0) }}K</div>
-                </div>
-                <div style="background:#f5f7fa;border-radius:8px;padding:12px 16px;min-width:100px">
-                  <div style="font-size:12px;color:#909399">成功/总任务</div>
-                  <div style="font-size:20px;font-weight:700;color:#67C23A">{{ usage.succeededCount }}<span style="font-size:14px;color:#909399">/{{ usage.totalTasks }}</span></div>
-                </div>
-                <div style="background:#f5f7fa;border-radius:8px;padding:12px 16px;min-width:100px">
-                  <div style="font-size:12px;color:#909399">预估费用</div>
-                  <div style="font-size:20px;font-weight:700;color:#E6A23C">~{{ usage.estimatedCost }}</div>
-                </div>
-                <div v-for="(v, k) in usage.byResolution" :key="k" style="background:#f5f7fa;border-radius:8px;padding:12px 16px">
-                  <div style="font-size:12px;color:#909399">{{ k }}</div>
-                  <div style="font-size:18px;font-weight:700;color:#303133">{{ (v.tokens/1000).toFixed(0) }}K<span style="font-size:12px;color:#909399;font-weight:400"> / {{ v.tasks }}个</span></div>
-                </div>
-              </div>
-
-              <!-- 任务明细列表 -->
-              <div v-if="usage && usage.tasks" style="font-size:12px">
-                <div style="font-weight:600;margin-bottom:6px;font-size:13px">全部任务明细</div>
-                <!-- 表头 -->
-                <div style="display:flex;align-items:center;padding:4px 8px;background:#f0f2f5;border-radius:4px;gap:4px;font-size:11px;color:#909399;font-weight:600">
-                  <span style="flex-shrink:0;width:44px;text-align:center">状态</span>
-                  <span style="flex:1;min-width:0">任务ID</span>
-                  <span style="flex-shrink:0;width:36px;text-align:center">画质</span>
-                  <span style="flex-shrink:0;width:40px;text-align:center">时长</span>
-                  <span style="flex-shrink:0;width:46px;text-align:right">Token</span>
-                  <span style="flex-shrink:0;width:36px;text-align:right">费用</span>
-                  <span style="flex-shrink:0;width:74px;text-align:right">提交时间</span>
-                  <span style="flex-shrink:0;width:20px" title="在线播放">▶</span>
-                  <span style="flex-shrink:0;width:20px" title="下载到素材库">⬇</span>
-                </div>
-                <div v-for="t in usage.tasks" :key="t.id" style="display:flex;align-items:center;padding:6px 8px;border-bottom:1px solid #ebeef5;gap:4px">
-                  <el-tag :type="t.status==='succeeded'?'success':t.status==='failed'?'danger':'warning'" size="small" style="flex-shrink:0;width:44px;text-align:center;font-size:11px">{{ t.status==='succeeded'?'成功':t.status==='failed'?'失败':t.status }}</el-tag>
-                  <span style="flex:1;color:#606266;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:11px" :title="t.id">{{ t.id }}</span>
-                  <span style="color:#909399;flex-shrink:0;width:36px;text-align:center;font-size:11px">{{ t.resolution||'-' }}</span>
-                  <span style="color:#909399;flex-shrink:0;width:40px;text-align:center;font-size:11px">{{ t.duration }}s</span>
-                  <span style="color:#303133;font-weight:600;flex-shrink:0;width:46px;text-align:right;font-size:11px">{{ (t.tokens/1000).toFixed(0) }}K</span>
-                  <span style="color:#E6A23C;flex-shrink:0;width:36px;text-align:right;font-size:11px">¥{{ t.cost }}</span>
-                  <span style="color:#909399;flex-shrink:0;width:74px;text-align:right;font-size:10px">{{ t.createdAt ? t.createdAt.slice(5,16).replace('T',' ') : '' }}</span>
-                  <a v-if="t.videoUrl && !t.expired" :href="`/api/v1/config/llm/video-proxy?url=${encodeURIComponent(t.videoUrl)}`" target="_blank" style="flex-shrink:0;width:20px;text-align:center;color:#409EFF;text-decoration:none;font-size:12px" title="在线播放">▶</a>
-                  <span v-else-if="t.status==='succeeded' && t.expired" style="flex-shrink:0;width:20px;text-align:center;font-size:10px;color:#C0C4CC" title="TOS链接已过期（超24小时）">⏰</span>
-                  <span v-else style="flex-shrink:0;width:20px"></span>
-                  <el-button v-if="t.status==='succeeded' && !t.expired && t.videoUrl" size="small" type="primary" text @click="downloadVideo(t)" :loading="t._downloading" style="flex-shrink:0;width:20px;min-width:20px;padding:0;font-size:13px" title="下载到素材库（24小时内有效）">⬇</el-button>
-                  <span v-else-if="t.status==='succeeded' && t.expired" style="flex-shrink:0;width:20px;text-align:center;font-size:10px;color:#C0C4CC" title="TOS链接已过期，无法下载">⏰</span>
-                  <span v-else style="flex-shrink:0;width:20px"></span>
-                </div>
               </div>
             </el-tab-pane>
-            <el-tab-pane label="通义 (Tongyi)" name="tongyi">
-              <el-form label-position="top">
-                <el-form-item>
-                  <template #label><span>API Key</span></template>
-                  <el-input v-model="form.tongyi.apiKey" type="password" show-password placeholder="输入通义API Key" />
-                  <div style="margin-top:2px"><a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" class="key-link">🔑 获取 Key →</a></div>
-                </el-form-item>
-                <el-form-item label="Base URL"><el-input v-model="form.tongyi.baseUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" /></el-form-item>
-                <el-form-item label="Model">
-                  <el-select v-model="form.tongyi.model" filterable allow-create>
+            <el-tab-pane name="tongyi">
+              <template #label>
+                <span class="ac-llm-tab-label">
+                  <span class="ac-llm-tab-dot" style="background:#9b59b6"></span> 通义
+                </span>
+              </template>
+              <div class="ac-llm-form">
+                <div class="ac-llm-row">
+                  <label>API Key</label>
+                  <el-input v-model="form.tongyi.apiKey" type="password" show-password placeholder="输入通义 API Key" size="default" />
+                  <a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" class="ac-key-link">获取 Key →</a>
+                </div>
+                <div class="ac-llm-row">
+                  <label>Base URL</label>
+                  <el-input v-model="form.tongyi.baseUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" size="default" />
+                </div>
+                <div class="ac-llm-row">
+                  <label>Model</label>
+                  <el-select v-model="form.tongyi.model" filterable allow-create style="width:100%">
                     <el-option v-for="m in tongyiModels" :key="m" :label="m" :value="m" />
                   </el-select>
-                </el-form-item>
-                <div style="display:flex;gap:8px">
-                  <el-button type="primary" @click="saveConfig('tongyi')" :loading="saving">保存</el-button>
+                </div>
+                <div class="ac-llm-actions">
+                  <el-button type="primary" @click="saveConfig('tongyi')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
                   <el-button @click="testConnection('tongyi')" :loading="testing === 'tongyi'" :type="testResults['tongyi'] === true ? 'success' : testResults['tongyi'] === false ? 'danger' : ''">{{ testBtnLabel('tongyi') }}</el-button>
                 </div>
-              </el-form>
+              </div>
             </el-tab-pane>
           </el-tabs>
-        </el-card>
-      </el-col>
+        </div>
 
-      <el-col :span="10">
-        <el-card class="section-card" shadow="never">
-          <template #header><span class="card-title">当前配置状态</span></template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="DeepSeek"><el-tag :type="summary.deepseek?.apiKey ? 'success' : 'info'">{{ summary.deepseek?.apiKey || '未配置' }}</el-tag></el-descriptions-item>
-            <el-descriptions-item label="OpenAI"><el-tag :type="summary.openai.apiKey ? 'success' : 'info'">{{ summary.openai.apiKey || '未配置' }}</el-tag></el-descriptions-item>
-            <el-descriptions-item label="豆包"><el-tag :type="summary.doubao.apiKey ? 'success' : 'info'">{{ summary.doubao.apiKey || '未配置' }}</el-tag></el-descriptions-item>
-            <el-descriptions-item label="通义"><el-tag :type="summary.tongyi.apiKey ? 'success' : 'info'">{{ summary.tongyi.apiKey || '未配置' }}</el-tag></el-descriptions-item>
-            <el-descriptions-item label="活跃Provider"><el-tag type="success">{{ summary.activeProvider }}</el-tag></el-descriptions-item>
-          </el-descriptions>
-          <el-divider />
-          <el-alert type="info" :closable="false" show-icon>
-            <template #title>密钥已保存到 MongoDB 数据库，重启后自动加载，无需重新输入。<br/>也可在 backend/.env 中设置环境变量（数据库值优先）。</template>
+        <!-- Seedance 用量 -->
+        <div class="ac-card" v-if="activeProvider === 'doubao'">
+          <div class="ac-card-head">
+            <h3 class="ac-card-title"><TrendCharts theme="outline" size="18" fill="var(--gold)" /> Seedance 2.0 用量</h3>
+            <el-button size="small" @click="fetchUsage" :loading="usageLoading">刷新</el-button>
+          </div>
+          <el-alert type="warning" :closable="false" show-icon style="margin-bottom:14px">
+            <template #title>火山引擎规则：视频生成后 <b>24 小时内</b>需下载，超时自动失效。已下载的视频可在 <router-link to="/media-library" style="color:var(--gold);text-decoration:underline">素材库</router-link> 查看。</template>
           </el-alert>
-          <el-divider />
-          <el-button @click="refreshStatus" :loading="loading">刷新状态</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
+          <div v-if="usageError" style="color:#f56c6c;margin-bottom:8px;font-size:12px">{{ usageError }}</div>
+          <div v-if="usage" class="ac-llm-usage-grid">
+            <div class="ac-usage-card">
+              <span class="ac-usage-num">{{ (usage.totalTokens / 1000).toFixed(0) }}K</span>
+              <span class="ac-usage-label">总 Token</span>
+            </div>
+            <div class="ac-usage-card">
+              <span class="ac-usage-num" style="color:#67c23a">{{ usage.succeededCount }}<span style="font-size:14px;color:var(--text-200)">/{{ usage.totalTasks }}</span></span>
+              <span class="ac-usage-label">成功/总任务</span>
+            </div>
+            <div class="ac-usage-card">
+              <span class="ac-usage-num" style="color:#e6a23c">~{{ usage.estimatedCost }}</span>
+              <span class="ac-usage-label">预估费用</span>
+            </div>
+            <div v-for="(v, k) in usage.byResolution" :key="k" class="ac-usage-card">
+              <span class="ac-usage-num" style="font-size:18px">{{ (v.tokens/1000).toFixed(0) }}K<span style="font-size:11px;color:var(--text-200)"> / {{ v.tasks }}个</span></span>
+              <span class="ac-usage-label">{{ k }}</span>
+            </div>
+          </div>
+          <div v-if="usage && usage.tasks" class="ac-usage-table-wrap">
+            <div style="font-weight:600;margin-bottom:8px;font-size:13px">任务明细</div>
+            <el-table :data="usage.tasks" size="small" stripe max-height="320" style="font-size:12px">
+              <el-table-column label="状态" width="70">
+                <template #default="{row}"><el-tag :type="row.status==='succeeded'?'success':row.status==='failed'?'danger':'warning'" size="small">{{ row.status==='succeeded'?'成功':row.status==='failed'?'失败':row.status }}</el-tag></template>
+              </el-table-column>
+              <el-table-column prop="id" label="任务ID" min-width="120" show-overflow-tooltip />
+              <el-table-column label="画质" width="60"><template #default="{row}">{{ row.resolution||'-' }}</template></el-table-column>
+              <el-table-column label="时长" width="50"><template #default="{row}">{{ row.duration }}s</template></el-table-column>
+              <el-table-column label="Token" width="70"><template #default="{row}">{{ (row.tokens/1000).toFixed(0) }}K</template></el-table-column>
+              <el-table-column label="费用" width="60"><template #default="{row}"><span style="color:#e6a23c">¥{{ row.cost }}</span></template></el-table-column>
+              <el-table-column label="时间" width="130"><template #default="{row}">{{ row.createdAt ? row.createdAt.slice(5,16).replace('T',' ') : '' }}</template></el-table-column>
+              <el-table-column label="操作" width="60">
+                <template #default="{row}">
+                  <el-button v-if="row.status==='succeeded' && !row.expired && row.videoUrl" size="small" type="primary" link @click="downloadVideo(row)" :loading="row._downloading">下载</el-button>
+                  <span v-else-if="row.status==='succeeded'" style="font-size:10px;color:var(--text-200)">已过期</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== 生图设置 ===== -->
