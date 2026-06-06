@@ -120,6 +120,9 @@ router.get('/top-genres', async (req, res, next) => {
 });
 
 // ===== 4. 服务器监控 =====
+// 首次启动时立即采样一次，确保第一次请求就有有效 CPU 数据
+let lastCpuSample = { time: Date.now(), times: os.cpus().map(c => ({ ...c.times })) };
+
 router.get('/server-monitor', (req, res) => {
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
@@ -127,9 +130,28 @@ router.get('/server-monitor', (req, res) => {
   const cpus = os.cpus();
   const uptimeSec = Math.floor(os.uptime());
 
-  // 更精确的 CPU 使用率：通过 loadAvg 相对核心数计算
+  // 实时 CPU 使用率：两次 os.cpus() 采样的差值
+  let cpuUsagePct = 0;
+  const now = Date.now();
+  if (lastCpuSample) {
+    const elapsed = now - lastCpuSample.time;
+    if (elapsed > 0) {
+      let totalDelta = 0;
+      let idleDelta = 0;
+      for (let i = 0; i < cpus.length; i++) {
+        const prev = lastCpuSample.times[i];
+        const curr = cpus[i].times;
+        const prevTotal = prev.user + prev.nice + prev.sys + prev.idle + prev.irq;
+        const currTotal = curr.user + curr.nice + curr.sys + curr.idle + curr.irq;
+        totalDelta += (currTotal - prevTotal);
+        idleDelta += (curr.idle - prev.idle);
+      }
+      cpuUsagePct = totalDelta > 0 ? Math.round((1 - idleDelta / totalDelta) * 100) : 0;
+    }
+  }
+  lastCpuSample = { time: now, times: cpus.map(c => ({ ...c.times })) };
+
   const loadAvg = os.loadavg();
-  const cpuUsagePct = Math.min(100, Math.round((loadAvg[0] / cpus.length) * 100));
 
   const d = Math.floor(uptimeSec / 86400);
   const h = Math.floor((uptimeSec % 86400) / 3600);
