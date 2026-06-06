@@ -504,7 +504,7 @@ async function drawUserCharts() {
       inRange: { color: ['#bfdbfe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
     },
     geo: {
-      map: MAP_NAME, zoom: 2.5, center: [104.5, 36],
+      map: MAP_NAME, zoom: 1.8, center: [104.5, 36],
       roam: true,
       label: { show: false },
       emphasis: {
@@ -1298,8 +1298,8 @@ onUnmounted(() => {
 .ua-stat-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
 .ua-stat-sub { font-size: 10px; margin-top: 2px; }
 .ua-chart { width: 100%; }
-.ua-chart-map { height: 560px; }
-.ua-chart-bar { height: 560px; }
+.ua-chart-map { height: 420px; }
+.ua-chart-bar { height: 420px; }
 .st-grid-ua-map { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px; }
 .st-ua-map-card { min-width: 0; padding: 14px 16px !important; }
 .ua-table-wrap { max-height: 400px; overflow-y: auto; }
