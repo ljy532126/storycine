@@ -8,33 +8,15 @@
 
     <!-- 统计卡片 -->
     <div class="um-stats">
-      <div class="um-stat-card">
-        <div class="um-stat-icon" style="background:rgba(201,168,76,0.12)"><People theme="outline" size="22" fill="var(--gold)" /></div>
-        <div class="um-stat-body">
-          <span class="um-stat-num">{{ total }}</span>
-          <span class="um-stat-label">注册用户</span>
+      <div class="um-stat-card" v-for="s in statCards" :key="s.label" :class="s.cssClass">
+        <div class="um-stat-left">
+          <span class="um-stat-num">{{ s.value }}</span>
+          <span class="um-stat-label">{{ s.label }}</span>
         </div>
-      </div>
-      <div class="um-stat-card">
-        <div class="um-stat-icon" style="background:rgba(103,194,58,0.12)"><CheckOne theme="outline" size="22" fill="#67c23a" /></div>
-        <div class="um-stat-body">
-          <span class="um-stat-num">{{ statCounts.active }}</span>
-          <span class="um-stat-label">正常用户</span>
+        <div class="um-stat-icon-wrap">
+          <component :is="s.icon" theme="outline" size="24" :fill="s.iconFill" />
         </div>
-      </div>
-      <div class="um-stat-card">
-        <div class="um-stat-icon" style="background:rgba(230,162,60,0.12)"><Time theme="outline" size="22" fill="#e6a23c" /></div>
-        <div class="um-stat-body">
-          <span class="um-stat-num">{{ statCounts.todayNew }}</span>
-          <span class="um-stat-label">今日新增</span>
-        </div>
-      </div>
-      <div class="um-stat-card">
-        <div class="um-stat-icon" style="background:rgba(201,168,76,0.1)"><FolderOpen theme="outline" size="22" fill="var(--primary-100)" /></div>
-        <div class="um-stat-body">
-          <span class="um-stat-num">{{ statCounts.admin }}</span>
-          <span class="um-stat-label">管理员</span>
-        </div>
+        <div class="um-stat-glow"></div>
       </div>
     </div>
 
@@ -43,27 +25,24 @@
       <div class="um-tb-left">
         <el-input v-model="search" placeholder="搜索账号 / 昵称 / UID" size="default" style="width:240px" clearable @clear="fetchUsers" @keyup.enter="fetchUsers" />
         <el-select v-model="statusFilter" size="default" style="width:120px" clearable placeholder="全部状态" @change="fetchUsers">
-          <el-option label="正常" value="active" />
-          <el-option label="已禁用" value="disabled" />
-          <el-option label="已封禁" value="banned" />
+          <el-option label="正常" value="active" /><el-option label="已禁用" value="disabled" /><el-option label="已封禁" value="banned" />
         </el-select>
         <el-select v-model="roleFilter" size="default" style="width:120px" clearable placeholder="全部角色" @change="fetchUsers">
-          <el-option label="管理员" value="admin" />
-          <el-option label="普通用户" value="user" />
+          <el-option label="管理员" value="admin" /><el-option label="普通用户" value="user" />
         </el-select>
-        <el-button type="primary" size="default" @click="fetchUsers">🔍 搜索</el-button>
+        <el-button type="primary" size="default" @click="fetchUsers" class="um-search-btn"><el-icon><Search /></el-icon> 搜索</el-button>
       </div>
       <div class="um-tb-right">
-        <el-button size="default" @click="fetchUsers" :loading="loading">🔄</el-button>
-        <span class="um-total">共 {{ total }} 个用户</span>
+        <el-button size="default" circle @click="fetchUsers" :loading="loading"><el-icon><Refresh /></el-icon></el-button>
+        <span class="um-total">共 <b>{{ total }}</b> 个用户</span>
       </div>
     </div>
 
     <!-- 用户卡片列表 -->
     <div class="um-list" v-loading="loading">
-      <div v-for="u in users" :key="u._id" class="um-user-card" :class="{ 'um-disabled': u.status !== 'active' }" @click="openDetail(u)">
+      <div v-for="u in users" :key="u._id" class="um-user-card" :class="statusCardClass(u)" @click="openDetail(u)">
         <div class="um-card-left">
-          <div class="um-avatar" :style="{ backgroundImage: u.avatar ? 'url('+u.avatar+')' : '', background: u.avatar ? '' : getAvatarBg(u) }">
+          <div class="um-avatar" :style="avatarStyle(u)">
             <span v-if="!u.avatar">{{ (u.nickname || u.username || '?')[0]?.toUpperCase() }}</span>
           </div>
         </div>
@@ -72,28 +51,31 @@
             <span class="um-uname">{{ u.nickname || u.username }}</span>
             <span class="um-uid" @click.stop="copyUID(u.uid)" :title="copiedUID === u.uid ? '已复制' : '点击复制UID'">{{ u.uid }}</span>
             <el-tag :type="u.role === 'admin' ? 'danger' : ''" size="small" effect="plain">{{ u.role === 'admin' ? '管理员' : '用户' }}</el-tag>
-            <el-tag :type="statusTag(u.status)" size="small" effect="plain">{{ statusMap[u.status] }}</el-tag>
+            <el-tag :type="statusTagType(u.status)" size="small" effect="dark">{{ statusMap[u.status] }}</el-tag>
           </div>
           <div class="um-card-row2">
             <span>@{{ u.username }}</span>
+            <span class="um-sep">·</span>
             <span>{{ fmt(u.createdAt) }} 注册</span>
-            <span v-if="u.lastLoginAt">最后登录 {{ fmt(u.lastLoginAt) }}</span>
-          </div>
-          <div class="um-card-row3">
-            <span v-if="u.lastLoginIp">IP: {{ u.lastLoginIp }}</span>
-            <span v-if="u.loginAttempts > 0" style="color:var(--gold)">登录失败 {{ u.loginAttempts }} 次</span>
+            <template v-if="u.lastLoginAt">
+              <span class="um-sep">·</span>
+              <span>最后登录 {{ fmt(u.lastLoginAt) }}</span>
+            </template>
+            <span v-if="u.lastLoginIp" class="um-sep">·</span>
+            <span v-if="u.lastLoginIp">IP: <code>{{ u.lastLoginIp }}</code></span>
+            <span v-if="u.loginAttempts > 0" class="um-warn">登录失败 {{ u.loginAttempts }} 次</span>
           </div>
         </div>
         <div class="um-card-right" @click.stop>
           <el-dropdown trigger="click" @command="(cmd) => handleAction(cmd, u)">
-            <el-button size="small" circle>···</el-button>
+            <el-button size="small" circle class="um-more-btn"><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logs">📋 登录日志</el-dropdown-item>
-                <el-dropdown-item command="active" v-if="u.status !== 'active'">✅ 启用</el-dropdown-item>
-                <el-dropdown-item command="disabled" v-if="u.status === 'active'">⏸ 禁用</el-dropdown-item>
-                <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided>🚫 封禁</el-dropdown-item>
-                <el-dropdown-item command="resetPwd">🔑 重置密码</el-dropdown-item>
+                <el-dropdown-item command="logs"><el-icon><List /></el-icon> 登录日志</el-dropdown-item>
+                <el-dropdown-item command="active" v-if="u.status !== 'active'"><el-icon><Check /></el-icon> 启用</el-dropdown-item>
+                <el-dropdown-item command="disabled" v-if="u.status === 'active'"><el-icon><Close /></el-icon> 禁用</el-dropdown-item>
+                <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided><el-icon><CircleCloseFilled /></el-icon> 封禁</el-dropdown-item>
+                <el-dropdown-item command="resetPwd"><el-icon><Key /></el-icon> 重置密码</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -107,11 +89,11 @@
       <el-pagination background layout="prev, pager, next" :page-size="size" :total="total" :current-page="page" @current-change="p => { page = p; fetchUsers(); }" />
     </div>
 
-    <!-- 用户详情抽屉 -->
+    <!-- 详情抽屉 -->
     <el-drawer v-model="detailVisible" :title="detailUser?.nickname || detailUser?.username || '用户详情'" size="420px" destroy-on-close>
       <template v-if="detailUser">
         <div class="um-detail-avatar">
-          <div class="um-d-avatar" :style="{ backgroundImage: detailUser.avatar ? 'url('+detailUser.avatar+')' : '', background: detailUser.avatar ? '' : getAvatarBg(detailUser) }">
+          <div class="um-d-avatar" :style="avatarStyle(detailUser)">
             <span v-if="!detailUser.avatar">{{ (detailUser.nickname || detailUser.username || '?')[0]?.toUpperCase() }}</span>
           </div>
           <div>
@@ -119,27 +101,21 @@
             <div class="um-d-role">@{{ detailUser.username }} · {{ detailUser.role === 'admin' ? '管理员' : '普通用户' }}</div>
           </div>
         </div>
-
         <el-descriptions :column="1" border size="small" style="margin-top:20px">
-          <el-descriptions-item label="UID">{{ detailUser.uid }}
-            <el-button size="small" link @click="copyUID(detailUser.uid)">{{ copiedUID === detailUser.uid ? '已复制' : '复制' }}</el-button>
-          </el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTag(detailUser.status)" size="small">{{ statusMap[detailUser.status] }}</el-tag>
-          </el-descriptions-item>
+          <el-descriptions-item label="UID">{{ detailUser.uid }} <el-button size="small" link type="primary" @click="copyUID(detailUser.uid)">{{ copiedUID === detailUser.uid ? '✓ 已复制' : '复制' }}</el-button></el-descriptions-item>
+          <el-descriptions-item label="状态"><el-tag :type="statusTagType(detailUser.status)" size="small">{{ statusMap[detailUser.status] }}</el-tag></el-descriptions-item>
           <el-descriptions-item label="注册时间">{{ fmt(detailUser.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="最后登录">{{ fmt(detailUser.lastLoginAt) }}</el-descriptions-item>
-          <el-descriptions-item label="最后登录 IP">{{ detailUser.lastLoginIp || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="最后登录 IP"><code>{{ detailUser.lastLoginIp || '—' }}</code></el-descriptions-item>
           <el-descriptions-item label="登录失败次数">{{ detailUser.loginAttempts || 0 }}</el-descriptions-item>
           <el-descriptions-item label="锁定期限">{{ detailUser.lockedUntil ? fmt(detailUser.lockedUntil) : '—' }}</el-descriptions-item>
         </el-descriptions>
-
-        <div class="um-detail-actions" style="margin-top:20px;display:flex;flex-wrap:wrap;gap:8px">
-          <el-button size="small" @click="handleAction('logs', detailUser); detailVisible = false">登录日志</el-button>
-          <el-button size="small" type="success" v-if="detailUser.status !== 'active'" @click="handleAction('active', detailUser)">启用</el-button>
-          <el-button size="small" type="warning" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)">禁用</el-button>
-          <el-button size="small" type="danger" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)">封禁</el-button>
-          <el-button size="small" type="warning" @click="handleAction('resetPwd', detailUser)">重置密码</el-button>
+        <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:8px">
+          <el-button size="small" @click="handleAction('logs', detailUser); detailVisible = false"><el-icon><List /></el-icon> 登录日志</el-button>
+          <el-button size="small" type="success" v-if="detailUser.status !== 'active'" @click="handleAction('active', detailUser)"><el-icon><Check /></el-icon> 启用</el-button>
+          <el-button size="small" type="warning" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)"><el-icon><Close /></el-icon> 禁用</el-button>
+          <el-button size="small" type="danger" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)"><el-icon><CircleCloseFilled /></el-icon> 封禁</el-button>
+          <el-button size="small" type="warning" @click="handleAction('resetPwd', detailUser)"><el-icon><Key /></el-icon> 重置密码</el-button>
         </div>
       </template>
     </el-drawer>
@@ -151,17 +127,13 @@
         <el-table-column prop="ip" label="IP" width="140" />
         <el-table-column label="地理位置" min-width="160">
           <template #default="{ row }">
-            <span v-if="row.geoInfo?.country">{{ row.geoInfo.country }} {{ row.geoInfo.province }} {{ row.geoInfo.city }}</span>
+            <span v-if="row.geoInfo?.country" class="um-geo-badge">{{ row.geoInfo.country }} {{ row.geoInfo.province }} {{ row.geoInfo.city }}</span>
             <span v-else style="color:var(--text-200)">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="运营商" width="100">
-          <template #default="{ row }">{{ row.geoInfo?.isp || '—' }}</template>
-        </el-table-column>
+        <el-table-column label="运营商" width="100"><template #default="{ row }">{{ row.geoInfo?.isp || '—' }}</template></el-table-column>
         <el-table-column label="结果" width="70">
-          <template #default="{ row }">
-            <el-tag :type="row.success ? 'success' : 'danger'" size="small">{{ row.success ? '成功' : '失败' }}</el-tag>
-          </template>
+          <template #default="{ row }"><el-tag :type="row.success ? 'success' : 'danger'" size="small">{{ row.success ? '成功' : '失败' }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="message" label="说明" min-width="100" show-overflow-tooltip />
       </el-table>
@@ -169,7 +141,7 @@
 
     <!-- 重置密码弹窗 -->
     <el-dialog v-model="resetVisible" title="重置密码" width="420px" destroy-on-close>
-      <p style="color:var(--text-200);margin-bottom:14px">为 <strong>{{ resetUser?.username }}</strong> 设置新密码</p>
+      <p style="color:var(--text-200);margin-bottom:14px">为 <strong style="color:var(--gold)">{{ resetUser?.username }}</strong> 设置新密码</p>
       <el-input v-model="newPassword" type="password" show-password placeholder="至少8位" style="margin-bottom:12px" />
       <template #footer>
         <el-button @click="resetVisible = false">取消</el-button>
@@ -180,9 +152,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { People, CheckOne, Time, FolderOpen } from '@icon-park/vue-next';
+import { People, User } from '@icon-park/vue-next';
 
 const users = ref([]);
 const loading = ref(false);
@@ -194,6 +166,13 @@ const size = ref(20);
 const total = ref(0);
 const statusMap = { active: '正常', disabled: '已禁用', banned: '已封禁' };
 const statCounts = reactive({ active: 0, todayNew: 0, admin: 0 });
+
+const statCards = computed(() => [
+  { label: '注册用户', value: total.value, icon: People, iconFill: '#fff', cssClass: 'um-sc-total' },
+  { label: '正常用户', value: statCounts.active, icon: User, iconFill: '#fff', cssClass: 'um-sc-active' },
+  { label: '今日新增', value: statCounts.todayNew, icon: People, iconFill: '#fff', cssClass: 'um-sc-today' },
+  { label: '管理员', value: statCounts.admin, icon: User, iconFill: '#fff', cssClass: 'um-sc-admin' },
+]);
 
 const detailVisible = ref(false);
 const detailUser = ref(null);
@@ -210,11 +189,28 @@ const newPassword = ref('');
 const resetting = ref(false);
 
 function fmt(d) { return d ? new Date(d).toLocaleString('zh-CN') : '-'; }
-function statusTag(s) { return s === 'active' ? 'success' : s === 'banned' ? 'danger' : 'warning'; }
-function getAvatarBg(u) {
-  const colors = ['#c9a84c','#6b8fa3','#8B7355','#7b6ba3','#409eff','#67c23a','#e6a23c'];
-  const idx = (u.username || '?').charCodeAt(0) % colors.length;
-  return colors[idx];
+function statusTagType(s) { return s === 'active' ? 'success' : s === 'banned' ? 'danger' : 'warning'; }
+function statusCardClass(u) {
+  if (u.status === 'banned') return 'um-card-banned';
+  if (u.status === 'disabled') return 'um-card-disabled';
+  return '';
+}
+
+const avatarColors = ['#c9a84c','#6b8fa3','#8B7355','#7b6ba3','#409eff','#67c23a','#e6a23c'];
+const avatarGradients = [
+  'linear-gradient(135deg, #c9a84c, #e8c97a)', 'linear-gradient(135deg, #6b8fa3, #8aafc2)',
+  'linear-gradient(135deg, #8B7355, #a89070)', 'linear-gradient(135deg, #7b6ba3, #a08fc2)',
+  'linear-gradient(135deg, #409eff, #79b8ff)', 'linear-gradient(135deg, #67c23a, #85ce61)',
+  'linear-gradient(135deg, #e6a23c, #ebb563)',
+];
+function avatarStyle(u) {
+  const idx = (u.username || '?').charCodeAt(0) % avatarGradients.length;
+  return {
+    backgroundImage: u.avatar ? `url(${u.avatar})` : '',
+    background: u.avatar ? '' : avatarGradients[idx],
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
 }
 
 const token = () => localStorage.getItem('token');
@@ -230,7 +226,6 @@ async function fetchUsers() {
     const data = await res.json();
     users.value = data.data?.users || [];
     total.value = data.data?.total || 0;
-    // 统计
     if (data.data?.stats) Object.assign(statCounts, data.data.stats);
     else {
       statCounts.active = users.value.filter(u => u.status === 'active').length;
@@ -258,10 +253,7 @@ function handleAction(cmd, u) {
 async function setStatus(row, status) {
   try { await ElMessageBox.confirm(`确认将 "${row.username}" 设为「${statusMap[status]}」？`, '提示', { type: 'warning' }); } catch { return; }
   try {
-    const res = await fetch(`/api/v1/auth/users/${row._id}/status`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
-      body: JSON.stringify({ status }),
-    });
+    const res = await fetch(`/api/v1/auth/users/${row._id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() }, body: JSON.stringify({ status }) });
     const data = await res.json();
     if (res.ok) { row.status = status; ElMessage.success(data.message || '已更新'); }
     else ElMessage.error(data.message);
@@ -272,10 +264,7 @@ async function doResetPwd() {
   if (!newPassword.value || newPassword.value.length < 8) { ElMessage.warning('密码至少8位'); return; }
   resetting.value = true;
   try {
-    const res = await fetch(`/api/v1/auth/users/${resetUser.value._id}/reset-password`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
-      body: JSON.stringify({ newPassword: newPassword.value }),
-    });
+    const res = await fetch(`/api/v1/auth/users/${resetUser.value._id}/reset-password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() }, body: JSON.stringify({ newPassword: newPassword.value }) });
     const data = await res.json();
     if (res.ok) { ElMessage.success('密码已重置'); resetVisible.value = false; }
     else ElMessage.error(data.message);
@@ -304,21 +293,29 @@ onMounted(() => fetchUsers());
 /* 统计卡片 */
 .um-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
 .um-stat-card {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
-  padding: 16px 18px; transition: all 0.2s;
+  position: relative; overflow: hidden;
+  display: flex; justify-content: space-between; align-items: center;
+  border-radius: 12px; padding: 18px 20px; transition: all 0.25s;
 }
-.um-stat-card:hover { border-color: var(--gold); }
-.um-stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.um-stat-body { display: flex; flex-direction: column; gap: 1px; }
-.um-stat-num { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900; color: var(--text-100); line-height: 1; }
-.um-stat-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
+.um-stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.um-sc-total { background: linear-gradient(135deg, #1A1A2E, #2a2a3e); border: 1px solid #3a3a5e; }
+.um-sc-active { background: linear-gradient(135deg, #1a3a1a, #2a4a2a); border: 1px solid #3a5a3a; }
+.um-sc-today { background: linear-gradient(135deg, #3a2a1a, #4a3a2a); border: 1px solid #5a4a3a; }
+.um-sc-admin { background: linear-gradient(135deg, #2a1a3a, #3a2a4a); border: 1px solid #4a3a5a; }
+
+.um-stat-left { display: flex; flex-direction: column; gap: 2px; position: relative; z-index: 1; }
+.um-stat-num { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 900; color: #fff; line-height: 1; }
+.um-stat-label { font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
+.um-stat-icon-wrap { width: 48px; height: 48px; border-radius: 12px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+.um-stat-glow { position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%); pointer-events: none; }
 
 /* 工具栏 */
 .um-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 8px; flex-wrap: wrap; }
 .um-tb-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .um-tb-right { display: flex; align-items: center; gap: 8px; }
 .um-total { font-size: 13px; color: var(--text-200); white-space: nowrap; }
+.um-total b { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 16px; }
+.um-search-btn { display: flex; align-items: center; gap: 4px !important; }
 
 /* 卡片列表 */
 .um-list { display: flex; flex-direction: column; gap: 8px; }
@@ -326,42 +323,49 @@ onMounted(() => fetchUsers());
   display: flex; align-items: center; gap: 14px;
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
   padding: 14px 18px; cursor: pointer; transition: all 0.2s;
+  border-left: 4px solid transparent;
 }
-.um-user-card:hover { border-color: var(--gold); }
-.um-disabled { opacity: 0.55; }
+.um-user-card:hover { border-color: var(--gold); border-left-color: var(--gold); }
+.um-card-banned { border-left-color: #f56c6c !important; opacity: 0.7; }
+.um-card-disabled { border-left-color: #e6a23c !important; opacity: 0.8; }
 .um-card-left { flex-shrink: 0; }
 .um-avatar {
-  width: 46px; height: 46px; border-radius: 50%; background-size: cover; background-position: center;
+  width: 46px; height: 46px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 18px; font-weight: 700;
 }
 .um-card-body { flex: 1; min-width: 0; }
 .um-card-right { flex-shrink: 0; }
-.um-card-row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
-.um-card-row2 { display: flex; gap: 12px; font-size: 12px; color: var(--text-200); }
-.um-card-row3 { display: flex; gap: 12px; font-size: 11px; color: var(--primary-300); margin-top: 2px; }
-.um-uname { font-size: 14px; font-weight: 700; color: var(--text-100); }
-.um-uid {
-  font-size: 10px; font-family: 'Courier New', monospace; color: var(--primary-300);
-  background: var(--bg-100); padding: 1px 6px; border-radius: 3px; cursor: pointer; user-select: all;
-}
-.um-uid:hover { color: var(--gold); }
+.um-more-btn { border: 1px solid var(--bg-300) !important; background: var(--bg-100) !important; color: var(--text-200) !important; }
+.um-more-btn:hover { border-color: var(--gold) !important; color: var(--gold) !important; }
 
-/* 详情抽屉 */
+.um-card-row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.um-card-row2 { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-200); flex-wrap: wrap; }
+.um-uname { font-size: 15px; font-weight: 700; color: var(--text-100); }
+.um-uid {
+  font-size: 10px; font-family: 'Courier New', monospace; color: var(--gold);
+  background: rgba(201,168,76,0.1); padding: 2px 8px; border-radius: 4px; cursor: pointer; user-select: all;
+}
+.um-uid:hover { background: rgba(201,168,76,0.2); }
+.um-sep { color: var(--bg-300); }
+.um-warn { color: #e6a23c; font-weight: 600; }
+code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold-dark); background: rgba(201,168,76,0.06); padding: 1px 5px; border-radius: 3px; }
+
+/* 抽屉 */
 .um-detail-avatar { display: flex; align-items: center; gap: 14px; }
 .um-d-avatar {
-  width: 64px; height: 64px; border-radius: 50%; background-size: cover; background-position: center;
+  width: 64px; height: 64px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; font-weight: 700; flex-shrink: 0;
 }
 .um-d-name { font-size: 18px; font-weight: 700; color: var(--text-100); }
 .um-d-role { font-size: 12px; color: var(--text-200); margin-top: 2px; }
+.um-geo-badge { background: rgba(201,168,76,0.08); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: var(--gold-dark); }
 
 .um-pager { display: flex; justify-content: center; margin-top: 20px; }
 
 @media (max-width: 768px) {
   .um-stats { grid-template-columns: repeat(2, 1fr); }
   .um-toolbar { flex-direction: column; align-items: stretch; }
-  .um-tb-left { flex-wrap: wrap; }
-  .um-card-row2 { flex-wrap: wrap; gap: 6px; }
+  .um-card-row2 { gap: 2px; }
 }
 </style>
