@@ -197,8 +197,24 @@ async function callLLM(systemPrompt, userPrompt, options = {}) {
     const errMsg = error.response?.data?.error?.message || error.message;
     const httpStatus = error.response?.status || 0;
     console.error(`LLM call failed [${llm.provider}] HTTP ${httpStatus}:`, errMsg);
-    const wrapped = new Error(`LLM调用失败 (${llm.provider}): ${errMsg}`);
-    // 保留 HTTP 状态码，让 error-handler 区分客户端/服务端错误
+
+    // 友好错误提示：引导用户去系统设置配置/充值 Key
+    const friendlyMap = [
+      { match: /overdue balance|balance/i, hint: '您的 API Key 账户欠费余额不足，请前往火山引擎控制台充值。' },
+      { match: /not enough quota|quota|limit exceeded/i, hint: '您的 API 调用额度已用完，请前往火山引擎/DeepSeek 控制台购买更多配额。' },
+      { match: /invalid.*api.?key|unauthorized|authentication|auth/i, hint: 'API Key 无效或未配置，请前往「系统设置 → LLM配置」填写正确的密钥后保存。' },
+      { match: /timeout|ECONNABORTED|ETIMEDOUT/i, hint: '请求超时，请检查网络连接或 API 服务是否可访问。' },
+    ];
+    const friendly = friendlyMap.find(f => f.match.test(errMsg));
+
+    let finalMsg;
+    if (friendly) {
+      finalMsg = `LLM 调用失败：${friendly.hint}\n\n原始错误: ${errMsg}`;
+    } else {
+      finalMsg = `LLM 调用失败 (${llm.provider}): ${errMsg}`;
+    }
+
+    const wrapped = new Error(finalMsg);
     if (httpStatus >= 400 && httpStatus < 500) wrapped.statusCode = httpStatus;
     throw wrapped;
   }

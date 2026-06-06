@@ -534,10 +534,25 @@ onMounted(async () => {
     socket.onScriptGenerationError((data) => {
       scriptStore.setGenerationError();
       addLog('创作失败: ' + data.error, 'error');
-      ElMessage.error(data.error || '生成失败');
+      showFriendlyError(data.error);
     });
   }
 });
+
+function showFriendlyError(msg) {
+  const isKeyError = /API\s*Key|api.?key|密钥|未配置|无效|invalid.*key|unauthorized|authentication/i.test(msg);
+  const isBalanceError = /balance|余额|额度|quota|欠费|billing|not enough|limit exceeded|overdue/i.test(msg);
+  if (isKeyError || isBalanceError) {
+    ElMessageBox.alert(
+      (isBalanceError ? '💳 您的 API 账户余额不足或配额已用完。\n\n' : '🔑 您的 API Key 未配置或已失效。\n\n') +
+      '请前往「系统设置 → LLM配置」检查并更新您的密钥，确保账户余额充足后再试。',
+      isBalanceError ? '余额不足' : 'API Key 未配置',
+      { confirmButtonText: '前往系统设置', type: 'warning' }
+    ).then(() => { router.push('/settings'); }).catch(() => {});
+  } else {
+    ElMessage.error(msg || '生成失败，请稍后重试');
+  }
+}
 
 // keep-alive 缓存激活时：同步从片场列表点击进入的项目
 onActivated(() => {
@@ -643,7 +658,7 @@ async function handleGenerate() {
     scriptStore.setGenerationError();
     addLog('创作失败: ' + data.error, 'error');
     progressMessages[currentStep.value] = '失败: ' + data.error;
-    ElMessage.error(data.error || '生成失败');
+    showFriendlyError(data.error);
   });
 
   try {
