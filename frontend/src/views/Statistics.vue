@@ -490,19 +490,7 @@ async function drawUserCharts() {
   if (provinces.length === 0) return; // 等后端返回数据再渲染
   const maxVal = Math.max(...provinces.map(p => p.value), 1);
 
-  // 简写省名 → GeoJSON 全名映射（数据库用简写，地图GeoJSON用全称）
-  const nameMap = {
-    '广东':'广东省','江苏':'江苏省','浙江':'浙江省','山东':'山东省','上海':'上海市',
-    '北京':'北京市','四川':'四川省','河南':'河南省','湖北':'湖北省','福建':'福建省',
-    '湖南':'湖南省','河北':'河北省','安徽':'安徽省','陕西':'陕西省','广西':'广西壮族自治区',
-    '云南':'云南省','贵州':'贵州省','江西':'江西省','山西':'山西省','辽宁':'辽宁省',
-    '吉林':'吉林省','黑龙江':'黑龙江省','内蒙古':'内蒙古自治区','新疆':'新疆维吾尔自治区',
-    '西藏':'西藏自治区','甘肃':'甘肃省','青海':'青海省','宁夏':'宁夏回族自治区',
-    '海南':'海南省','重庆':'重庆市','天津':'天津市',
-  };
-  const mapData = provinces.map(p => ({ name: nameMap[p.name] || p.name, value: p.value }));
-
-  // 中国地图
+  // 中国城市地图（GeoJSON 用 "合肥" 等短名，后端返回匹配）
   uaMapInstance = echarts.init(mapDom);
   uaMapInstance.setOption({
     backgroundColor: 'transparent',
@@ -514,20 +502,17 @@ async function drawUserCharts() {
       inRange: { color: ['#bfdbfe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
     },
     geo: {
-      map: 'china', zoom: 1.35, center: [104.5, 36],
+      map: MAP_NAME, zoom: 2.5, center: [104.5, 36],
       roam: true,
-      label: {
-        show: true, fontSize: 10, color: '#fff',
-        textShadowColor: 'rgba(0,0,0,0.6)', textShadowBlur: 3,
-      },
+      label: { show: false },
       emphasis: {
-        label: { color: '#1A1A2E', fontSize: 13, fontWeight: 'bold', textShadowBlur: 0 },
+        label: { color: '#1A1A2E', fontSize: 11, fontWeight: 'bold', show: true },
         itemStyle: { areaColor: '#f5e6c8' },
       },
     },
     series: [{
-      name: 'IP数量', type: 'map', map: 'china', geoIndex: 0,
-      data: mapData,
+      name: 'IP数量', type: 'map', map: MAP_NAME, geoIndex: 0,
+      data: provinces.map(p => ({ name: p.name, value: p.value })),
       itemStyle: { borderColor: '#d4c5c0', borderWidth: 1 },
     }],
   });
@@ -547,20 +532,22 @@ async function drawUserCharts() {
 
 let mapReady = false;
 let mapLoadPromise = null;
+const MAP_FILE = '/china_cities.json';
+const MAP_NAME = 'china';
 function ensureEcharts() {
   if (mapReady) return Promise.resolve(true);
   if (mapLoadPromise) return mapLoadPromise;
-  mapLoadPromise = fetch('/china.json')
+  mapLoadPromise = fetch(MAP_FILE)
     .then(r => r.json())
     .then(geoJson => {
-      echarts.registerMap('china', geoJson);
+      echarts.registerMap(MAP_NAME, geoJson);
       mapReady = true;
       // 地图加载完成后立即渲染（如果数据已就绪）
       if (userRegion.provinces?.length) nextTick(() => drawUserCharts());
       return true;
     })
     .catch((e) => {
-      console.error('[ChinaMap] 加载失败:', e);
+      console.error('[CityMap] 加载失败:', e);
       return false;
     });
   return mapLoadPromise;
