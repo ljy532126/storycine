@@ -40,7 +40,8 @@
             <el-tab-pane name="deepseek">
               <template #label>
                 <span class="ac-llm-tab-label">
-                  <span class="ac-llm-tab-dot" style="background:#409eff"></span> DeepSeek
+                  <span :class="['ac-llm-tab-dot', summary.deepseek?.apiKey ? 'ac-dot-ok' : 'ac-dot-off']"></span> DeepSeek
+                  <span v-if="summary.deepseek?.apiKey" class="ac-dot-check">✓</span>
                 </span>
               </template>
               <div class="ac-llm-form">
@@ -68,7 +69,8 @@
             <el-tab-pane name="openai">
               <template #label>
                 <span class="ac-llm-tab-label">
-                  <span class="ac-llm-tab-dot" style="background:#67c23a"></span> OpenAI
+                  <span :class="['ac-llm-tab-dot', summary.openai?.apiKey ? 'ac-dot-ok' : 'ac-dot-off']"></span> OpenAI
+                  <span v-if="summary.openai?.apiKey" class="ac-dot-check">✓</span>
                 </span>
               </template>
               <div class="ac-llm-form">
@@ -102,7 +104,8 @@
             <el-tab-pane name="doubao">
               <template #label>
                 <span class="ac-llm-tab-label">
-                  <span class="ac-llm-tab-dot" style="background:#e6a23c"></span> 豆包 / Seedance
+                  <span :class="['ac-llm-tab-dot', summary.doubao?.apiKey ? 'ac-dot-ok' : 'ac-dot-off']"></span> 豆包 / Seedance
+                  <span v-if="summary.doubao?.apiKey" class="ac-dot-check">✓</span>
                 </span>
               </template>
               <div class="ac-llm-form">
@@ -136,7 +139,8 @@
             <el-tab-pane name="tongyi">
               <template #label>
                 <span class="ac-llm-tab-label">
-                  <span class="ac-llm-tab-dot" style="background:#9b59b6"></span> 通义
+                  <span :class="['ac-llm-tab-dot', summary.tongyi?.apiKey ? 'ac-dot-ok' : 'ac-dot-off']"></span> 通义
+                  <span v-if="summary.tongyi?.apiKey" class="ac-dot-check">✓</span>
                 </span>
               </template>
               <div class="ac-llm-form">
@@ -778,7 +782,10 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
 
 .ac-llm-tabs { margin: 0; }
 .ac-llm-tab-label { display: flex; align-items: center; gap: 6px; }
-.ac-llm-tab-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ac-llm-tab-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; transition: all 0.3s; }
+.ac-dot-ok { background: #67c23a !important; box-shadow: 0 0 6px rgba(103,194,58,0.5); }
+.ac-dot-off { background: var(--bg-300); }
+.ac-dot-check { font-size: 10px; color: #67c23a; font-weight: 700; margin-left: -2px; }
 .ac-llm-form { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; max-width: 520px; }
 .ac-llm-row { display: flex; flex-direction: column; gap: 4px; }
 .ac-llm-row label { font-size: 13px; font-weight: 600; color: var(--text-100); }
