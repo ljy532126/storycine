@@ -76,6 +76,20 @@ function sanitizeScriptData(scriptData) {
 }
 
 // AI一键生成完整剧本体系（异步，WebSocket推送结果）
+
+// 内存中追踪活跃的生成任务（刷新页面后前端可查询恢复）
+const activeGenerations = new Map(); // projectId → { status, startTime, step, userId }
+
+router.get('/generation-status', async (req, res) => {
+  const { projectId } = req.query;
+  if (!projectId) return res.status(400).json({ message: '缺少 projectId' });
+  const job = activeGenerations.get(projectId);
+  if (!job) return res.json({ data: { active: false } });
+  // 清理超过 10 分钟的过期任务
+  if (Date.now() - job.startTime > 600000) { activeGenerations.delete(projectId); return res.json({ data: { active: false } }); }
+  res.json({ data: { active: true, status: job.status, step: job.step, startTime: job.startTime } });
+});
+
 router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
   try {
     await appConfig.loadUserConfig(req.user._id);
@@ -85,6 +99,16 @@ router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
     if (!projectId || !tags) {
       return res.status(400).json({ message: '缺少必要参数: projectId, tags' });
     }
+
+    // 防止重复提交
+    if (activeGenerations.has(projectId)) {
+      const existing = activeGenerations.get(projectId);
+      if (Date.now() - existing.startTime < 600000) {
+        return res.status(409).json({ message: '该片场已有正在进行的剧本生成任务，请等待完成' });
+      }
+    }
+
+    activeGenerations.set(projectId, { status: 'running', startTime: Date.now(), step: 0, userId: req.user._id });
 
     // 读取项目的视觉配置
     const project = await Project.findById(projectId);
@@ -142,6 +166,7 @@ router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
           script,
         },
       });
+      activeGenerations.delete(projectId);
     }).catch((err) => {
       console.error('Script generation error:', err);
       let msg = err.message || '未知错误';
@@ -155,6 +180,7 @@ router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
         msg = 'API 调用频率限制，请稍后重试';
       }
       io.to(`project-${projectId}`).emit('script-generation-error', { error: msg });
+      activeGenerations.delete(projectId);
     });
   } catch (error) { next(error); }
 });

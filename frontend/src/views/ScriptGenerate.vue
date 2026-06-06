@@ -512,32 +512,57 @@ onMounted(async () => {
   if (restored) { currentProjectId.value = restored._id; loadScripts(restored._id); socket.joinProject(restored._id); }
   socket.connect();
 
-  // 如果切回页面时有正在进行的生成任务，重新注册 WebSocket 监听
-  if (scriptStore.generating && currentProjectId.value) {
-    socket.joinProject(currentProjectId.value);
-    socket.onScriptGenerationProgress((data) => {
-      currentStep.value = data.step; nextTick(() => { currentStep.value = data.step; });
-      progressMessages[data.step] = data.message;
-      addLog(data.message, data.level || 'info');
-    });
-    socket.onScriptGenerationComplete((data) => {
-      scriptStore.progressStep = 7;
-      progressMessages[7] = '剧本已保存';
-      addLog('创作完成', 'success');
-      generationResult.value = data.data;
-      scriptStore.setGenerationComplete();
-      loadScripts(currentProjectId.value);
-      setTimeout(() => { logCollapsed.value = true; }, 1500);
-      ElMessage.success('创作完成！剧本已保存 🎉');
-      window.__addNotification?.('创作完成', 'success', '✅');
-    });
-    socket.onScriptGenerationError((data) => {
-      scriptStore.setGenerationError();
-      addLog('创作失败: ' + data.error, 'error');
-      showFriendlyError(data.error);
-    });
+  // 刷新后恢复：检查后端是否有未完成的生成任务
+  const pid = currentProjectId.value || restored?._id;
+  if (pid) {
+    try {
+      const res = await fetch(`/api/v1/scripts/generation-status?projectId=${pid}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const json = await res.json();
+      if (json.data?.active) {
+        // 后端有正在运行的生成任务，恢复前端状态
+        scriptStore.generating = true;
+        scriptStore.genProjectId = pid;
+        logCollapsed.value = false;
+        addLog('检测到后台有正在进行的创作任务，已恢复监听...', 'info');
+        reconnectGenListeners(pid, true);
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 如果切回页面时有 scriptStore 中记录的进行中任务，也恢复监听
+  if (scriptStore.generating && !pid) {
+    reconnectGenListeners(scriptStore.genProjectId, false);
   }
 });
+
+function reconnectGenListeners(pid, fromRefresh) {
+  const shown = fromRefresh === true;
+  socket.joinProject(pid);
+  socket.onScriptGenerationProgress((data) => {
+    currentStep.value = data.step; nextTick(() => { currentStep.value = data.step; });
+    progressMessages[data.step] = data.message;
+    addLog(data.message, data.level || 'info');
+    if (shown) logCollapsed.value = false;
+  });
+  socket.onScriptGenerationComplete((data) => {
+    scriptStore.progressStep = 7;
+    progressMessages[7] = '剧本已保存';
+    addLog('创作完成', 'success');
+    generationResult.value = data.data;
+    scriptStore.setGenerationComplete();
+    loadScripts(currentProjectId.value);
+    setTimeout(() => { logCollapsed.value = true; }, 1500);
+    ElMessage.success('创作完成！剧本已保存 🎉');
+    window.__addNotification?.('创作完成', 'success', '✅');
+  });
+  socket.onScriptGenerationError((data) => {
+    scriptStore.setGenerationError();
+    addLog('创作失败: ' + data.error, 'error');
+    showFriendlyError(data.error);
+  });
+}
 
 function showFriendlyError(msg) {
   const isKeyError = /API\s*Key|api.?key|密钥|未配置|无效|invalid.*key|unauthorized|authentication/i.test(msg);
