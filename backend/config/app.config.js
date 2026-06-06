@@ -73,32 +73,41 @@ const appConfig = {
     secretKey: process.env.MINIO_SECRET_KEY || '',
     bucket: process.env.MINIO_BUCKET || 'autodrama',
   },
+  // 如果已加载了用户配置，不回退到 env（防止用户A使用用户B或全局的 Key）
   llm: {
     get deepseek() {
+      const user = runtimeConfig.deepseek.apiKey;
+      const env = process.env.DEEPSEEK_API_KEY || '';
       return {
-        apiKey: runtimeConfig.deepseek.apiKey || process.env.DEEPSEEK_API_KEY || '',
+        apiKey: user || (_loadedUserId ? '' : env),
         baseUrl: runtimeConfig.deepseek.baseUrl || process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
         model: runtimeConfig.deepseek.model || process.env.DEEPSEEK_MODEL || 'deepseek-v4-pro',
       };
     },
     get doubao() {
+      const user = runtimeConfig.doubao.apiKey;
+      const env = process.env.DOUBAO_API_KEY || '';
       return {
-        apiKey: runtimeConfig.doubao.apiKey || process.env.DOUBAO_API_KEY || '',
+        apiKey: user || (_loadedUserId ? '' : env),
         baseUrl: runtimeConfig.doubao.baseUrl || process.env.DOUBAO_BASE_URL || '',
         model: runtimeConfig.doubao.model || process.env.DOUBAO_MODEL || '',
         imageModel: runtimeConfig.doubao.imageModel || process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-4-5-251128',
       };
     },
     get tongyi() {
+      const user = runtimeConfig.tongyi.apiKey;
+      const env = process.env.TONGYI_API_KEY || '';
       return {
-        apiKey: runtimeConfig.tongyi.apiKey || process.env.TONGYI_API_KEY || '',
+        apiKey: user || (_loadedUserId ? '' : env),
         baseUrl: runtimeConfig.tongyi.baseUrl || process.env.TONGYI_BASE_URL || '',
         model: runtimeConfig.tongyi.model || process.env.TONGYI_MODEL || '',
       };
     },
     get openai() {
+      const user = runtimeConfig.openai.apiKey;
+      const env = process.env.OPENAI_API_KEY || '';
       return {
-        apiKey: runtimeConfig.openai.apiKey || process.env.OPENAI_API_KEY || '',
+        apiKey: user || (_loadedUserId ? '' : env),
         baseUrl: runtimeConfig.openai.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
         model: runtimeConfig.openai.model || process.env.OPENAI_MODEL || 'gpt-4o',
         imageModel: runtimeConfig.openai.imageModel || process.env.OPENAI_IMAGE_MODEL || '',
@@ -107,16 +116,14 @@ const appConfig = {
   },
   image: {
     get jimeng() {
-      return {
-        apiKey: runtimeConfig.jimeng.apiKey || process.env.JIMENG_API_KEY || '',
-        baseUrl: runtimeConfig.jimeng.baseUrl || process.env.JIMENG_BASE_URL || '',
-      };
+      const user = runtimeConfig.jimeng.apiKey;
+      const env = process.env.JIMENG_API_KEY || '';
+      return { apiKey: user || (_loadedUserId ? '' : env), baseUrl: runtimeConfig.jimeng.baseUrl || process.env.JIMENG_BASE_URL || '' };
     },
     get wan27() {
-      return {
-        apiKey: runtimeConfig.wan27.apiKey || process.env.WAN27_API_KEY || '',
-        baseUrl: runtimeConfig.wan27.baseUrl || process.env.WAN27_BASE_URL || '',
-      };
+      const user = runtimeConfig.wan27.apiKey;
+      const env = process.env.WAN27_API_KEY || '';
+      return { apiKey: user || (_loadedUserId ? '' : env), baseUrl: runtimeConfig.wan27.baseUrl || process.env.WAN27_BASE_URL || '' };
     },
     get doubao() {
       const d = appConfig.llm.doubao;

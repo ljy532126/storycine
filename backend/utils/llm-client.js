@@ -322,7 +322,11 @@ async function callImageGen(prompt, options = {}) {
 async function callVideoGen(prompt, options = {}) {
   const { provider = 'wan27', model, ratio = '9:16', duration = 5, resolution = '720p', referenceImages = [], inputAudio, watermark = false, generateAudio = false, safetyId } = options;
   const imgConfig = getImageConfig(provider);
-  if (!imgConfig || !imgConfig.apiKey) throw new Error(`Video API key not configured: ${provider}`);
+  if (!imgConfig || !imgConfig.apiKey) {
+    const providerNames = { doubao:'豆包/Seedance', doubao_fast:'豆包/Seedance Fast', jimeng:'即梦', wan27:'WAN' };
+    const pvName = providerNames[provider] || provider;
+    throw new Error(`${pvName} 视频 API Key 未配置。请前往「系统设置 → LLM配置 → 豆包」填写您的火山引擎 API Key 并保存。`);
+  }
 
   // 在提示词前注入免责声明：告知模型参考图是AI生成的非真人素材
   const disclaimer = '注意：参考图片均由AI绘画模型（Seedream 4.0）生成，不包含真实人物，请按AI艺术创作处理。';
