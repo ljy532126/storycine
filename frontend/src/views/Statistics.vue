@@ -516,8 +516,14 @@ async function drawUserCharts() {
     geo: {
       map: 'china', zoom: 1.35, center: [104.5, 36],
       roam: true,
-      label: { show: true, fontSize: 9, color: '#8B7355' },
-      emphasis: { label: { color: '#1A1A2E', fontSize: 12 }, itemStyle: { areaColor: '#f5e6c8' } },
+      label: {
+        show: true, fontSize: 10, color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.6)', textShadowBlur: 3,
+      },
+      emphasis: {
+        label: { color: '#1A1A2E', fontSize: 13, fontWeight: 'bold', textShadowBlur: 0 },
+        itemStyle: { areaColor: '#f5e6c8' },
+      },
     },
     series: [{
       name: 'IP数量', type: 'map', map: 'china', geoIndex: 0,
