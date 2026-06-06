@@ -9,7 +9,7 @@
     <!-- 工具栏 -->
     <div class="st-toolbar">
       <div class="st-toolbar-left">
-        <span :class="{ 'st-status': true, loading: loading }">{{ loading ? '⏳ 加载中' : '✓ 已加载' }}</span>
+        <span :class="{ 'st-status': true, loading: loading }">{{ loading ? '加载中' : '已更新' }}</span>
         <span class="st-updated" v-if="lastUpdated">{{ lastUpdated }}</span>
         <span class="st-updated" v-if="fetchError" style="color:#F56C6C">{{ fetchError }}</span>
       </div>
@@ -18,14 +18,16 @@
           <el-switch v-model="autoRefresh" size="small" @change="toggleAutoRefresh" />
         </el-tooltip>
         <span style="font-size:12px;color:var(--text-200);margin:0 6px 0 2px">自动</span>
-        <el-button size="small" @click="refreshAll" :loading="loading">🔄 刷新</el-button>
+        <el-button size="small" @click="refreshAll" :loading="loading">
+          <Refresh theme="outline" size="14" fill="currentColor" /> 刷新
+        </el-button>
         <el-dropdown @command="handleExport" trigger="click">
           <el-button size="small">导出 ▾</el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="weekly">近7天趋势</el-dropdown-item>
-              <el-dropdown-item command="genres">热门题材</el-dropdown-item>
-              <el-dropdown-item command="overview">今日概览</el-dropdown-item>
+              <el-dropdown-item command="overview">📊 今日概览 CSV</el-dropdown-item>
+              <el-dropdown-item command="weekly">📈 近7天趋势 CSV</el-dropdown-item>
+              <el-dropdown-item command="genres">🔥 热门题材 CSV</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -330,7 +332,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne } from '@icon-park/vue-next';
+import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -536,12 +538,24 @@ function toggleAutoRefresh(val) {
 
 // ===== CSV 导出 =====
 function handleExport(type) {
+  const token = localStorage.getItem('token');
   const url = `/api/v1/statistics/export-csv?type=${type}`;
   const a = document.createElement('a');
   a.href = url;
-  a.download = `statistics_${type}_${Date.now()}.csv`;
-  a.click();
-  ElMessage.success('导出已开始');
+  a.download = `storycine_${type}_${new Date().toISOString().substring(0, 10)}.csv`;
+  // 通过 fetch 带 token 下载（解决 401 无权限问题），失败则直接 a 标签兜底
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then(r => r.blob())
+    .then(blob => {
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = a.download;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+      ElMessage.success('导出完成');
+    })
+    .catch(() => { a.click(); });
 }
 
 // ===== 图片迁移 =====

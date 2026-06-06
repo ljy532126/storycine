@@ -307,7 +307,6 @@ router.get('/export-csv', async (req, res, next) => {
         csv += `${d.toISOString().substring(0, 10)},${sc},${cc}\n`;
       }
     } else if (type === 'genres') {
-      // 导出题材
       const projects = await Project.find({ isDeleted: { $ne: true } }, 'videoConfig.visualStyle videoConfig.subStyle').lean();
       const map = {};
       projects.forEach(p => {
@@ -319,6 +318,27 @@ router.get('/export-csv', async (req, res, next) => {
       Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([name, count]) => {
         csv += `${name},${count},${Math.round(count / total * 100)}\n`;
       });
+    } else if (type === 'overview') {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 86400000);
+      const [projects, scripts, comps, users] = await Promise.all([
+        Project.countDocuments({ createdAt: { $gte: todayStart, $lt: todayEnd }, isDeleted: { $ne: true } }),
+        Script.countDocuments({ createdAt: { $gte: todayStart, $lt: todayEnd } }),
+        Composition.countDocuments({ createdAt: { $gte: todayStart, $lt: todayEnd } }),
+        Analytics.distinct('userId', { createdAt: { $gte: todayStart, $lt: todayEnd } }),
+      ]);
+      const total = scripts + comps || 1;
+      const failedScripts = await Script.countDocuments({ createdAt: { $gte: todayStart, $lt: todayEnd }, status: { $nin: ['draft', 'approved', 'locked'] } });
+      const failedComps = await Composition.countDocuments({ createdAt: { $gte: todayStart, $lt: todayEnd }, status: 'failed' });
+      const successRate = Math.round((scripts + comps - failedScripts - failedComps) / total * 100);
+      csv = `指标,数值\n`;
+      csv += `新增用户,${users.length}\n`;
+      csv += `新增项目,${projects}\n`;
+      csv += `剧本生成,${scripts}\n`;
+      csv += `成片合成,${comps}\n`;
+      csv += `成功率,${successRate}%\n`;
+      csv += `导出时间,${now.toLocaleString('zh-CN')}\n`;
     } else {
       csv = '类型,值\n(无数据)\n';
     }
