@@ -235,25 +235,65 @@
     </div>
 
     <!-- AI 调用统计 -->
-    <section class="st-section" v-if="endpoints.ai && statTab === 'ai'">
-      <div class="st-grid-3">
-        <div class="st-card st-ai-card">
-          <div class="st-ai-icon-wrap" style="background:rgba(201,168,76,0.1)"><PictureOne theme="outline" size="28" fill="var(--gold)" /></div>
-          <div class="st-ai-num">{{ endpoints.ai?.image?.total || 0 }}</div>
-          <div class="st-ai-label">AI 生图</div>
-          <div class="st-ai-stat"><span class="ai-ok">{{ endpoints.ai?.image?.success || 0 }} 成功</span> · <span class="ai-fail">{{ endpoints.ai?.image?.fail || 0 }} 失败</span></div>
+    <section class="st-section" v-show="statTab === 'ai'">
+      <div class="st-grid-2">
+        <div class="st-card">
+          <div class="st-card-head">
+            <h2 class="st-section-title"><Trend theme="outline" size="18" fill="var(--gold)" /> AI 调用统计</h2>
+            <span class="st-card-badge" v-if="endpoints.ai">{{ (endpoints.ai.image?.total || 0) + (endpoints.ai.video?.total || 0) + (endpoints.ai.llm?.total || 0) }} 次</span>
+          </div>
+          <div class="st-chart-container" style="position:relative">
+            <canvas ref="aiBarCanvas" width="500" height="260" @mousemove="onAiBarHover" @mouseleave="aiBarTooltip.show = false"></canvas>
+            <div v-if="aiBarTooltip.show" class="chart-tooltip" :style="{ left: aiBarTooltip.x + 'px', top: aiBarTooltip.y + 'px' }">
+              <div class="ct-date">{{ aiBarTooltip.category }}</div>
+              <div><span class="ct-dot" style="background:#67c23a"></span> 成功: {{ aiBarTooltip.success }}</div>
+              <div><span class="ct-dot" style="background:#f56c6c"></span> 失败: {{ aiBarTooltip.fail }}</div>
+            </div>
+          </div>
+          <div class="chart-legend" style="margin-top:4px">
+            <span class="legend-item"><span class="legend-dot" style="background:#67c23a"></span> 成功</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#f56c6c"></span> 失败</span>
+          </div>
         </div>
-        <div class="st-card st-ai-card">
-          <div class="st-ai-icon-wrap" style="background:rgba(107,143,163,0.1)"><PlayTwo theme="outline" size="28" fill="#6b8fa3" /></div>
-          <div class="st-ai-num">{{ endpoints.ai?.video?.total || 0 }}</div>
-          <div class="st-ai-label">AI 生视频</div>
-          <div class="st-ai-stat"><span class="ai-ok">{{ endpoints.ai?.video?.success || 0 }} 成功</span> · <span class="ai-fail">{{ endpoints.ai?.video?.fail || 0 }} 失败</span></div>
+        <div class="st-card">
+          <div class="st-card-head">
+            <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 调用分布</h2>
+          </div>
+          <div class="st-chart-container">
+            <canvas ref="aiPieCanvas" width="260" height="260"></canvas>
+          </div>
+          <div class="chart-legend" style="justify-content:center;margin-top:4px">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span> 生图</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#6b8fa3"></span> 生视频</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#409eff"></span> LLM</span>
+          </div>
         </div>
-        <div class="st-card st-ai-card">
-          <div class="st-ai-icon-wrap" style="background:rgba(64,158,255,0.1)"><EditTwo theme="outline" size="28" fill="#409eff" /></div>
-          <div class="st-ai-num">{{ endpoints.ai?.llm?.total || 0 }}</div>
-          <div class="st-ai-label">LLM 文本</div>
-          <div class="st-ai-stat"><span class="ai-ok">{{ endpoints.ai?.llm?.success || 0 }} 成功</span> · <span class="ai-fail">{{ endpoints.ai?.llm?.fail || 0 }} 失败</span></div>
+      </div>
+      <!-- 成功率概况 -->
+      <div class="st-grid-3" style="margin-top:14px">
+        <div class="st-ai-card">
+          <div class="st-ai-icon-wrap" style="background:rgba(201,168,76,0.1)"><PictureOne theme="outline" size="24" fill="var(--gold)" /></div>
+          <div>
+            <div class="st-ai-num" style="font-size:22px">{{ endpoints.ai?.image?.total || 0 }}</div>
+            <div class="st-ai-label">生图</div>
+          </div>
+          <div class="st-ai-rate" :style="{ color: rateColor(endpoints.ai?.image) }">{{ ratePct(endpoints.ai?.image) }}%</div>
+        </div>
+        <div class="st-ai-card">
+          <div class="st-ai-icon-wrap" style="background:rgba(107,143,163,0.1)"><PlayTwo theme="outline" size="24" fill="#6b8fa3" /></div>
+          <div>
+            <div class="st-ai-num" style="font-size:22px">{{ endpoints.ai?.video?.total || 0 }}</div>
+            <div class="st-ai-label">生视频</div>
+          </div>
+          <div class="st-ai-rate" :style="{ color: rateColor(endpoints.ai?.video) }">{{ ratePct(endpoints.ai?.video) }}%</div>
+        </div>
+        <div class="st-ai-card">
+          <div class="st-ai-icon-wrap" style="background:rgba(64,158,255,0.1)"><EditTwo theme="outline" size="24" fill="#409eff" /></div>
+          <div>
+            <div class="st-ai-num" style="font-size:22px">{{ endpoints.ai?.llm?.total || 0 }}</div>
+            <div class="st-ai-label">LLM 文本</div>
+          </div>
+          <div class="st-ai-rate" :style="{ color: rateColor(endpoints.ai?.llm) }">{{ ratePct(endpoints.ai?.llm) }}%</div>
         </div>
       </div>
     </section>
@@ -312,7 +352,11 @@ const userActivity = reactive({ dau: '-', avgGenerations: '-', newActive: '-', r
 const distribution = reactive({ regions: [], platforms: [], browsers: [] });
 
 const trendCanvas = ref(null);
+const aiBarCanvas = ref(null);
+const aiPieCanvas = ref(null);
+
 const chartTooltip = reactive({ show: false, x: 0, y: 0, label: '', script: 0, comp: 0 });
+const aiBarTooltip = reactive({ show: false, x: 0, y: 0, category: '', success: 0, fail: 0 });
 
 // Chart hover handler
 function onChartHover(e) {
@@ -572,6 +616,152 @@ function drawTrendChart() {
   });
 }
 
+// AI bar chart
+function drawAiBarChart() {
+  const canvas = aiBarCanvas.value;
+  if (!canvas || !endpoints.ai) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.width = 500 * dpr, H = canvas.height = 260 * dpr;
+  canvas.style.width = '100%';
+  canvas.style.height = '260px';
+  ctx.scale(dpr, dpr);
+
+  const img = endpoints.ai.image || {}, vid = endpoints.ai.video || {}, llm = endpoints.ai.llm || {};
+  const maxVal = Math.max(
+    (img.success || 0) + (img.fail || 0),
+    (vid.success || 0) + (vid.fail || 0),
+    (llm.success || 0) + (llm.fail || 0),
+    1
+  );
+  const yMax = Math.ceil(maxVal * 1.3);
+
+  const pad = { top: 16, right: 24, bottom: 38, left: 48 };
+  const pw = 500 - pad.left - pad.right;
+  const ph = 260 - pad.top - pad.bottom;
+
+  // Background
+  ctx.fillStyle = 'rgba(26,26,46,0.06)';
+  ctx.fillRect(pad.left - 4, pad.top - 4, pw + 8, ph + 8);
+
+  // Grid
+  ctx.strokeStyle = '#E8D5C480';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const gy = pad.top + (ph / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(500 - pad.right, gy); ctx.stroke();
+    ctx.fillStyle = '#8B7355'; ctx.font = '10px "DM Sans", sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(yMax - (yMax / 4) * i), pad.left - 8, gy + 4);
+  }
+
+  const categories = [
+    { label: '生图', data: img, colors: ['#67c23a', '#f56c6c'] },
+    { label: '生视频', data: vid, colors: ['#67c23a', '#f56c6c'] },
+    { label: 'LLM', data: llm, colors: ['#67c23a', '#f56c6c'] },
+  ];
+  const barW = 36, barGap = 4, groupGap = 60, startX = 58;
+
+  categories.forEach((cat, i) => {
+    const gx = startX + i * (barW * 2 + barGap + groupGap);
+    const success = cat.data.success || 0, fail = cat.data.fail || 0;
+
+    // Fail bar (behind)
+    const failH = (fail / yMax) * ph;
+    ctx.fillStyle = '#f56c6c60';
+    ctx.fillRect(gx + barW + barGap, pad.top + ph - failH, barW, failH);
+    // Fail top
+    ctx.fillStyle = '#f56c6c';
+    ctx.fillRect(gx + barW + barGap, pad.top + ph - failH, barW, 3);
+    if (fail > 0) {
+      ctx.fillStyle = '#f56c6c'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(fail, gx + barW + barGap + barW / 2, pad.top + ph - failH - 6);
+    }
+
+    // Success bar
+    const succH = (success / yMax) * ph;
+    const grad = ctx.createLinearGradient(0, pad.top + ph - succH, 0, pad.top + ph);
+    grad.addColorStop(0, '#67c23a');
+    grad.addColorStop(1, '#67c23a40');
+    ctx.fillStyle = grad;
+    ctx.fillRect(gx, pad.top + ph - succH, barW, succH);
+    ctx.fillStyle = '#67c23a';
+    ctx.fillRect(gx, pad.top + ph - succH, barW, 3);
+    if (success > 0) {
+      ctx.fillStyle = '#67c23a'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(success, gx + barW / 2, pad.top + ph - succH - 6);
+    }
+
+    // Label
+    ctx.fillStyle = '#8B7355'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(cat.label, gx + barW + barGap / 2, 260 - 10);
+  });
+}
+
+// AI pie/donut chart
+function drawAiPieChart() {
+  const canvas = aiPieCanvas.value;
+  if (!canvas || !endpoints.ai) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = 260 * dpr;
+  canvas.style.width = canvas.style.height = '260px';
+  ctx.scale(dpr, dpr);
+
+  const cx = 130, cy = 130, outerR = 100, innerR = 60;
+  const img = endpoints.ai.image?.total || 0;
+  const vid = endpoints.ai.video?.total || 0;
+  const llm = endpoints.ai.llm?.total || 0;
+  const total = img + vid + llm || 1;
+
+  const slices = [
+    { value: img, color: '#c9a84c', label: '生图' },
+    { value: vid, color: '#6b8fa3', label: '生视频' },
+    { value: llm, color: '#409eff', label: 'LLM' },
+  ];
+
+  let startAngle = -Math.PI / 2;
+  slices.forEach(slice => {
+    const angle = (slice.value / total) * Math.PI * 2;
+    if (angle <= 0) return;
+    // Slice
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startAngle, startAngle + angle);
+    ctx.arc(cx, cy, innerR, startAngle + angle, startAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = slice.color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    const midAngle = startAngle + angle / 2;
+    const lx = cx + Math.cos(midAngle) * (outerR + 18);
+    const ly = cy + Math.sin(midAngle) * (outerR + 18);
+    ctx.fillStyle = '#8B7355'; ctx.font = '11px "DM Sans", sans-serif';
+    ctx.textAlign = midAngle > Math.PI / 2 || midAngle < -Math.PI / 2 ? 'end' : 'start';
+    ctx.fillText(slice.label, lx, ly + 4);
+    // Count
+    ctx.fillStyle = '#1A1A2E';
+    ctx.font = '900 11px "DM Sans", sans-serif';
+    ctx.textAlign = midAngle > Math.PI / 2 || midAngle < -Math.PI / 2 ? 'end' : 'start';
+    ctx.fillText(slice.value, lx, ly - 8);
+
+    startAngle += angle;
+  });
+
+  // Center text
+  ctx.fillStyle = '#1A1A2E'; ctx.font = '900 28px "Playfair Display", serif'; ctx.textAlign = 'center';
+  ctx.fillText(total, cx, cy + 6);
+  ctx.fillStyle = '#8B7355'; ctx.font = '10px "DM Sans", sans-serif';
+  ctx.fillText('总调用', cx, cy - 12);
+}
+
+// Watch for tab switch
+watch(() => statTab.value, (v) => {
+  if (v === 'ai') { nextTick(() => { drawAiBarChart(); drawAiPieChart(); }); }
+});
+
 // ===== 生命周期 =====
 watch(() => route.path, (p) => { if (p === '/statistics') refreshAll(); });
 onMounted(async () => {
@@ -748,17 +938,23 @@ onUnmounted(() => {
   color: var(--text-100); margin-top: 6px;
 }
 
-/* AI 调用卡片 */
-.st-ai-card { text-align: center; padding: 24px 20px !important; }
+/* AI 调用卡片（横向） */
+.st-ai-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
+  padding: 16px 18px; transition: all 0.25s;
+}
+.st-ai-card:hover { border-color: rgba(201,168,76,0.3); }
 .st-ai-icon-wrap {
-  width: 56px; height: 56px; border-radius: 14px;
-  display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .st-ai-num {
-  font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900;
+  font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900;
   color: var(--text-100); line-height: 1;
 }
-.st-ai-label { font-size: 13px; color: var(--text-200); margin-top: 6px; }
+.st-ai-label { font-size: 12px; color: var(--text-200); }
+.st-ai-rate { font-size: 18px; font-weight: 900; font-family: 'Playfair Display', serif; margin-left: auto; }
 .st-ai-stat { font-size: 11px; margin-top: 8px; }
 .ai-ok { color: #67c23a; font-weight: 600; }
 .ai-fail { color: #f56c6c; }
