@@ -253,50 +253,50 @@
             <el-input-number v-model="videoDuration" :min="4" :max="15" size="small" style="width:100%" @change="saveVideoDuration" />
             <div style="font-size:10px;color:var(--text-200);margin-top:2px">范围 4-15 秒</div>
           </div>
-          <div class="right-section" style="display:flex;gap:8px;align-items:flex-end">
-            <!-- 高级参数 popover -->
-            <el-popover placement="bottom" :width="260" trigger="click">
-              <template #reference>
-                <el-button size="small" style="flex:1"><SettingTwo theme="outline" size="14" fill="currentColor" /> 高级</el-button>
-              </template>
-              <div class="vp-pop">
-                <div class="vp-row">
-                  <span>分辨率</span>
-                  <el-select v-model="videoResolution" size="small" style="width:120px">
-                    <el-option label="480p" value="480p" />
-                    <el-option label="720p" value="720p" />
-                    <el-option label="1080p" value="1080p" />
-                    <el-option label="2K (1440p)" value="2K" />
-                  </el-select>
-                </div>
-                <div class="vp-row">
-                  <span>画幅比例</span>
-                  <el-select v-model="videoRatio" size="small" style="width:120px">
-                    <el-option label="9:16 竖屏" value="9:16" />
-                    <el-option label="16:9 横屏" value="16:9" />
-                    <el-option label="4:3" value="4:3" />
-                    <el-option label="1:1" value="1:1" />
-                    <el-option label="3:4" value="3:4" />
-                    <el-option label="21:9" value="21:9" />
-                  </el-select>
-                </div>
-                <div class="vp-row">
-                  <span>视频模型</span>
-                  <el-select v-model="selectedVideoModel" size="small" style="width:130px">
-                    <el-option label="Seedance 2.0" value="doubao_video" />
-                    <el-option label="Seedance 2.0 Fast" value="doubao_video_fast" />
-                  </el-select>
-                </div>
-                <div class="vp-row">
-                  <span>禁用水印</span>
-                  <el-switch v-model="videoNoWatermark" size="small" />
-                </div>
-                <div class="vp-row">
-                  <span>生成音频</span>
-                  <el-switch v-model="videoGenAudio" size="small" />
-                </div>
+
+          <!-- 视频比例 -->
+          <div class="right-section">
+            <label>视频比例</label>
+            <div class="vp-ratio-grid">
+              <div v-for="r in videoRatios" :key="r.value"
+                :class="['vp-ratio-item', { active: videoRatio === r.value }]"
+                @click="videoRatio = r.value" :title="r.label">
+                <div class="vp-ratio-icon" v-html="r.icon"></div>
+                <span class="vp-ratio-label">{{ r.label }}</span>
               </div>
-            </el-popover>
+            </div>
+          </div>
+
+          <!-- 分辨率 -->
+          <div class="right-section">
+            <label>分辨率</label>
+            <div class="vp-resolution-row">
+              <span v-for="r in videoResolutions" :key="r"
+                :class="['vp-res-item', { active: videoResolution === r }]"
+                @click="videoResolution = r">{{ r }}</span>
+            </div>
+          </div>
+
+          <!-- 模型 + 水印 + 音频 -->
+          <div class="right-section">
+            <label>视频模型</label>
+            <el-select v-model="selectedVideoModel" size="small" style="width:100%">
+              <el-option label="Seedance 2.0" value="doubao_video" />
+              <el-option label="Seedance 2.0 Fast" value="doubao_video_fast" />
+            </el-select>
+          </div>
+          <div class="right-section" style="display:flex;gap:16px;align-items:center;padding:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--text-200)">禁用水印</span>
+              <el-switch v-model="videoNoWatermark" size="small" />
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--text-200)">生成音频</span>
+              <el-switch v-model="videoGenAudio" size="small" />
+            </div>
+          </div>
+
+          <div class="right-section" style="display:flex;gap:8px;align-items:flex-end">
             <el-button size="small" type="primary" style="flex:1" @click="generateVideoForShot" :loading="genningVideo" :disabled="!currentShot">生成视频</el-button>
           </div>
         </div>
@@ -529,6 +529,15 @@ const currentShotPrompt = ref('');
 const currentVideoPrompt = ref('');
 const videoDuration = ref(5);
 const videoRatio = ref('9:16');
+const videoResolutions = ['480p', '720p', '1080p'];
+const videoRatios = [
+  { label: '21:9', value: '21:9', icon: '<svg viewBox="0 0 42 18" width="28" height="12"><rect x="0" y="0" width="42" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+  { label: '16:9', value: '16:9', icon: '<svg viewBox="0 0 32 18" width="24" height="14"><rect x="0" y="0" width="32" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+  { label: '4:3', value: '4:3', icon: '<svg viewBox="0 0 24 18" width="20" height="15"><rect x="0" y="0" width="24" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+  { label: '1:1', value: '1:1', icon: '<svg viewBox="0 0 18 18" width="16" height="16"><rect x="0" y="0" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+  { label: '3:4', value: '3:4', icon: '<svg viewBox="0 0 18 24" width="15" height="20"><rect x="0" y="0" width="18" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+  { label: '9:16', value: '9:16', icon: '<svg viewBox="0 0 18 32" width="14" height="24"><rect x="0" y="0" width="18" height="32" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
+];
 const videoResolution = ref('720p');
 const videoNoWatermark = ref(true);
 const videoGenAudio = ref(true);
@@ -2052,8 +2061,26 @@ async function handleImport() {
 .btn-danger-delete:hover { background: #c0392b !important; border-color: #c0392b !important; color: #fff !important; }
 .btn-danger-delete.is-disabled { background: #ebc9c6 !important; border-color: #ebc9c6 !important; color: rgba(255,255,255,0.7) !important; }
 
-/* 视频高级参数 popover */
-.vp-pop { display: flex; flex-direction: column; gap: 10px; }
-.vp-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-100); }
-.vp-row span { font-weight: 500; }
+/* 视频比例选择 */
+.vp-ratio-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+.vp-ratio-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 5px 8px; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid var(--bg-300); color: var(--text-200);
+  transition: all 0.2s; min-width: 48px;
+}
+.vp-ratio-item:hover { border-color: var(--gold); color: var(--gold); }
+.vp-ratio-item.active { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold); }
+.vp-ratio-icon { display: flex; align-items: center; justify-content: center; }
+.vp-ratio-label { font-size: 10px; font-weight: 600; }
+
+/* 分辨率选择 */
+.vp-resolution-row { display: flex; gap: 6px; }
+.vp-res-item {
+  padding: 4px 14px; border-radius: 6px; cursor: pointer;
+  border: 1.5px solid var(--bg-300); color: var(--text-200);
+  font-size: 12px; font-weight: 600; transition: all 0.2s;
+}
+.vp-res-item:hover { border-color: var(--gold); color: var(--gold); }
+.vp-res-item.active { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold); }
 </style>
