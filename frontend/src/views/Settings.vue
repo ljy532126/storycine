@@ -171,8 +171,13 @@
         <!-- Seedance 用量 -->
         <div class="ac-card" v-if="activeProvider === 'doubao'">
           <div class="ac-card-head">
-            <h3 class="ac-card-title"><TrendCharts theme="outline" size="18" fill="var(--gold)" /> Seedance 2.0 用量</h3>
-            <el-button size="small" @click="fetchUsage" :loading="usageLoading">刷新</el-button>
+            <div class="ac-usage-header">
+              <h3 class="ac-card-title">📊 Seedance 2.0 用量</h3>
+              <span v-if="usageTotalDisplay" class="ac-usage-summary">{{ usageTotalDisplay }}</span>
+            </div>
+            <el-button size="small" class="ac-usage-refresh" @click="fetchUsage" :loading="usageLoading">
+              <el-icon><Refresh /></el-icon> 刷新
+            </el-button>
           </div>
           <el-alert type="warning" :closable="false" show-icon style="margin-bottom:14px">
             <template #title>火山引擎规则：视频生成后 <b>24 小时内</b>需下载，超时自动失效。已下载的视频可在 <router-link to="/media-library" style="color:var(--gold);text-decoration:underline">素材库</router-link> 查看。</template>
@@ -825,4 +830,9 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
 .ac-usage-num { font-size: 22px; font-weight: 900; color: var(--text-100); font-family: 'Playfair Display', serif; }
 .ac-usage-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
 .ac-usage-table-wrap { margin-top: 12px; }
+
+.ac-usage-header { display: flex; align-items: center; gap: 12px; }
+.ac-usage-summary { font-size: 11px; color: var(--text-200); background: var(--bg-100); padding: 3px 10px; border-radius: 12px; }
+.ac-usage-refresh { border-radius: 8px !important; font-weight: 500 !important; }
+.ac-usage-refresh:hover { border-color: var(--gold) !important; color: var(--gold) !important; }
 </style>
