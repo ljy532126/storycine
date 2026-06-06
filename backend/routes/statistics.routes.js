@@ -384,7 +384,7 @@ router.get('/user-regions', async (req, res, next) => {
     });
 
     const provinces = CHINA_PROVINCES.map(name => ({ name, value: provinceCount[name] || 0 }))
-      .filter(p => p.value > 0).sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.value - a.value);
 
     if (provinces.length === 0) {
       [{ name: '广东', v: 45 }, { name: '上海', v: 32 }, { name: '北京', v: 28 }, { name: '浙江', v: 22 },

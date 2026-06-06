@@ -498,16 +498,19 @@ async function drawUserCharts() {
       min: 0, max: maxVal, left: 8, bottom: 20,
       text: ['高', '低'], calculable: true,
       textStyle: { color: '#8B7355' },
-      inRange: { color: ['#e8f0fe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
+      inRange: { color: ['#bfdbfe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
     },
     geo: {
       map: 'china', zoom: 1.35, center: [104.5, 36],
       roam: true,
       label: { show: true, fontSize: 9, color: '#8B7355' },
-      itemStyle: { areaColor: '#f5f0eb', borderColor: '#d4c5c0', borderWidth: 1 },
       emphasis: { label: { color: '#1A1A2E', fontSize: 12 }, itemStyle: { areaColor: '#f5e6c8' } },
     },
-    series: [{ name: 'IP数量', type: 'map', map: 'china', geoIndex: 0, data: provinces.map(p => ({ name: p.name, value: p.value })) }],
+    series: [{
+      name: 'IP数量', type: 'map', map: 'china', geoIndex: 0,
+      data: provinces.map(p => ({ name: p.name, value: p.value })),
+      itemStyle: { borderColor: '#d4c5c0', borderWidth: 1 },
+    }],
   });
 
   // TOP10 柱状图
