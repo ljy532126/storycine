@@ -404,7 +404,7 @@
                 <td>{{ r.username }}</td>
                 <td style="color:var(--text-200)">接入IP查询后显示</td>
                 <td style="color:var(--text-200)">接入IP查询后显示</td>
-                <td style="color:var(--text-200);font-size:11px">{{ fmt(r.createdAt) }}</td>
+                <td style="color:var(--text-200);font-size:11px">{{ formatDate(r.createdAt) }}</td>
               </tr>
             </tbody>
           </table>
@@ -584,6 +584,8 @@ const endpoints = reactive({ total: 0, routes: [], recent: [], health: 100 });
 const endpointsLoading = ref(false);
 async function fetchEndpoints() { endpointsLoading.value = true; try { const r = await fetch('/api/v1/monitor/endpoints', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }); const d = await r.json(); Object.assign(endpoints, d.data); } catch {} finally { endpointsLoading.value = false; } }
 function timeAgo(t) { if (!t) return ''; const s = Math.floor((Date.now() - new Date(t).getTime()) / 1000); if (s < 60) return s + '秒前'; if (s < 3600) return Math.floor(s / 60) + '分钟前'; return Math.floor(s / 3600) + '小时前'; }
+
+function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : '-'; }
 
 function ratePct(d) {
   if (!d || !d.total) return 0;
