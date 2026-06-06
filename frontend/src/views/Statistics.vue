@@ -109,28 +109,32 @@
 
     <!-- 趋势 -->
     <section class="st-section" v-show="statTab === 'trend'">
-      <h2 class="st-section-title">近7天趋势</h2>
-      <div class="st-card">
+      <div class="st-card st-trend-card">
+        <div class="st-card-head">
+          <h2 class="st-section-title"><Trend theme="outline" size="18" fill="var(--gold)" /> 近7天趋势</h2>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span> 剧本生成</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--primary-100)"></span> 成片合成</span>
+          </div>
+        </div>
         <div class="st-chart-container">
           <canvas ref="trendCanvas" width="900" height="200"></canvas>
         </div>
-        <div class="st-chart-empty" v-if="!trendData.labels || trendData.labels.length === 0">暂无数据</div>
-        <div class="chart-legend">
-          <span class="legend-dot" style="background:var(--gold)"></span> 剧本生成
-          <span class="legend-dot" style="background:var(--primary-100)"></span> 成片合成
-        </div>
+        <div class="st-chart-empty" v-if="!trendData.labels || trendData.labels.length === 0">暂无趋势数据</div>
       </div>
     </section>
 
     <!-- 排行 + 活跃 -->
     <div class="st-grid-2" v-show="statTab === 'trend'">
       <!-- 热门题材 Top5 -->
-      <div class="st-card">
-        <h3 class="st-card-title">热门题材 Top5</h3>
+      <div class="st-card st-rank-card">
+        <div class="st-card-head">
+          <h3 class="st-card-title"><Fire theme="outline" size="18" fill="#e6a23c" /> 热门题材 Top5</h3>
+        </div>
         <div class="st-rank-list">
           <div v-if="topGenres.length === 0" class="st-empty-hint">暂无数据</div>
           <div v-for="(g, i) in topGenres" :key="g.name" class="rank-item" :style="{ animationDelay: (i*80)+'ms' }">
-            <span class="rank-num">{{ i+1 }}</span>
+            <span :class="['rank-num', { 'rank-top': i < 3 }]">{{ i+1 }}</span>
             <span class="rank-name">{{ g.name }}</span>
             <div class="rank-bar-wrap"><div class="rank-bar" :style="{ width: g.pct+'%', background: g.color }"></div></div>
             <span class="rank-val">{{ g.count }}次</span>
@@ -139,13 +143,31 @@
       </div>
 
       <!-- 用户活跃 -->
-      <div class="st-card">
-        <h3 class="st-card-title">用户活跃</h3>
+      <div class="st-card st-user-card">
+        <div class="st-card-head">
+          <h3 class="st-card-title"><People theme="outline" size="18" fill="var(--gold)" /> 用户活跃</h3>
+        </div>
         <div class="st-user-stats">
-          <div class="user-stat-row"><span>日活跃 (DAU)</span><strong style="color:var(--gold)">{{ userActivity.dau }}</strong></div>
-          <div class="user-stat-row"><span>人均生成</span><strong style="color:var(--primary-100)">{{ userActivity.avgGenerations }}</strong></div>
-          <div class="user-stat-row"><span>本周新用户</span><strong style="color:var(--text-100)">{{ userActivity.newActive }}</strong></div>
-          <div class="user-stat-row"><span>7日留存率</span><strong style="color:var(--gold-dark)">{{ userActivity.retentionRate }}%</strong></div>
+          <div class="user-stat-row">
+            <span class="usr-icon" style="background:rgba(201,168,76,0.12)"><People theme="outline" size="16" fill="var(--gold)" /></span>
+            <span class="usr-label">日活跃 (DAU)</span>
+            <strong class="usr-val" style="color:var(--gold)">{{ userActivity.dau }}</strong>
+          </div>
+          <div class="user-stat-row">
+            <span class="usr-icon" style="background:rgba(139,115,85,0.12)"><EditTwo theme="outline" size="16" fill="var(--primary-100)" /></span>
+            <span class="usr-label">人均生成</span>
+            <strong class="usr-val" style="color:var(--primary-100)">{{ userActivity.avgGenerations }}</strong>
+          </div>
+          <div class="user-stat-row">
+            <span class="usr-icon" style="background:rgba(103,194,58,0.12)"><AddUser theme="outline" size="16" fill="#67c23a" /></span>
+            <span class="usr-label">本周新用户</span>
+            <strong class="usr-val" style="color:var(--text-100)">{{ userActivity.newActive }}</strong>
+          </div>
+          <div class="user-stat-row">
+            <span class="usr-icon" style="background:rgba(64,158,255,0.1)"><Data theme="outline" size="16" fill="#409eff" /></span>
+            <span class="usr-label">7日留存率</span>
+            <strong class="usr-val" style="color:#409eff">{{ userActivity.retentionRate }}%</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -273,7 +295,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data } from '@icon-park/vue-next';
+import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser } from '@icon-park/vue-next';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -600,37 +622,52 @@ onUnmounted(() => {
 .ov-health-sub { font-size: 11px; color: var(--text-200); letter-spacing: 1px; text-transform: uppercase; }
 
 /* 双栏网格 */
-.st-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.st-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.st-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.st-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 
 .st-card {
-  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 10px;
-  padding: 18px; transition: border-color 0.2s;
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
+  padding: 20px; transition: all 0.25s;
 }
-.st-card:hover { border-color: var(--gold); }
+.st-card:hover { border-color: rgba(201,168,76,0.3); }
+.st-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 12px; margin-bottom: 14px; border-bottom: 2px solid rgba(201,168,76,0.2);
+}
 .st-card-title {
-  font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--text-100);
-  margin: 0 0 14px; padding-bottom: 10px; border-bottom: 2px solid var(--gold);
+  font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+  color: var(--text-100); margin: 0; display: flex; align-items: center; gap: 8px;
+}
+.st-section-title {
+  font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+  color: var(--text-100); margin: 0; display: flex; align-items: center; gap: 8px;
 }
 
 /* 图表 */
 .st-chart-container { margin: 8px 0; }
 .st-chart-container canvas { width: 100%; height: auto; }
-.st-chart-empty { text-align: center; padding: 20px; color: var(--text-200); font-size: 13px; }
-.chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text-200); align-items: center; }
-.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.st-chart-empty { text-align: center; padding: 20px; color: var(--text-200); font-size: 12px; }
+
+/* 趋势 */
+.st-trend-card { margin-bottom: 20px; }
+.chart-legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-200); align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
 
 /* 排行 */
 .st-rank-list { display: flex; flex-direction: column; gap: 8px; }
 .rank-item {
-  display: flex; align-items: center; gap: 10px;
-  animation: fadeIn 0.3s ease-out both; font-size: 13px;
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px;
+  border-radius: 8px; animation: fadeIn 0.3s ease-out both; font-size: 13px;
+  transition: background 0.15s;
 }
-.rank-num { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 900; color: var(--gold); width: 20px; text-align: center; }
-.rank-name { width: 70px; font-weight: 600; color: var(--text-100); flex-shrink: 0; }
-.rank-bar-wrap { flex: 1; height: 8px; background: var(--bg-300); border-radius: 4px; overflow: hidden; }
-.rank-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-.rank-val { font-size: 11px; color: var(--text-200); width: 40px; text-align: right; }
+.rank-item:hover { background: var(--bg-100); }
+.rank-num { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 900; color: var(--text-200); width: 22px; text-align: center; flex-shrink: 0; }
+.rank-top { color: var(--gold) !important; font-size: 18px !important; }
+.rank-name { width: 72px; font-weight: 600; color: var(--text-100); flex-shrink: 0; }
+.rank-bar-wrap { flex: 1; height: 10px; background: var(--bg-300); border-radius: 5px; overflow: hidden; }
+.rank-bar { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+.rank-val { font-size: 11px; color: var(--text-200); width: 36px; text-align: right; flex-shrink: 0; }
 
 /* 监控 */
 .st-monitor-list { display: flex; flex-direction: column; gap: 14px; }
@@ -640,9 +677,14 @@ onUnmounted(() => {
 .mon-val-big { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--gold-dark); font-weight: 700; }
 
 /* 用户活跃 */
-.st-user-stats { display: flex; flex-direction: column; gap: 14px; }
-.user-stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-200); }
-.user-stat-row strong { font-family: 'Playfair Display', serif; font-size: 20px; }
+.st-user-stats { display: flex; flex-direction: column; gap: 8px; }
+.user-stat-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 10px; background: var(--bg-100); font-size: 13px; color: var(--text-200);
+}
+.usr-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.usr-label { flex: 1; font-weight: 500; color: var(--text-100); }
+.usr-val { font-family: 'Playfair Display', serif; font-size: 22px; flex-shrink: 0; }
 
 /* 柱状图 */
 .st-bar-chart { display: flex; flex-direction: column; gap: 8px; }
