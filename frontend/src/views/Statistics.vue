@@ -387,6 +387,42 @@ const endpointsLoading = ref(false);
 async function fetchEndpoints() { endpointsLoading.value = true; try { const r = await fetch('/api/v1/monitor/endpoints', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }); const d = await r.json(); Object.assign(endpoints, d.data); } catch {} finally { endpointsLoading.value = false; } }
 function timeAgo(t) { if (!t) return ''; const s = Math.floor((Date.now() - new Date(t).getTime()) / 1000); if (s < 60) return s + '秒前'; if (s < 3600) return Math.floor(s / 60) + '分钟前'; return Math.floor(s / 3600) + '小时前'; }
 
+function ratePct(d) {
+  if (!d || !d.total) return 0;
+  return Math.round((d.success || 0) / d.total * 100);
+}
+function rateColor(d) {
+  const r = ratePct(d);
+  return r >= 90 ? '#67c23a' : r >= 70 ? '#e6a23c' : '#f56c6c';
+}
+
+function onAiBarHover(e) {
+  const canvas = aiBarCanvas.value;
+  if (!canvas || !endpoints.ai) { aiBarTooltip.show = false; return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (500 / rect.width);
+  const cats = [
+    { label: '生图', data: endpoints.ai.image, color: 'var(--gold)' },
+    { label: '生视频', data: endpoints.ai.video, color: '#6b8fa3' },
+    { label: 'LLM', data: endpoints.ai.llm, color: '#409eff' },
+  ];
+  const barW = 36, barGap = 4, groupGap = 60, startX = 58;
+  for (let i = 0; i < 3; i++) {
+    const gx = startX + i * (barW * 2 + barGap + groupGap) + barW + barGap;
+    if (mx >= gx && mx <= gx + barW) {
+      const d = cats[i].data || {};
+      aiBarTooltip.show = true;
+      aiBarTooltip.category = cats[i].label;
+      aiBarTooltip.fail = d.fail || 0;
+      aiBarTooltip.success = d.success || 0;
+      aiBarTooltip.x = mx + 10;
+      aiBarTooltip.y = Math.max(0, (e.clientY - rect.top) - 55);
+      return;
+    }
+  }
+  aiBarTooltip.show = false;
+}
+
 function formatChange(change) {
   if (change === 0) return '持平';
   const arrow = change > 0 ? '↑' : '↓';
