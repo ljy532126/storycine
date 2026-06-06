@@ -443,7 +443,7 @@ function goToResult(r) {
 }
 
 // === 新手引导 ===
-const showOnboarding = ref(!localStorage.getItem('ad_onboarded'));
+const showOnboarding = ref(false); // 线上用户已熟悉，不再弹引导
 function dismissOnboarding() {
   showOnboarding.value = false;
   try { localStorage.setItem('ad_onboarded', '1'); } catch {}
