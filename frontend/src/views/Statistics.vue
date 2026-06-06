@@ -393,7 +393,8 @@
               <tr>
                 <th>IP 地址</th>
                 <th>用户</th>
-                <th>省份(模拟)</th>
+                <th>国家</th>
+                <th>省份/城市</th>
                 <th>运营商</th>
                 <th>访问时间</th>
               </tr>
@@ -402,7 +403,8 @@
               <tr v-for="(r, i) in userRegion.recentRecords.slice(0, 20)" :key="i">
                 <td class="ua-td-ip">{{ r.ip }}</td>
                 <td>{{ r.username }}</td>
-                <td :style="{ color: r.province ? 'var(--text-100)' : 'var(--text-200)' }">{{ r.province || r.country || '查询中...' }}</td>
+                <td :style="{ color: r.country !== '中国' ? 'var(--gold)' : 'var(--text-200)' }">{{ r.country || '—' }}</td>
+                <td :style="{ color: r.province ? 'var(--text-100)' : 'var(--text-200)' }">{{ r.province }}{{ r.city ? ' ' + r.city : '' }}{{ r.district ? ' ' + r.district : '' }}{{ !r.province && !r.city ? '—' : '' }}</td>
                 <td :style="{ color: r.isp ? 'var(--text-100)' : 'var(--text-200)' }">{{ r.isp || '—' }}</td>
                 <td style="color:var(--text-200);font-size:11px">{{ formatDate(r.createdAt) }}</td>
               </tr>

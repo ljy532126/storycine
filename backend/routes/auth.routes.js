@@ -20,9 +20,49 @@ function getClientIp(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
 }
 
-/** 记录登录日志 */
+/** IP 查询缓存 + API */
+const ipGeoCache = new Map();
+const axios = require('axios');
+const IP_API = 'https://uapis.cn/api/v1/network/ipinfo';
+
+async function lookupIP(ip) {
+  if (ipGeoCache.has(ip)) return ipGeoCache.get(ip);
+  if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|::1|localhost)/i.test(ip)) {
+    const r = null;
+    ipGeoCache.set(ip, r);
+    return r;
+  }
+  try {
+    const res = await axios.get(IP_API, { params: { ip, source: 'commercial' }, timeout: 6000 });
+    const d = res.data;
+    if (d && d.ip) {
+      const parts = (d.region || '').split(' ');
+      const result = {
+        country: parts[0] || '',
+        province: parts[1] || '',
+        city: parts[2] || '',
+        district: parts[3] || '',
+        isp: d.isp || d.llc || '',
+        asn: d.asn || '',
+        latitude: d.latitude || 0,
+        longitude: d.longitude || 0,
+      };
+      ipGeoCache.set(ip, result);
+      return result;
+    }
+  } catch (e) { /* ignore */ }
+  ipGeoCache.set(ip, null);
+  return null;
+}
+
+/** 记录登录日志（含IP地理位置） */
 async function logLogin(username, ip, ua, success, message, userId) {
-  await LoginLog.create({ userId: userId || null, username, ip, userAgent: ua || '', success, message });
+  const geoInfo = await lookupIP(ip);
+  await LoginLog.create({
+    userId: userId || null, username, ip,
+    userAgent: ua || '', success, message,
+    geoInfo: geoInfo || {},
+  });
 }
 
 // ===== 获取图形验证码 =====

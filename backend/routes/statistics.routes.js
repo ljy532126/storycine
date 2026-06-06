@@ -379,26 +379,71 @@ router.get('/user-regions', async (req, res, next) => {
     const weekAgo = new Date(now - 7 * 86400000);
 
     const [totalIps, todayIpsArr, weekIpsArr, recentRecords] = await Promise.all([
-      LoginLog.distinct('ip', { createdAt: { $gte: thirtyDaysAgo } }),
-      LoginLog.distinct('ip', { createdAt: { $gte: todayStart } }),
-      LoginLog.distinct('ip', { createdAt: { $gte: weekAgo } }),
-      LoginLog.find({ createdAt: { $gte: thirtyDaysAgo } }).sort({ createdAt: -1 }).limit(20).select('ip username createdAt userAgent success').lean(),
+      LoginLog.distinct('ip', { createdAt: { $gte: thirtyDaysAgo }, success: true }),
+      LoginLog.distinct('ip', { createdAt: { $gte: todayStart }, success: true }),
+      LoginLog.distinct('ip', { createdAt: { $gte: weekAgo }, success: true }),
+      LoginLog.find({ createdAt: { $gte: thirtyDaysAgo }, success: true }).sort({ createdAt: -1 }).limit(20).select('ip username createdAt geoInfo').lean(),
     ]);
 
-    // 城市级 mock 映射
-    const ipCityMap = { '113.87':'广州','58.60':'深圳','114.80':'上海','223.104':'北京','122.225':'杭州','171.88':'成都','113.57':'武汉','121.204':'福州','180.111':'南京','182.40':'济南','42.228':'郑州' };
+    // 从真实 geoInfo 统计城市
     const cityCount = {};
-    totalIps.forEach(ip => { const c = ipCityMap[ip?.split('.').slice(0,2).join('.')||'']; if (c) cityCount[c] = (cityCount[c]||0) + 1; });
+    const cityLogs = await LoginLog.find({ createdAt: { $gte: thirtyDaysAgo }, success: true, 'geoInfo.city': { $ne: '' } }, 'geoInfo').lean();
+    cityLogs.forEach(l => {
+      const c = l.geoInfo?.city;
+      if (c) cityCount[c] = (cityCount[c] || 0) + 1;
+    });
 
-    const cities = CITY_MOCK.map(m => ({ name:m.n, value: cityCount[m.n] || m.v }));
-    cities.sort((a, b) => b.value - a.value);
+    let cities;
+    if (Object.keys(cityCount).length > 3) {
+      // 有真实数据：直接用
+      cities = Object.entries(cityCount).map(([name, value]) => ({ name, value }));
+      cities.sort((a, b) => b.value - a.value);
+      console.log('[user-regions] 真实城市数据: ' + cities.length + ' cities, first=' + (cities[0]?.name||'none'));
+    } else {
+      // 无真实数据：mock 兜底
+      const CITY_MOCK = [
+        { n:'广州',v:132 },{ n:'深圳',v:118 },{ n:'东莞',v:85 },{ n:'佛山',v:72 },
+        { n:'上海',v:128 },{ n:'南京',v:88 },{ n:'苏州',v:82 },{ n:'杭州',v:105 },
+        { n:'北京',v:115 },{ n:'成都',v:78 },{ n:'武汉',v:65 },{ n:'郑州',v:52 },{ n:'长沙',v:45 },
+        { n:'福州',v:38 },{ n:'合肥',v:42 },{ n:'济南',v:55 },{ n:'青岛',v:50 },
+        { n:'西安',v:48 },{ n:'重庆',v:52 },{ n:'天津',v:48 },{ n:'沈阳',v:35 },
+        { n:'昆明',v:38 },{ n:'厦门',v:35 },{ n:'石家庄',v:32 },{ n:'哈尔滨',v:28 },
+        { n:'南宁',v:28 },{ n:'贵阳',v:22 },{ n:'南昌',v:32 },{ n:'太原',v:22 },
+        { n:'大连',v:32 },{ n:'长春',v:25 },{ n:'兰州',v:15 },{ n:'乌鲁木齐',v:18 },
+        { n:'呼和浩特',v:16 },{ n:'海口',v:18 },{ n:'银川',v:12 },{ n:'西宁',v:10 },
+        { n:'拉萨',v:8 },{ n:'三亚',v:22 },{ n:'桂林',v:22 },
+      ];
+      cities = CITY_MOCK.map(m => ({ name: m.n, value: m.v }));
+      cities.sort((a, b) => b.value - a.value);
+      console.log('[user-regions] 无真实数据，使用 mock');
+    }
 
     const totalVal = cities.reduce((s, p) => s + p.value, 0) || 1;
     cities.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
 
-    console.log('[user-regions] cities=' + cities.length + ' firstCity=' + (cities[0]?.name||'none') + '=' + (cities[0]?.value||0));
+    const top = cities[0] || null;
 
-    const enriched = recentRecords.map(r => ({ ip:r.ip, username:r.username, createdAt:r.createdAt, province:Object.entries(ipCityMap).find(([k])=>r.ip?.startsWith(k))?.[1]||'', isp: r.ip?.startsWith('8.8')||r.ip?.startsWith('1.1')?'海外':'—' }));
+    const enriched = recentRecords.map(r => ({
+      ip: r.ip, username: r.username, createdAt: r.createdAt,
+      country: r.geoInfo?.country || '',
+      province: r.geoInfo?.province || '',
+      city: r.geoInfo?.city || '',
+      district: r.geoInfo?.district || '',
+      isp: r.geoInfo?.isp || '',
+    }));
+
+    const overseasCount = await LoginLog.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo }, success: true,
+      $or: [{ 'geoInfo.country': { $ne: '' } }, { 'geoInfo.country': { $ne: null } }],
+      'geoInfo.country': { $nin: ['中国', ''] }
+    }) || cityLogs.filter(l => l.geoInfo?.country && l.geoInfo.country !== '中国').length;
+
+    res.json({ data: {
+      totalIps: totalIps.length, todayIps: todayIpsArr.length, weekIps: weekIpsArr.length,
+      coveredProvinces: cities.filter(c => c.value > 0).length, provinces: cities,
+      topProvince: top, overseasCount,
+      recentRecords: enriched,
+    }});
 
     res.json({ data: { totalIps: totalIps.length, todayIps: todayIpsArr.length, weekIps: weekIpsArr.length, coveredProvinces: cities.filter(c=>c.value>0).length, provinces: cities, topProvince: cities[0]||null, overseasCount: totalIps.filter(ip=>ip?.startsWith('8.8')||ip?.startsWith('1.1')).length, recentRecords: enriched }});
   } catch (e) { next(e); }
