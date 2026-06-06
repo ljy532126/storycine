@@ -174,63 +174,77 @@
 
     <!-- 服务器监控（全宽） -->
     <section class="st-section" v-show="statTab === 'monitor'">
-      <h2 class="st-section-title">服务器监控</h2>
-      <div class="st-card" v-if="serverData">
-        <div class="st-monitor-h">
-          <div class="st-mon-h-item">
-            <div class="st-mon-h-icon">🖥️</div>
-            <div class="st-mon-h-body">
-              <span class="st-mon-h-label">CPU {{ serverData.cpu.model }}</span>
-              <el-progress :percentage="serverData.cpu.usagePct" :stroke-width="10" :color="serverData.cpu.usagePct > 80 ? '#C44545' : 'var(--navy)'" />
-              <span class="mon-sub">{{ serverData.cpu.cores }}核 · 负载 {{ serverData.cpu.loadAvg?.[0] }}</span>
+      <div class="st-card st-monitor-card" v-if="serverData">
+        <div class="st-monitor-grid">
+          <div class="st-mon-block">
+            <div class="st-mon-block-head">
+              <span class="st-mon-block-icon" style="background:rgba(64,158,255,0.1)"><Cpu theme="outline" size="20" fill="#409eff" /></span>
+              <div>
+                <span class="st-mon-block-title">CPU</span>
+                <span class="st-mon-block-sub">{{ serverData.cpu.model }}</span>
+              </div>
+              <span class="st-mon-block-pct" :style="{ color: serverData.cpu.usagePct > 80 ? '#f56c6c' : '#409eff' }">{{ serverData.cpu.usagePct }}%</span>
             </div>
+            <el-progress :percentage="serverData.cpu.usagePct" :stroke-width="8" :color="serverData.cpu.usagePct > 80 ? '#f56c6c' : '#409eff'" style="margin:12px 0 8px" />
+            <div class="st-mon-block-info">{{ serverData.cpu.cores }} 核心 · 负载 {{ serverData.cpu.loadAvg?.[0] || '-' }}</div>
           </div>
-          <div class="st-mon-h-item">
-            <div class="st-mon-h-icon">💾</div>
-            <div class="st-mon-h-body">
-              <span class="st-mon-h-label">内存 {{ serverData.memory.used }} / {{ serverData.memory.total }} GB</span>
-              <el-progress :percentage="serverData.memory.usagePct" :stroke-width="10" :color="serverData.memory.usagePct > 80 ? '#C44545' : 'var(--gold)'" />
+          <div class="st-mon-block">
+            <div class="st-mon-block-head">
+              <span class="st-mon-block-icon" style="background:rgba(201,168,76,0.1)"><Memory theme="outline" size="20" fill="var(--gold)" /></span>
+              <div>
+                <span class="st-mon-block-title">内存</span>
+                <span class="st-mon-block-sub">{{ serverData.memory.used }} / {{ serverData.memory.total }} GB</span>
+              </div>
+              <span class="st-mon-block-pct" :style="{ color: serverData.memory.usagePct > 80 ? '#f56c6c' : 'var(--gold)' }">{{ serverData.memory.usagePct }}%</span>
             </div>
+            <el-progress :percentage="serverData.memory.usagePct" :stroke-width="8" :color="serverData.memory.usagePct > 80 ? '#f56c6c' : 'var(--gold)'" style="margin:12px 0 8px" />
+            <div class="st-mon-block-info">{{ serverData.memory.free || '-' }} GB 可用</div>
           </div>
-          <div class="st-mon-h-item">
-            <div class="st-mon-h-icon">⏱️</div>
-            <div class="st-mon-h-body">
-              <span class="st-mon-h-label">运行时长</span>
-              <strong style="font-size:18px;color:var(--text-100)">{{ serverData.uptimeFormatted }}</strong>
+          <div class="st-mon-block">
+            <div class="st-mon-block-head">
+              <span class="st-mon-block-icon" style="background:rgba(103,194,58,0.1)"><Timer theme="outline" size="20" fill="#67c23a" /></span>
+              <div>
+                <span class="st-mon-block-title">运行时长</span>
+                <span class="st-mon-block-sub">持续运行</span>
+              </div>
             </div>
+            <div class="st-mon-uptime">{{ serverData.uptimeFormatted || '-' }}</div>
           </div>
-          <div class="st-mon-h-item">
-            <div class="st-mon-h-icon">⚙️</div>
-            <div class="st-mon-h-body">
-              <span class="st-mon-h-label">系统</span>
-              <span style="font-size:13px;color:var(--text-200)">{{ serverData.platform }} / {{ serverData.arch }}</span>
+          <div class="st-mon-block">
+            <div class="st-mon-block-head">
+              <span class="st-mon-block-icon" style="background:rgba(139,115,85,0.1)"><SettingTwo theme="outline" size="20" fill="var(--primary-100)" /></span>
+              <div>
+                <span class="st-mon-block-title">系统</span>
+                <span class="st-mon-block-sub">平台 & 架构</span>
+              </div>
             </div>
+            <div class="st-mon-uptime" style="font-size:15px">{{ serverData.platform }} {{ serverData.arch }}</div>
           </div>
         </div>
       </div>
+      <div class="st-empty-hint" v-else>暂无服务器数据</div>
     </section>
 
     <!-- AI 调用统计 -->
     <section class="st-section" v-if="endpoints.ai && statTab === 'ai'">
-      <h2 class="st-section-title">AI 调用统计</h2>
       <div class="st-grid-3">
-        <div class="st-card" style="text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🎨</div>
-          <div style="font-size:28px;font-weight:900;color:var(--text-100);font-family:'Playfair Display',serif">{{ endpoints.ai?.image?.total || 0 }}</div>
-          <div style="font-size:13px;color:var(--text-200);margin-top:4px">生图调用</div>
-          <div style="font-size:11px;margin-top:6px"><span style="color:#67C23A">{{ endpoints.ai?.image?.success || 0 }} 成功</span> · <span style="color:#F56C6C">{{ endpoints.ai?.image?.fail || 0 }} 失败</span></div>
+        <div class="st-card st-ai-card">
+          <div class="st-ai-icon-wrap" style="background:rgba(201,168,76,0.1)"><PictureOne theme="outline" size="28" fill="var(--gold)" /></div>
+          <div class="st-ai-num">{{ endpoints.ai?.image?.total || 0 }}</div>
+          <div class="st-ai-label">AI 生图</div>
+          <div class="st-ai-stat"><span class="ai-ok">{{ endpoints.ai?.image?.success || 0 }} 成功</span> · <span class="ai-fail">{{ endpoints.ai?.image?.fail || 0 }} 失败</span></div>
         </div>
-        <div class="st-card" style="text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🎥</div>
-          <div style="font-size:28px;font-weight:900;color:var(--text-100);font-family:'Playfair Display',serif">{{ endpoints.ai?.video?.total || 0 }}</div>
-          <div style="font-size:13px;color:var(--text-200);margin-top:4px">生视频调用</div>
-          <div style="font-size:11px;margin-top:6px"><span style="color:#67C23A">{{ endpoints.ai?.video?.success || 0 }} 成功</span> · <span style="color:#F56C6C">{{ endpoints.ai?.video?.fail || 0 }} 失败</span></div>
+        <div class="st-card st-ai-card">
+          <div class="st-ai-icon-wrap" style="background:rgba(107,143,163,0.1)"><PlayTwo theme="outline" size="28" fill="#6b8fa3" /></div>
+          <div class="st-ai-num">{{ endpoints.ai?.video?.total || 0 }}</div>
+          <div class="st-ai-label">AI 生视频</div>
+          <div class="st-ai-stat"><span class="ai-ok">{{ endpoints.ai?.video?.success || 0 }} 成功</span> · <span class="ai-fail">{{ endpoints.ai?.video?.fail || 0 }} 失败</span></div>
         </div>
-        <div class="st-card" style="text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🤖</div>
-          <div style="font-size:28px;font-weight:900;color:var(--text-100);font-family:'Playfair Display',serif">{{ endpoints.ai?.llm?.total || 0 }}</div>
-          <div style="font-size:13px;color:var(--text-200);margin-top:4px">LLM 文本调用</div>
-          <div style="font-size:11px;margin-top:6px"><span style="color:#67C23A">{{ endpoints.ai?.llm?.success || 0 }} 成功</span> · <span style="color:#F56C6C">{{ endpoints.ai?.llm?.fail || 0 }} 失败</span></div>
+        <div class="st-card st-ai-card">
+          <div class="st-ai-icon-wrap" style="background:rgba(64,158,255,0.1)"><EditTwo theme="outline" size="28" fill="#409eff" /></div>
+          <div class="st-ai-num">{{ endpoints.ai?.llm?.total || 0 }}</div>
+          <div class="st-ai-label">LLM 文本</div>
+          <div class="st-ai-stat"><span class="ai-ok">{{ endpoints.ai?.llm?.success || 0 }} 成功</span> · <span class="ai-fail">{{ endpoints.ai?.llm?.fail || 0 }} 失败</span></div>
         </div>
       </div>
     </section>
@@ -295,7 +309,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser } from '@icon-park/vue-next';
+import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne } from '@icon-park/vue-next';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -669,63 +683,59 @@ onUnmounted(() => {
 .rank-bar { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
 .rank-val { font-size: 11px; color: var(--text-200); width: 36px; text-align: right; flex-shrink: 0; }
 
-/* 监控 */
-.st-monitor-list { display: flex; flex-direction: column; gap: 14px; }
-.monitor-item { display: flex; flex-direction: column; gap: 4px; }
-.mon-label { font-size: 12px; color: var(--text-100); font-weight: 600; }
-.mon-sub { font-size: 10px; color: var(--text-200); margin-top: 2px; }
-.mon-val-big { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--gold-dark); font-weight: 700; }
-
-/* 用户活跃 */
-.st-user-stats { display: flex; flex-direction: column; gap: 8px; }
-.user-stat-row {
-  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-  border-radius: 10px; background: var(--bg-100); font-size: 13px; color: var(--text-200);
+/* 服务器监控 */
+.st-monitor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.st-mon-block { padding: 0; }
+.st-mon-block-head {
+  display: flex; align-items: center; gap: 10px;
 }
-.usr-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.usr-label { flex: 1; font-weight: 500; color: var(--text-100); }
-.usr-val { font-family: 'Playfair Display', serif; font-size: 22px; flex-shrink: 0; }
+.st-mon-block-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.st-mon-block-title { font-size: 14px; font-weight: 700; color: var(--text-100); display: block; }
+.st-mon-block-sub { font-size: 11px; color: var(--text-200); display: block; margin-top: 1px; }
+.st-mon-block-pct { font-size: 22px; font-weight: 900; font-family: 'Playfair Display', serif; margin-left: auto; }
+.st-mon-block-info { font-size: 11px; color: var(--text-200); }
+.st-mon-uptime {
+  font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900;
+  color: var(--text-100); margin-top: 6px;
+}
 
-/* 柱状图 */
-.st-bar-chart { display: flex; flex-direction: column; gap: 8px; }
-.bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.bar-label { width: 40px; color: var(--text-100); font-weight: 600; flex-shrink: 0; }
-.bar-fill { height: 16px; border-radius: 4px; min-width: 4px; transition: width 0.5s ease; }
-.bar-val { color: var(--text-200); font-size: 11px; width: 32px; }
-
-/* 饼图简化版 */
-.st-pie-simple { display: flex; flex-direction: column; gap: 10px; }
-.pie-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-100); }
-.pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.pie-val { margin-left: auto; color: var(--text-200); font-size: 12px; }
-
-.st-empty-hint { text-align: center; padding: 24px; color: var(--text-200); font-size: 12px; }
-
-/* 水平监控 */
-.st-monitor-h { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.st-mon-h-item { display: flex; gap: 12px; align-items: flex-start; }
-.st-mon-h-icon { font-size: 28px; flex-shrink: 0; width: 40px; text-align: center; }
-.st-mon-h-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.st-mon-h-label { font-size: 12px; color: var(--text-100); font-weight: 600; }
+/* AI 调用卡片 */
+.st-ai-card { text-align: center; padding: 24px 20px !important; }
+.st-ai-icon-wrap {
+  width: 56px; height: 56px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+}
+.st-ai-num {
+  font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900;
+  color: var(--text-100); line-height: 1;
+}
+.st-ai-label { font-size: 13px; color: var(--text-200); margin-top: 6px; }
+.st-ai-stat { font-size: 11px; margin-top: 8px; }
+.ai-ok { color: #67c23a; font-weight: 600; }
+.ai-fail { color: #f56c6c; }
 
 /* 接口监控 */
-.st-endpoint-header { display: flex; gap: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--bg-300); margin-bottom: 8px; font-size: 13px; color: var(--text-200); }
-.st-endpoint-header strong { color: var(--text-100); font-size: 18px; font-family: 'Playfair Display', serif; }
+.st-endpoint-header { display: flex; gap: 24px; padding: 6px 0 14px; border-bottom: 2px solid rgba(201,168,76,0.2); margin-bottom: 8px; font-size: 13px; color: var(--text-200); }
+.st-endpoint-header strong { color: var(--text-100); font-size: 20px; font-family: 'Playfair Display', serif; }
 .st-endpoint-list { display: flex; flex-direction: column; }
-.st-ep-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--bg-300); font-size: 12px; }
-.st-ep-row:last-child { border-bottom: none; }
-.st-ep-method { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; min-width: 42px; text-align: center; }
+.st-ep-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 6px; font-size: 12px; transition: background 0.1s; }
+.st-ep-row:hover { background: var(--bg-100); }
+.st-ep-method { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; min-width: 44px; text-align: center; }
 .st-ep-method.get { background: #E8F5E9; color: #2E7D32; }
 .st-ep-method.post { background: #E3F2FD; color: #1565C0; }
 .st-ep-method.put { background: #FFF3E0; color: #E65100; }
 .st-ep-method.delete { background: #FFEBEE; color: #C62828; }
-.st-ep-path { flex: 1; color: var(--text-100); font-family: monospace; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.st-ep-count { color: var(--text-200); min-width: 40px; text-align: right; }
+.st-ep-path { flex: 1; color: var(--text-100); font-family: 'Courier New', monospace; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-ep-count { color: var(--text-200); min-width: 40px; text-align: right; font-weight: 600; }
 .st-ep-last { color: var(--text-200); font-size: 10px; min-width: 60px; text-align: right; }
 
 @media (max-width: 768px) {
   .st-overview-cards { grid-template-columns: repeat(2, 1fr); }
   .st-grid-2, .st-grid-3 { grid-template-columns: 1fr; }
-  .st-monitor-h { grid-template-columns: repeat(2, 1fr); }
+  .st-monitor-grid { grid-template-columns: repeat(2, 1fr); }
+  .ov-live-row { grid-template-columns: 1fr; }
 }
 </style>
