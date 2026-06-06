@@ -1363,6 +1363,7 @@ async function generateVideoPromptForShot() {
     if (data.data?.prompt) {
       currentVideoPrompt.value = data.data.prompt;
       saveCurrentVideoPrompt();
+      nextTick(() => renderEditor(data.data.prompt));
       ElMessage.success('视频提示词已生成（含台词节奏）');
     }
   } catch (e) { ElMessage.error('生成失败: ' + (e.message || '')); }
@@ -1397,6 +1398,7 @@ async function generateTimedStoryboard() {
     if (data.data?.prompt) {
       currentVideoPrompt.value = data.data.prompt;
       saveCurrentVideoPrompt();
+      nextTick(() => renderEditor(data.data.prompt));
       ElMessage.success('已生成智能时间轴分镜！');
     }
   } catch (e) { ElMessage.error('分镜失败: ' + (e.message || '')); }
