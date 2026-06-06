@@ -211,19 +211,31 @@ router.put('/password', authRequired, async (req, res) => {
   } catch (e) { console.error('[password] 修改失败:', e.message); res.status(500).json({ message: '修改失败' }); }
 });
 
-// ===== 管理员：用户列表 =====
+// ===== 管理员：用户列表（含统计） =====
 router.get('/users', adminRequired, async (req, res) => {
   try {
-    const { page = 1, size = 20, search, status } = req.query;
+    const { page = 1, size = 20, search, status, role } = req.query;
     const filter = {};
-    if (search) filter.username = { $regex: search, $options: 'i' };
+    if (search) {
+      filter.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { nickname: { $regex: search, $options: 'i' } },
+        { uid: { $regex: search, $options: 'i' } },
+      ];
+    }
     if (status) filter.status = status;
+    if (role) filter.role = role;
 
-    const total = await User.countDocuments(filter);
-    const users = await User.find(filter).select('-password').sort({ createdAt: -1 })
-      .skip((page - 1) * size).limit(Number(size));
+    const [users, total, stats] = await Promise.all([
+      User.find(filter).select('-password').sort({ createdAt: -1 }).skip((page - 1) * size).limit(Number(size)).lean(),
+      User.countDocuments(filter),
+      User.aggregate([
+        { $group: { _id: null, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } }, admins: { $sum: { $cond: [{ $eq: ['$role', 'admin'] }, 1, 0] } }, today: { $sum: { $cond: [{ $gte: ['$createdAt', new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())] }, 1, 0] } } } },
+      ]),
+    ]);
 
-    res.json({ data: { users, total, page: Number(page), size: Number(size) } });
+    const s = stats[0] || { active: 0, admins: 0, today: 0 };
+    res.json({ data: { users, total, page: Number(page), size: Number(size), stats: { active: s.active, todayNew: s.today, admin: s.admins } } });
   } catch (e) { res.status(500).json({ message: '查询失败' }); }
 });
 
@@ -260,6 +272,21 @@ router.get('/users/:id/logs', adminRequired, async (req, res) => {
   const logs = await LoginLog.find({ username: user.username }).sort({ createdAt: -1 })
     .skip((page - 1) * size).limit(Number(size));
   res.json({ data: { logs, total, page: Number(page), size: Number(size) } });
+});
+
+// ===== 管理员：重置用户密码 =====
+router.put('/users/:id/reset-password', adminRequired, async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 8) return res.status(400).json({ message: '密码至少8位' });
+  if (req.params.id === req.user._id.toString()) return res.status(400).json({ message: '不能重置自己的密码' });
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: '用户不存在' });
+  user.password = await bcrypt.hash(newPassword, 12);
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  user.loginAttempts = 0;
+  user.lockedUntil = null;
+  await user.save();
+  res.json({ message: '密码已重置，用户需重新登录' });
 });
 
 module.exports = router;
