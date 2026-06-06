@@ -417,6 +417,18 @@ async function callVideoGen(prompt, options = {}) {
       err.statusCode = 400;
       throw err;
     }
+
+    // 模型未开通/未激活
+    if (msg.includes('not activated') || msg.includes('has not activated')) {
+      const modelName = (body.model || '').replace('doubao-', '');
+      throw new Error(`该模型 ${modelName} 尚未开通。请前往火山引擎 Ark 控制台开通此模型服务。\n\n原始错误: ${msg}`);
+    }
+
+    // 网络/连接错误
+    if (status === 0 || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) {
+      throw new Error(`无法连接到 Seedance API 服务器，请检查 Base URL 配置和网络连接。\n\n原始错误: ${msg}`);
+    }
+
     const wrapped = new Error(`视频生成失败 (HTTP ${status}): ${msg}`);
     if (status >= 400 && status < 500) wrapped.statusCode = status;
     throw wrapped;
