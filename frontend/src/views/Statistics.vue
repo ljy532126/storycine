@@ -36,7 +36,6 @@
     <div class="st-tabs">
       <span :class="['st-tab', { active: statTab === 'overview' }]" @click="statTab = 'overview'">今日概览</span>
       <span :class="['st-tab', { active: statTab === 'trend' }]" @click="statTab = 'trend'">趋势 & 排行</span>
-      <span :class="['st-tab', { active: statTab === 'monitor' }]" @click="statTab = 'monitor'">服务器监控</span>
       <span :class="['st-tab', { active: statTab === 'ai' }]" @click="statTab = 'ai'">AI 调用</span>
       <span :class="['st-tab', { active: statTab === 'endpoints' }]" @click="statTab = 'endpoints'">接口监控</span>
     </div>
@@ -105,6 +104,64 @@
           </div>
         </div>
       </div>
+
+      <!-- 服务器监控 -->
+      <div class="ov-live-row" style="margin-top:14px">
+        <div class="ov-live-card" style="grid-column: span 2">
+          <div class="ov-live-head">
+            <Cpu theme="outline" size="16" fill="var(--gold)" />
+            <span>服务器状态</span>
+            <span class="ov-live-dot"></span>
+          </div>
+          <div class="st-monitor-grid" v-if="serverData">
+            <div class="st-mon-block">
+              <div class="st-mon-block-head">
+                <span class="st-mon-block-icon" style="background:rgba(64,158,255,0.1)"><Cpu theme="outline" size="20" fill="#409eff" /></span>
+                <div>
+                  <span class="st-mon-block-title">CPU</span>
+                  <span class="st-mon-block-sub">{{ serverData.cpu.model }}</span>
+                </div>
+                <span class="st-mon-block-pct" :style="{ color: serverData.cpu.usagePct > 80 ? '#f56c6c' : '#409eff' }">{{ serverData.cpu.usagePct }}%</span>
+              </div>
+              <el-progress :percentage="serverData.cpu.usagePct" :stroke-width="8" :color="serverData.cpu.usagePct > 80 ? '#f56c6c' : '#409eff'" style="margin:12px 0 8px" />
+              <div class="st-mon-block-info">{{ serverData.cpu.cores }} 核心 · 负载 {{ serverData.cpu.loadAvg?.[0] || '-' }}</div>
+            </div>
+            <div class="st-mon-block">
+              <div class="st-mon-block-head">
+                <span class="st-mon-block-icon" style="background:rgba(201,168,76,0.1)"><Memory theme="outline" size="20" fill="var(--gold)" /></span>
+                <div>
+                  <span class="st-mon-block-title">内存</span>
+                  <span class="st-mon-block-sub">{{ serverData.memory.used }} / {{ serverData.memory.total }} GB</span>
+                </div>
+                <span class="st-mon-block-pct" :style="{ color: serverData.memory.usagePct > 80 ? '#f56c6c' : 'var(--gold)' }">{{ serverData.memory.usagePct }}%</span>
+              </div>
+              <el-progress :percentage="serverData.memory.usagePct" :stroke-width="8" :color="serverData.memory.usagePct > 80 ? '#f56c6c' : 'var(--gold)'" style="margin:12px 0 8px" />
+              <div class="st-mon-block-info">{{ serverData.memory.free || '-' }} GB 可用</div>
+            </div>
+            <div class="st-mon-block">
+              <div class="st-mon-block-head">
+                <span class="st-mon-block-icon" style="background:rgba(103,194,58,0.1)"><Timer theme="outline" size="20" fill="#67c23a" /></span>
+                <div>
+                  <span class="st-mon-block-title">运行时长</span>
+                  <span class="st-mon-block-sub">持续运行</span>
+                </div>
+              </div>
+              <div class="st-mon-uptime">{{ serverData.uptimeFormatted || '-' }}</div>
+            </div>
+            <div class="st-mon-block">
+              <div class="st-mon-block-head">
+                <span class="st-mon-block-icon" style="background:rgba(139,115,85,0.1)"><SettingTwo theme="outline" size="20" fill="var(--primary-100)" /></span>
+                <div>
+                  <span class="st-mon-block-title">系统</span>
+                  <span class="st-mon-block-sub">平台 & 架构</span>
+                </div>
+              </div>
+              <div class="st-mon-uptime" style="font-size:15px">{{ serverData.platform }} {{ serverData.arch }}</div>
+            </div>
+          </div>
+          <div class="st-empty-hint" v-else>暂无服务器数据</div>
+        </div>
+      </div>
     </section>
 
     <!-- 趋势 -->
@@ -171,59 +228,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 服务器监控（全宽） -->
-    <section class="st-section" v-show="statTab === 'monitor'">
-      <div class="st-card st-monitor-card" v-if="serverData">
-        <div class="st-monitor-grid">
-          <div class="st-mon-block">
-            <div class="st-mon-block-head">
-              <span class="st-mon-block-icon" style="background:rgba(64,158,255,0.1)"><Cpu theme="outline" size="20" fill="#409eff" /></span>
-              <div>
-                <span class="st-mon-block-title">CPU</span>
-                <span class="st-mon-block-sub">{{ serverData.cpu.model }}</span>
-              </div>
-              <span class="st-mon-block-pct" :style="{ color: serverData.cpu.usagePct > 80 ? '#f56c6c' : '#409eff' }">{{ serverData.cpu.usagePct }}%</span>
-            </div>
-            <el-progress :percentage="serverData.cpu.usagePct" :stroke-width="8" :color="serverData.cpu.usagePct > 80 ? '#f56c6c' : '#409eff'" style="margin:12px 0 8px" />
-            <div class="st-mon-block-info">{{ serverData.cpu.cores }} 核心 · 负载 {{ serverData.cpu.loadAvg?.[0] || '-' }}</div>
-          </div>
-          <div class="st-mon-block">
-            <div class="st-mon-block-head">
-              <span class="st-mon-block-icon" style="background:rgba(201,168,76,0.1)"><Memory theme="outline" size="20" fill="var(--gold)" /></span>
-              <div>
-                <span class="st-mon-block-title">内存</span>
-                <span class="st-mon-block-sub">{{ serverData.memory.used }} / {{ serverData.memory.total }} GB</span>
-              </div>
-              <span class="st-mon-block-pct" :style="{ color: serverData.memory.usagePct > 80 ? '#f56c6c' : 'var(--gold)' }">{{ serverData.memory.usagePct }}%</span>
-            </div>
-            <el-progress :percentage="serverData.memory.usagePct" :stroke-width="8" :color="serverData.memory.usagePct > 80 ? '#f56c6c' : 'var(--gold)'" style="margin:12px 0 8px" />
-            <div class="st-mon-block-info">{{ serverData.memory.free || '-' }} GB 可用</div>
-          </div>
-          <div class="st-mon-block">
-            <div class="st-mon-block-head">
-              <span class="st-mon-block-icon" style="background:rgba(103,194,58,0.1)"><Timer theme="outline" size="20" fill="#67c23a" /></span>
-              <div>
-                <span class="st-mon-block-title">运行时长</span>
-                <span class="st-mon-block-sub">持续运行</span>
-              </div>
-            </div>
-            <div class="st-mon-uptime">{{ serverData.uptimeFormatted || '-' }}</div>
-          </div>
-          <div class="st-mon-block">
-            <div class="st-mon-block-head">
-              <span class="st-mon-block-icon" style="background:rgba(139,115,85,0.1)"><SettingTwo theme="outline" size="20" fill="var(--primary-100)" /></span>
-              <div>
-                <span class="st-mon-block-title">系统</span>
-                <span class="st-mon-block-sub">平台 & 架构</span>
-              </div>
-            </div>
-            <div class="st-mon-uptime" style="font-size:15px">{{ serverData.platform }} {{ serverData.arch }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="st-empty-hint" v-else>暂无服务器数据</div>
-    </section>
 
     <!-- AI 调用统计 -->
     <section class="st-section" v-if="endpoints.ai && statTab === 'ai'">
