@@ -402,8 +402,8 @@
               <tr v-for="(r, i) in userRegion.recentRecords.slice(0, 20)" :key="i">
                 <td class="ua-td-ip">{{ r.ip }}</td>
                 <td>{{ r.username }}</td>
-                <td style="color:var(--text-200)">接入IP查询后显示</td>
-                <td style="color:var(--text-200)">接入IP查询后显示</td>
+                <td :style="{ color: r.province ? 'var(--text-100)' : 'var(--text-200)' }">{{ r.province || r.country || '查询中...' }}</td>
+                <td :style="{ color: r.isp ? 'var(--text-100)' : 'var(--text-200)' }">{{ r.isp || '—' }}</td>
                 <td style="color:var(--text-200);font-size:11px">{{ formatDate(r.createdAt) }}</td>
               </tr>
             </tbody>
@@ -706,9 +706,10 @@ async function refreshAll() {
       fetchUserActivity(),
       fetchDistribution(),
       fetchEndpoints(),
-      fetchUserRegions(),
     ]);
     lastUpdated.value = new Date().toLocaleTimeString();
+    // IP 查询较慢，延迟 2 秒再请求（不影响主数据展示）
+    setTimeout(() => fetchUserRegions(), 2000);
   } catch (e) {
     fetchError.value = '部分数据加载失败，请检查网络连接';
   } finally {

@@ -352,6 +352,36 @@ router.get('/export-csv', async (req, res, next) => {
 });
 
 // ===== 8. 用户 IP 地域分析 =====
+const axios = require('axios');
+const ipCache = new Map();
+const IP_API = 'https://uapis.cn/api/v1/network/ipinfo';
+const CHINA_PROVINCES = ['广东','江苏','浙江','山东','上海','北京','四川','河南','湖北','福建','湖南','河北','安徽','陕西','广西','云南','贵州','江西','山西','辽宁','吉林','黑龙江','内蒙古','新疆','西藏','甘肃','青海','宁夏','海南','重庆','天津'];
+
+async function queryIP(ip) {
+  if (ipCache.has(ip)) return ipCache.get(ip);
+  if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.0|::1|localhost)/i.test(ip)) {
+    const r = { region: '内网', isp: '', country: '', province: '', city: '' };
+    ipCache.set(ip, r); return r;
+  }
+  try {
+    const res = await axios.get(IP_API, { params: { ip }, timeout: 5000 });
+    const d = res.data;
+    if (d && d.ip) {
+      const parts = (d.region || '未知').split(' ');
+      const r = {
+        region: d.region || '未知', isp: d.isp || d.llc || '',
+        country: parts[0] || '', province: parts.slice(1).join(' ') || '',
+        city: parts.slice(2).join(' ') || '',
+      };
+      // 合并直辖市
+      CHINA_PROVINCES.forEach(p => { if (r.region.includes(p) || r.province.includes(p)) r.province = p; });
+      ipCache.set(ip, r); return r;
+    }
+  } catch (e) { /* ignore */ }
+  const r = { region: '', isp: '', country: '', province: '', city: '' };
+  ipCache.set(ip, r); return r;
+}
+
 router.get('/user-regions', async (req, res, next) => {
   try {
     const now = new Date();
@@ -359,58 +389,44 @@ router.get('/user-regions', async (req, res, next) => {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(now - 7 * 86400000);
 
-    const [totalIps, todayIpsArr, weekIpsArr, topIps, recentRecords] = await Promise.all([
+    const [totalIps, todayIpsArr, weekIpsArr, recentRecords] = await Promise.all([
       LoginLog.distinct('ip', { createdAt: { $gte: thirtyDaysAgo } }),
       LoginLog.distinct('ip', { createdAt: { $gte: todayStart } }),
       LoginLog.distinct('ip', { createdAt: { $gte: weekAgo } }),
-      LoginLog.aggregate([
-        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
-        { $group: { _id: '$ip', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 200 },
-      ]),
-      LoginLog.find({ createdAt: { $gte: thirtyDaysAgo } })
-        .sort({ createdAt: -1 }).limit(100)
-        .select('ip username createdAt userAgent success')
-        .lean(),
+      LoginLog.find({ createdAt: { $gte: thirtyDaysAgo } }).sort({ createdAt: -1 }).limit(20).select('ip username createdAt userAgent success').lean(),
     ]);
 
-    const baseProvinces = [
-      { name: '广东', value: 285, pct: 22.2 }, { name: '江苏', value: 202, pct: 15.7 },
-      { name: '浙江', value: 179, pct: 13.9 }, { name: '山东', value: 146, pct: 11.4 },
-      { name: '上海', value: 128, pct: 10.0 }, { name: '北京', value: 121, pct: 9.4 },
-      { name: '四川', value: 98, pct: 7.6 }, { name: '河南', value: 85, pct: 6.6 },
-      { name: '湖北', value: 72, pct: 5.6 }, { name: '福建', value: 65, pct: 5.1 },
-      { name: '湖南', value: 58, pct: 4.5 }, { name: '河北', value: 51, pct: 4.0 },
-      { name: '安徽', value: 44, pct: 3.4 }, { name: '陕西', value: 38, pct: 3.0 },
-    ];
-    // 补充全部省份（无数据的补0，确保地图不报 NaN）
-    const allProvinceNames = ['广东','江苏','浙江','山东','上海','北京','四川','河南','湖北','福建','湖南','河北','安徽','陕西','广西','云南','贵州','江西','山西','辽宁','吉林','黑龙江','内蒙古','新疆','西藏','甘肃','青海','宁夏','海南','重庆','天津','香港','澳门','台湾'];
-    const provinceMap = {};
-    baseProvinces.forEach(p => { provinceMap[p.name] = p.value; });
-    const scale = Math.min(1, Math.max(0.15, totalIps.length / 300));
-    const provinces = allProvinceNames.map(name => {
-      const rawVal = provinceMap[name] || 0;
-      const val = Math.max(0, Math.round(rawVal * scale));
-      return { name, value: val };
-    }).filter(p => p.value > 0 || provinceMap[p.name] !== undefined || baseProvinces.some(b => b.name === p.name));
-    // 确保有数据的省份排前面
-    provinces.sort((a, b) => b.value - a.value);
+    const uniqueIPs = [...new Set(totalIps)].slice(0, 50);
+    const provinceCount = {};
+    let overseas = 0;
+    for (let i = 0; i < uniqueIPs.length; i++) {
+      const info = await queryIP(uniqueIPs[i]);
+      if (info.province && info.province !== '内网') {
+        const isChina = info.country.includes('中国') || CHINA_PROVINCES.some(p => info.province.includes(p) || (info.region||'').includes(p));
+        if (isChina) {
+          const pv = CHINA_PROVINCES.find(p => info.province.includes(p) || (info.region||'').includes(p)) || info.province;
+          provinceCount[pv] = (provinceCount[pv] || 0) + 1;
+        } else { overseas++; }
+      }
+      if (i < uniqueIPs.length - 1) await new Promise(r => setTimeout(r, 150));
+    }
+
+    const provinces = CHINA_PROVINCES.map(name => ({ name, value: provinceCount[name] || 0 }))
+      .filter(p => p.value > 0).sort((a, b) => b.value - a.value);
     const totalVal = provinces.reduce((s, p) => s + p.value, 0) || 1;
     provinces.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
 
-    res.json({
-      data: {
-        totalIps: totalIps.length,
-        todayIps: todayIpsArr.length,
-        weekIps: weekIpsArr.length,
-        coveredProvinces: provinces.length,
-        provinces,
-        topProvince: provinces[0] || null,
-        overseasCount: Math.max(0, Math.round(totalIps.length * 0.015)),
-        recentRecords,
-      },
+    const enriched = recentRecords.map(r => {
+      const c = ipCache.get(r.ip);
+      return { ip: r.ip, username: r.username, createdAt: r.createdAt, country: c?.country || '', province: c?.province || '', city: c?.city || '', isp: c?.isp || '' };
     });
+
+    res.json({ data: {
+      totalIps: totalIps.length, todayIps: todayIpsArr.length, weekIps: weekIpsArr.length,
+      coveredProvinces: provinces.length, provinces,
+      topProvince: provinces[0] || null, overseasCount: overseas,
+      recentRecords: enriched, queried: uniqueIPs.length, cached: ipCache.size,
+    }});
   } catch (e) { next(e); }
 });
 
