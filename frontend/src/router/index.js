@@ -43,7 +43,7 @@ const routes = [
   { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/error-logs', name: 'ErrorLog', component: ErrorLog, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/announcements', name: 'Announcements', component: Announcements, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
+  { path: '/profile', redirect: '/settings' },
 ];
 
 const router = createRouter({ history: createWebHistory(), routes });

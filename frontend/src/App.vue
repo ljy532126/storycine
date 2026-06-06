@@ -105,10 +105,6 @@
             <el-icon><Bell /></el-icon>
             <template #title>公告管理</template>
           </el-menu-item>
-          <el-menu-item index="/profile">
-            <el-icon><UserFilled /></el-icon>
-            <template #title>个人中心</template>
-          </el-menu-item>
           <el-menu-item index="/settings">
             <el-icon><Setting /></el-icon>
             <template #title>系统设置</template>
@@ -119,7 +115,7 @@
         <div class="sidebar-footer">
           <!-- 当前用户 -->
           <div class="sidebar-user-row" v-if="currentUser.username">
-            <div class="sidebar-user" @click="$router.push('/profile')" title="点击进入个人中心">
+            <div class="sidebar-user" @click="$router.push('/settings')" title="点击进入系统设置">
               <div class="sidebar-avatar" :style="{ backgroundImage: currentUser.avatar ? 'url(' + currentUser.avatar + ')' : '' }">
                 <span v-if="!currentUser.avatar">{{ avatarLetter }}</span>
               </div>
