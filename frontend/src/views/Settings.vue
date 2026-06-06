@@ -787,8 +787,9 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
 .ac-llm-actions { display: flex; gap: 10px; margin-top: 8px; }
 .ac-llm-actions .el-button {
   flex: 1; max-width: 180px; height: 40px; border-radius: 10px;
-  font-size: 14px; font-weight: 600; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 13px; font-weight: 600; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 5px;
+  padding: 0 20px !important; letter-spacing: 0.3px;
 }
 .ac-llm-actions .el-button--primary {
   background: linear-gradient(135deg, #c9a84c, #e0b860) !important;
@@ -800,6 +801,7 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
   background: linear-gradient(135deg, #d4b860, #e8c97a) !important;
 }
 .ac-llm-actions .el-button--primary:active { transform: translateY(0) scale(0.98); }
+.ac-llm-actions .el-button .el-icon { margin: 0 !important; }
 .ac-llm-actions .el-button--default {
   background: var(--bg-100) !important; border: 2px solid var(--bg-300) !important; color: var(--text-100) !important;
 }
