@@ -287,10 +287,6 @@
               </div>
             </el-popover>
             <el-button size="small" type="primary" style="flex:1" @click="generateVideoForShot" :loading="genningVideo" :disabled="!currentShot">生成视频</el-button>
-            <div style="margin-top:8px;display:flex;gap:4px">
-              <el-input v-model="recoverTaskId" size="small" placeholder="粘贴 taskId 恢复视频" clearable style="flex:1" />
-              <el-button size="small" @click="recoverVideo" :loading="recovering" :disabled="!recoverTaskId">恢复</el-button>
-            </div>
           </div>
         </div>
 
@@ -1467,8 +1463,6 @@ if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
 // 视频生成 polling 状态 — key: `${scriptId}_${shotNumber}`
 const videoPollingMap = reactive({});
 const videoPollTimers = {};
-const recoverTaskId = ref('');
-const recovering = ref(false);
 function isTaskId(url) { return url && /^cgt-/.test(url); }
 function getShotPollKey(shot, scriptId) {
   const s = shot || currentShot.value;
@@ -1479,37 +1473,6 @@ function getShotPollKey(shot, scriptId) {
 function statusLabel(s) {
   const m = { queued: '排队中', submitted: '已提交', running: '生成中', processing: '处理中', succeeded: '已完成', failed: '失败', cancelled: '已取消', expired: '已过期' };
   return m[s] || s || '处理中';
-}
-
-async function recoverVideo() {
-  const tid = recoverTaskId.value.trim();
-  if (!tid) return;
-  recovering.value = true;
-  try {
-    const res = await fetch('/api/v1/assets/video-tasks/recover', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ taskIds: [tid] }),
-    });
-    const json = await res.json();
-    const r = json.data?.[0];
-    if (r?.videoUrl) {
-      currentShot.value.renderedVideo = r.videoUrl;
-      const mats = currentShot.value.materials || [];
-      mats.push({ version: mats.length + 1, type: 'video', url: r.videoUrl, prompt: currentVideoPrompt.value, createdAt: new Date().toISOString() });
-      currentShot.value.materials = mats;
-      if (currentStoryboard.value?._id) {
-        try { await storyboardAPI.updateShot(currentStoryboard.value._id, currentShot.value.shotNumber, { renderedVideo: r.videoUrl, materials: mats }); } catch {}
-      }
-      recoverTaskId.value = '';
-      ElMessage.success('视频已恢复到当前分镜 🎉');
-    } else {
-      ElMessage.warning(r?.status === 'running' || r?.status === 'queued' ? '任务仍在生成中，已开始轮询' : `任务状态: ${r?.status || '未知'}`);
-      if (r?.status === 'running' || r?.status === 'queued') {
-        startVideoPolling(tid, currentShot.value?.shotNumber, currentStoryboard.value?._id, currentScriptId.value);
-      }
-    }
-  } catch (e) { ElMessage.error('恢复失败: ' + (e.message || '')); }
-  finally { recovering.value = false; }
 }
 
 async function generateVideoForShot() {
