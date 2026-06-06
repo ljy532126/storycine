@@ -523,17 +523,29 @@ async function drawUserCharts() {
 
 let echartsLoadPromise = null;
 function ensureEcharts() {
-  if (window.echarts) return Promise.resolve(true);
+  if (window.echarts && window.__chinaMapReady) return Promise.resolve(true);
   if (echartsLoadPromise) return echartsLoadPromise;
   echartsLoadPromise = new Promise((resolve) => {
+    // 先加载 echarts 核心
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
     script.onload = () => {
-      const mapScript = document.createElement('script');
-      mapScript.src = 'https://cdn.jsdelivr.net/npm/echarts/map/js/china.js';
-      mapScript.onload = () => resolve(true);
-      mapScript.onerror = () => resolve(false);
-      document.head.appendChild(mapScript);
+      // 加载中国地图 GeoJSON（阿里 DataV 稳定源）
+      fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+        .then(r => r.json())
+        .then(geoJson => {
+          window.echarts.registerMap('china', geoJson);
+          window.__chinaMapReady = true;
+          resolve(true);
+        })
+        .catch(() => {
+          // 回退：尝试旧版 jsdelivr china.js
+          const mapScript = document.createElement('script');
+          mapScript.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/js/china.js';
+          mapScript.onload = () => { window.__chinaMapReady = true; resolve(true); };
+          mapScript.onerror = () => resolve(false);
+          document.head.appendChild(mapScript);
+        });
     };
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
