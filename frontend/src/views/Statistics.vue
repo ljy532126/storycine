@@ -504,7 +504,7 @@ async function drawUserCharts() {
       inRange: { color: ['#bfdbfe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
     },
     geo: {
-      map: MAP_NAME, zoom: 1.8, center: [104.5, 36],
+      map: MAP_NAME, zoom: 1.2, center: [104.5, 36],
       roam: true,
       label: { show: false },
       emphasis: {
