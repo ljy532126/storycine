@@ -421,8 +421,6 @@ router.get('/user-regions', async (req, res, next) => {
     const totalVal = cities.reduce((s, p) => s + p.value, 0) || 1;
     cities.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
 
-    const top = cities[0] || null;
-
     const enriched = recentRecords.map(r => ({
       ip: r.ip, username: r.username, createdAt: r.createdAt,
       country: r.geoInfo?.country || '',
@@ -431,19 +429,6 @@ router.get('/user-regions', async (req, res, next) => {
       district: r.geoInfo?.district || '',
       isp: r.geoInfo?.isp || '',
     }));
-
-    const overseasCount = await LoginLog.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo }, success: true,
-      $or: [{ 'geoInfo.country': { $ne: '' } }, { 'geoInfo.country': { $ne: null } }],
-      'geoInfo.country': { $nin: ['中国', ''] }
-    }) || cityLogs.filter(l => l.geoInfo?.country && l.geoInfo.country !== '中国').length;
-
-    res.json({ data: {
-      totalIps: totalIps.length, todayIps: todayIpsArr.length, weekIps: weekIpsArr.length,
-      coveredProvinces: cities.filter(c => c.value > 0).length, provinces: cities,
-      topProvince: top, overseasCount,
-      recentRecords: enriched,
-    }});
 
     res.json({ data: { totalIps: totalIps.length, todayIps: todayIpsArr.length, weekIps: weekIpsArr.length, coveredProvinces: cities.filter(c=>c.value>0).length, provinces: cities, topProvince: cities[0]||null, overseasCount: totalIps.filter(ip=>ip?.startsWith('8.8')||ip?.startsWith('1.1')).length, recentRecords: enriched }});
   } catch (e) { next(e); }
