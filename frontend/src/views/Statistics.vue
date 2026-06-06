@@ -174,8 +174,13 @@
             <span class="legend-item"><span class="legend-dot" style="background:var(--primary-100)"></span> 成片合成</span>
           </div>
         </div>
-        <div class="st-chart-container">
-          <canvas ref="trendCanvas" width="900" height="240"></canvas>
+        <div class="st-chart-container" style="position:relative">
+          <canvas ref="trendCanvas" width="900" height="240" @mousemove="onChartHover" @mouseleave="chartTooltip.show = false"></canvas>
+          <div v-if="chartTooltip.show" class="chart-tooltip" :style="{ left: chartTooltip.x + 'px', top: chartTooltip.y + 'px' }">
+            <div class="ct-date">{{ chartTooltip.label }}</div>
+            <div><span class="ct-dot" style="background:var(--gold)"></span> 剧本: {{ chartTooltip.script }}</div>
+            <div><span class="ct-dot" style="background:var(--primary-100)"></span> 成片: {{ chartTooltip.comp }}</div>
+          </div>
         </div>
         <div class="st-chart-empty" v-if="!trendData.labels || trendData.labels.length === 0">暂无趋势数据</div>
       </div>
@@ -254,12 +259,12 @@
     </section>
 
     <!-- 接口监控 -->
-    <section class="st-section" v-show="statTab === 'trend'">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <h2 class="st-section-title" style="margin:0">接口监控</h2>
-        <el-button size="small" @click="fetchEndpoints" :loading="endpointsLoading">刷新</el-button>
-      </div>
-      <div class="st-card" v-show="statTab === 'endpoints'">
+    <section class="st-section" v-show="statTab === 'endpoints'">
+      <div class="st-card">
+        <div class="st-card-head">
+          <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 接口监控</h2>
+          <el-button size="small" @click="fetchEndpoints" :loading="endpointsLoading">刷新</el-button>
+        </div>
         <div class="st-endpoint-header">
           <span>总请求: <strong>{{ endpoints.total }}</strong></span>
           <span>健康度: <strong :style="{ color: endpoints.health > 90 ? '#67C23A' : endpoints.health > 70 ? '#E6A23C' : '#F56C6C' }">{{ endpoints.health }}%</strong></span>
@@ -277,10 +282,9 @@
 
     <!-- 用户分布 -->
     <section class="st-section" v-show="statTab === 'trend'">
-      <h2 class="st-section-title">用户分布</h2>
       <div class="st-grid-3">
         <div class="st-card">
-          <h3 class="st-card-title">地区</h3>
+          <div class="st-card-head"><h3 class="st-card-title"><CheckOne theme="outline" size="16" fill="var(--gold)" /> 地区</h3></div>
           <div class="st-bar-chart" v-if="distribution.regions.length > 0">
             <div v-for="r in distribution.regions" :key="r.name" class="bar-row">
               <span class="bar-label">{{ r.name }}</span>
@@ -291,14 +295,14 @@
           <div v-else class="st-empty-hint">收集中...</div>
         </div>
         <div class="st-card">
-          <h3 class="st-card-title">平台</h3>
+          <div class="st-card-head"><h3 class="st-card-title"><FolderOpen theme="outline" size="16" fill="var(--gold)" /> 平台</h3></div>
           <div class="st-pie-simple" v-if="distribution.platforms.length > 0">
             <div v-for="p in distribution.platforms" :key="p.name" class="pie-row"><span class="pie-dot" :style="{ background: p.color }"></span><span>{{ p.name }}</span><span class="pie-val">{{ p.pct }}%</span></div>
           </div>
           <div v-else class="st-empty-hint">收集中...</div>
         </div>
         <div class="st-card">
-          <h3 class="st-card-title">浏览器</h3>
+          <div class="st-card-head"><h3 class="st-card-title"><Data theme="outline" size="16" fill="var(--gold)" /> 浏览器</h3></div>
           <div class="st-pie-simple" v-if="distribution.browsers.length > 0">
             <div v-for="b in distribution.browsers" :key="b.name" class="pie-row"><span class="pie-dot" :style="{ background: b.color }"></span><span>{{ b.name }}</span><span class="pie-val">{{ b.pct }}%</span></div>
           </div>
@@ -339,6 +343,30 @@ const userActivity = reactive({ dau: '-', avgGenerations: '-', newActive: '-', r
 const distribution = reactive({ regions: [], platforms: [], browsers: [] });
 
 const trendCanvas = ref(null);
+const chartTooltip = reactive({ show: false, x: 0, y: 0, label: '', script: 0, comp: 0 });
+
+// Chart hover handler
+function onChartHover(e) {
+  const canvas = trendCanvas.value;
+  if (!canvas || !trendData.labels.length) { chartTooltip.show = false; return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const scaleX = 900 / rect.width;
+
+  const labels = trendData.labels;
+  const pad = { left: 40, right: 24, top: 24, bottom: 32 };
+  const pw = 900 - pad.left - pad.right;
+  const idx = Math.round(((mx * scaleX) - pad.left) / pw * (labels.length - 1));
+  if (idx < 0 || idx >= labels.length) { chartTooltip.show = false; return; }
+
+  chartTooltip.show = true;
+  chartTooltip.label = labels[idx];
+  chartTooltip.script = trendData.scripts[idx] || 0;
+  chartTooltip.comp = trendData.compositions[idx] || 0;
+  chartTooltip.x = mx + 12;
+  chartTooltip.y = Math.max(0, my - 60);
+}
 const migrating = ref(false);
 const migrateResult = ref('');
 const endpoints = reactive({ total: 0, routes: [], recent: [], health: 100 });
@@ -505,14 +533,15 @@ function drawTrendChart() {
   const labels = trendData.labels;
   const scripts = trendData.scripts;
   const comps = trendData.compositions;
-  const maxVal = Math.max(...scripts, ...comps, 1) * 1.2;
+  const maxVal = Math.max(...scripts, ...comps, 1);
+  const yMax = Math.ceil(maxVal * 1.2);
 
   const pad = { top: 24, right: 24, bottom: 32, left: 40 };
   const pw = 900 - pad.left - pad.right;
   const ph = 240 - pad.top - pad.bottom;
 
   function x(i) { return pad.left + (pw / (labels.length - 1 || 1)) * i; }
-  function y(v) { return pad.top + ph - (v / maxVal) * ph; }
+  function y(v) { return pad.top + ph - (v / yMax) * ph; }
 
   // Background
   ctx.fillStyle = 'rgba(26,26,46,0.06)';
@@ -525,7 +554,7 @@ function drawTrendChart() {
     const gy = pad.top + (ph / 4) * i;
     ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(900 - pad.right, gy); ctx.stroke();
     ctx.fillStyle = '#8B7355'; ctx.font = '10px "DM Sans", sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), pad.left - 8, gy + 4);
+    ctx.fillText(Math.round(yMax - (yMax / 4) * i), pad.left - 8, gy + 4);
   }
 
   // X labels
@@ -690,6 +719,16 @@ onUnmounted(() => {
 .st-chart-container canvas { width: 100%; height: auto; }
 .st-chart-empty { text-align: center; padding: 20px; color: var(--text-200); font-size: 12px; }
 
+/* 图表悬停提示 */
+.chart-tooltip {
+  position: absolute; z-index: 100; pointer-events: none;
+  background: var(--navy); color: #fff; padding: 8px 12px;
+  border-radius: 6px; font-size: 11px; line-height: 1.6;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2); white-space: nowrap;
+}
+.ct-date { font-weight: 700; margin-bottom: 2px; color: var(--gold); }
+.ct-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px; }
+
 /* 趋势 */
 .st-trend-card { margin-bottom: 20px; }
 .chart-legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-200); align-items: center; }
@@ -746,7 +785,7 @@ onUnmounted(() => {
 .ai-fail { color: #f56c6c; }
 
 /* 接口监控 */
-.st-endpoint-header { display: flex; gap: 24px; padding: 6px 0 14px; border-bottom: 2px solid rgba(201,168,76,0.2); margin-bottom: 8px; font-size: 13px; color: var(--text-200); }
+.st-endpoint-header { display: flex; gap: 24px; padding: 6px 0 14px; border-bottom: 2px solid rgba(201,168,76,0.2); margin-bottom: 8px; font-size: 13px; color: var(--text-200); margin-top: -8px; }
 .st-endpoint-header strong { color: var(--text-100); font-size: 20px; font-family: 'Playfair Display', serif; }
 .st-endpoint-list { display: flex; flex-direction: column; }
 .st-ep-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 6px; font-size: 12px; transition: background 0.1s; }
