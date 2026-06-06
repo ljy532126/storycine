@@ -259,8 +259,12 @@
           <div class="st-card-head">
             <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 调用分布</h2>
           </div>
-          <div class="st-chart-container">
-            <canvas ref="aiPieCanvas" width="260" height="260"></canvas>
+          <div class="st-chart-container" style="position:relative;display:flex;justify-content:center">
+            <canvas ref="aiPieCanvas" width="300" height="240" @mousemove="onAiPieHover" @mouseleave="aiPieTooltip.show = false"></canvas>
+            <div v-if="aiPieTooltip.show" class="chart-tooltip" :style="{ left: aiPieTooltip.x + 'px', top: aiPieTooltip.y + 'px' }">
+              <div class="ct-date">{{ aiPieTooltip.category }}</div>
+              <div><span class="ct-dot" :style="{ background: aiPieTooltip.color }"></span> {{ aiPieTooltip.value }} 次 ({{ aiPieTooltip.pct }}%)</div>
+            </div>
           </div>
           <div class="chart-legend" style="justify-content:center;margin-top:4px">
             <span class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span> 生图</span>
@@ -357,6 +361,7 @@ const aiPieCanvas = ref(null);
 
 const chartTooltip = reactive({ show: false, x: 0, y: 0, label: '', script: 0, comp: 0 });
 const aiBarTooltip = reactive({ show: false, x: 0, y: 0, category: '', success: 0, fail: 0 });
+const aiPieTooltip = reactive({ show: false, x: 0, y: 0, category: '', value: 0, pct: 0, color: '' });
 
 // Chart hover handler
 function onChartHover(e) {
@@ -733,17 +738,17 @@ function drawAiBarChart() {
   });
 }
 
-// AI pie/donut chart
+// AI donut chart
 function drawAiPieChart() {
   const canvas = aiPieCanvas.value;
   if (!canvas || !endpoints.ai) return;
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.height = 260 * dpr;
-  canvas.style.width = canvas.style.height = '260px';
+  canvas.width = 300 * dpr; canvas.height = 240 * dpr;
+  canvas.style.width = '300px'; canvas.style.height = '240px';
   ctx.scale(dpr, dpr);
 
-  const cx = 130, cy = 130, outerR = 100, innerR = 60;
+  const cx = 120, cy = 120, outerR = 88, innerR = 52;
   const img = endpoints.ai.image?.total || 0;
   const vid = endpoints.ai.video?.total || 0;
   const llm = endpoints.ai.llm?.total || 0;
@@ -755,11 +760,11 @@ function drawAiPieChart() {
     { value: llm, color: '#409eff', label: 'LLM' },
   ];
 
+  // Draw slices
   let startAngle = -Math.PI / 2;
   slices.forEach(slice => {
     const angle = (slice.value / total) * Math.PI * 2;
-    if (angle <= 0) return;
-    // Slice
+    if (angle <= 0.01) { startAngle += angle; return; }
     ctx.beginPath();
     ctx.arc(cx, cy, outerR, startAngle, startAngle + angle);
     ctx.arc(cx, cy, innerR, startAngle + angle, startAngle, true);
@@ -769,28 +774,82 @@ function drawAiPieChart() {
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    // Label
-    const midAngle = startAngle + angle / 2;
-    const lx = cx + Math.cos(midAngle) * (outerR + 18);
-    const ly = cy + Math.sin(midAngle) * (outerR + 18);
-    ctx.fillStyle = '#8B7355'; ctx.font = '11px "DM Sans", sans-serif';
-    ctx.textAlign = midAngle > Math.PI / 2 || midAngle < -Math.PI / 2 ? 'end' : 'start';
-    ctx.fillText(slice.label, lx, ly + 4);
-    // Count
-    ctx.fillStyle = '#1A1A2E';
-    ctx.font = '900 11px "DM Sans", sans-serif';
-    ctx.textAlign = midAngle > Math.PI / 2 || midAngle < -Math.PI / 2 ? 'end' : 'start';
-    ctx.fillText(slice.value, lx, ly - 8);
-
     startAngle += angle;
   });
 
-  // Center text
-  ctx.fillStyle = '#1A1A2E'; ctx.font = '900 28px "Playfair Display", serif'; ctx.textAlign = 'center';
-  ctx.fillText(total, cx, cy + 6);
-  ctx.fillStyle = '#8B7355'; ctx.font = '10px "DM Sans", sans-serif';
-  ctx.fillText('总调用', cx, cy - 12);
+  // Center text - drawn LAST so it's always on top
+  ctx.fillStyle = 'rgba(26,26,46,0.95)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR - 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '900 26px "Playfair Display", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(total, cx, cy - 6);
+  ctx.fillStyle = '#8B7355';
+  ctx.font = '11px "DM Sans", sans-serif';
+  ctx.fillText('总调用', cx, cy + 16);
+
+  // Labels on the right side
+  slices.forEach((slice, i) => {
+    const pct = Math.round((slice.value / total) * 100);
+    const lx = 220;
+    const ly = 100 + i * 28;
+    ctx.fillStyle = slice.color;
+    ctx.fillRect(lx, ly - 4, 10, 10);
+    ctx.fillStyle = '#8B7355';
+    ctx.font = '12px "DM Sans", sans-serif';
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(slice.label + '  ' + slice.value + ' (' + pct + '%)', lx + 16, ly);
+  });
+}
+
+// Pie hover
+function onAiPieHover(e) {
+  const canvas = aiPieCanvas.value;
+  if (!canvas || !endpoints.ai) { aiPieTooltip.show = false; return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (300 / rect.width);
+  const my = (e.clientY - rect.top) * (240 / rect.height);
+
+  const cx = 120, cy = 120, outerR = 88, innerR = 52;
+  const dx = mx - cx, dy = my - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  // Only inside ring
+  if (dist < innerR - 4 || dist > outerR + 2) { aiPieTooltip.show = false; return; }
+
+  const img = endpoints.ai.image?.total || 0;
+  const vid = endpoints.ai.video?.total || 0;
+  const llm = endpoints.ai.llm?.total || 0;
+  const total = img + vid + llm || 1;
+  const slices = [
+    { value: img, color: '#c9a84c', label: '生图' },
+    { value: vid, color: '#6b8fa3', label: '生视频' },
+    { value: llm, color: '#409eff', label: 'LLM' },
+  ];
+
+  let angle = Math.atan2(dy, dx);
+  if (angle < -Math.PI / 2) angle += Math.PI * 2;
+  let startAngle = -Math.PI / 2;
+  for (const slice of slices) {
+    const sweep = (slice.value / total) * Math.PI * 2;
+    if (sweep > 0.01 && angle >= startAngle && angle < startAngle + sweep) {
+      aiPieTooltip.show = true;
+      aiPieTooltip.category = slice.label;
+      aiPieTooltip.value = slice.value;
+      aiPieTooltip.pct = Math.round((slice.value / total) * 100);
+      aiPieTooltip.color = slice.color;
+      aiPieTooltip.x = mx + 14;
+      aiPieTooltip.y = Math.max(0, my - 40);
+      return;
+    }
+    startAngle += sweep;
+  }
+  aiPieTooltip.show = false;
 }
 
 // Watch for tab switch
