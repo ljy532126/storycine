@@ -470,6 +470,7 @@ async function fetchUserRegions() {
     const json = await res.json();
     if (json.data) {
       Object.assign(userRegion, json.data);
+      console.log('[用户分析] provinces=' + (json.data.provinces?.length || 0) + ' first=' + (json.data.provinces?.[0]?.name || 'none') + '=' + (json.data.provinces?.[0]?.value || 0));
       nextTick(() => { drawUserCharts(); });
     }
   } catch { /* ignore */ }
@@ -536,9 +537,14 @@ function ensureEcharts() {
     .then(geoJson => {
       echarts.registerMap('china', geoJson);
       mapReady = true;
+      // 地图加载完成后立即渲染（如果数据已就绪）
+      if (userRegion.provinces?.length) nextTick(() => drawUserCharts());
       return true;
     })
-    .catch(() => false);
+    .catch((e) => {
+      console.error('[ChinaMap] 加载失败:', e);
+      return false;
+    });
   return mapLoadPromise;
 }
 
@@ -1059,10 +1065,13 @@ function onAiPieHover(e) {
 
 // ===== 生命周期 =====
 watch(() => route.path, (p) => { if (p === '/statistics') refreshAll(); });
+// 组件挂载时立即预加载 china.json
 onMounted(async () => {
   await refreshAll();
   window.addEventListener('resize', onResize);
   trackEvent('page_view');
+  // 预加载地图 GeoJSON
+  ensureEcharts();
 });
 
 onUnmounted(() => {

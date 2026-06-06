@@ -404,6 +404,8 @@ router.get('/user-regions', async (req, res, next) => {
     const totalVal = provinces.reduce((s, p) => s + p.value, 0) || 1;
     provinces.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
 
+    console.log('[user-regions] totalIps=' + totalIps.length + ' provinceCount=' + JSON.stringify(provinceCount) + ' firstProvince=' + (provinces[0]?.name || 'none') + '=' + (provinces[0]?.value || 0));
+
     const enriched = recentRecords.map(r => ({
       ip: r.ip, username: r.username, createdAt: r.createdAt,
       province: Object.entries(mockProvinceMap).find(([pfx]) => r.ip?.startsWith(pfx))?.[1] || '',
