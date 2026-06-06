@@ -755,4 +755,43 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
 .pf-uid { cursor: pointer; font-family: 'Courier New', monospace; letter-spacing: 1px; user-select: all; }
 .pf-uid:hover { color: var(--gold); }
 @media (max-width: 700px) { .pf-cards { grid-template-columns: 1fr; } .pf-card:nth-child(3) { grid-column: span 1; } }
+
+/* ===== LLM 配置精装 ===== */
+.ac-llm-status {
+  display: flex !important; flex-direction: row !important; align-items: center; justify-content: space-between;
+  padding: 18px 22px !important;
+  border-left: 4px solid var(--bg-300);
+  transition: all 0.3s;
+}
+.ac-llm-ready { border-left-color: #67c23a !important; background: rgba(103,194,58,0.03) !important; }
+.ac-llm-status-left { display: flex; align-items: center; gap: 14px; }
+.ac-llm-status-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700;
+  background: var(--bg-300); color: var(--text-200);
+}
+.ac-llm-ready .ac-llm-status-icon { background: rgba(103,194,58,0.15); color: #67c23a; }
+.ac-llm-status-title { font-size: 15px; font-weight: 700; color: var(--text-100); }
+.ac-llm-status-sub { font-size: 12px; color: var(--text-200); margin-top: 2px; }
+.ac-llm-refresh { flex-shrink: 0; }
+
+.ac-llm-tabs { margin: 0; }
+.ac-llm-tab-label { display: flex; align-items: center; gap: 6px; }
+.ac-llm-tab-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ac-llm-form { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; max-width: 520px; }
+.ac-llm-row { display: flex; flex-direction: column; gap: 4px; }
+.ac-llm-row label { font-size: 13px; font-weight: 600; color: var(--text-100); }
+.ac-key-link { font-size: 11px; color: #409eff; text-decoration: none; margin-top: 2px; display: inline-block; }
+.ac-key-link:hover { text-decoration: underline; }
+.ac-llm-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+.ac-llm-usage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.ac-usage-card {
+  background: var(--bg-100); border: 1px solid var(--bg-300); border-radius: 10px;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.ac-usage-num { font-size: 22px; font-weight: 900; color: var(--text-100); font-family: 'Playfair Display', serif; }
+.ac-usage-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
+.ac-usage-table-wrap { margin-top: 12px; }
 </style>
