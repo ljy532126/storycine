@@ -60,7 +60,7 @@
                   </el-select>
                 </div>
                 <div class="ac-llm-actions">
-                  <el-button type="primary" @click="saveConfig('deepseek')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
+                  <el-button type="primary" @click="saveConfig('deepseek')" :loading="saving">保存更新</el-button>
                   <el-button @click="testConnection('deepseek')" :loading="testing === 'deepseek'" :type="testResults['deepseek'] === true ? 'success' : testResults['deepseek'] === false ? 'danger' : ''">{{ testBtnLabel('deepseek') }}</el-button>
                 </div>
               </div>
@@ -94,7 +94,7 @@
                   </el-select>
                 </div>
                 <div class="ac-llm-actions">
-                  <el-button type="primary" @click="saveConfig('openai')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
+                  <el-button type="primary" @click="saveConfig('openai')" :loading="saving">保存更新</el-button>
                   <el-button @click="testConnection('openai')" :loading="testing === 'openai'" :type="testResults['openai'] === true ? 'success' : testResults['openai'] === false ? 'danger' : ''">{{ testBtnLabel('openai') }}</el-button>
                 </div>
               </div>
@@ -128,7 +128,7 @@
                   </el-select>
                 </div>
                 <div class="ac-llm-actions">
-                  <el-button type="primary" @click="saveConfig('doubao')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
+                  <el-button type="primary" @click="saveConfig('doubao')" :loading="saving">保存更新</el-button>
                   <el-button @click="testConnection('doubao')" :loading="testing === 'doubao'" :type="testResults['doubao'] === true ? 'success' : testResults['doubao'] === false ? 'danger' : ''">{{ testBtnLabel('doubao') }}</el-button>
                 </div>
               </div>
@@ -156,7 +156,7 @@
                   </el-select>
                 </div>
                 <div class="ac-llm-actions">
-                  <el-button type="primary" @click="saveConfig('tongyi')" :loading="saving"><el-icon><Check /></el-icon> 保存</el-button>
+                  <el-button type="primary" @click="saveConfig('tongyi')" :loading="saving">保存更新</el-button>
                   <el-button @click="testConnection('tongyi')" :loading="testing === 'tongyi'" :type="testResults['tongyi'] === true ? 'success' : testResults['tongyi'] === false ? 'danger' : ''">{{ testBtnLabel('tongyi') }}</el-button>
                 </div>
               </div>
@@ -786,9 +786,8 @@ onMounted(() => { if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin
 .ac-key-link:hover { text-decoration: underline; }
 .ac-llm-actions { display: flex; gap: 10px; margin-top: 8px; }
 .ac-llm-actions .el-button {
-  height: 40px; border-radius: 8px;
-  font-size: 13px; font-weight: 600;
-  padding: 0 22px !important;
+  min-width: 90px; height: 38px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; text-align: center;
 }
 .ac-llm-actions .el-button--primary {
   background: transparent !important;
