@@ -99,7 +99,7 @@
 
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="错误详情" width="780px" destroy-on-close top="3vh">
-      <template v-if="detailLog">
+      <template v-if="detailLog" v-loading="detailLoading">
         <el-descriptions :column="2" border size="small" style="margin-bottom:16px">
           <el-descriptions-item label="状态码">
             <el-tag :type="detailLog.statusCode >= 500 ? 'danger' : 'warning'" size="small">{{ detailLog.statusCode }}</el-tag>
@@ -118,6 +118,16 @@
         <div class="detail-section">
           <div class="detail-section-title">错误消息</div>
           <div class="detail-msg">{{ detailLog.message }}</div>
+        </div>
+
+        <!-- AI 分析结果 -->
+        <div v-if="aiResult" class="detail-section" style="border:1.5px solid var(--gold);border-radius:10px;padding:14px;background:rgba(201,168,76,0.04)">
+          <div class="detail-section-title" style="color:var(--gold);margin-bottom:10px">🤖 AI 分析</div>
+          <div v-for="(block, i) in aiBlocks" :key="i" style="margin-bottom:10px">
+            <div v-if="block.title" style="font-weight:700;font-size:13px;color:var(--text-100);margin-bottom:4px">{{ block.title }}</div>
+            <div v-if="block.text" style="font-size:13px;color:var(--text-200);line-height:1.7;white-space:pre-wrap">{{ block.text }}</div>
+            <pre v-if="block.code" class="detail-pre" style="max-height:200px">{{ block.code }}</pre>
+          </div>
         </div>
 
         <!-- 请求体 — 默认展开 -->
@@ -160,6 +170,9 @@
         <el-button @click="detailVisible = false">关闭</el-button>
         <el-button type="danger" plain size="small" @click="deleteLog(detailLog._id)">删除</el-button>
         <el-button v-if="!detailLog?.resolved" type="primary" @click="resolveLog(detailLog._id)">标记已处理</el-button>
+        <el-button type="success" size="small" @click="aiAnalyze" :loading="analyzing">
+          <el-icon><MagicStick /></el-icon> AI 分析
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -168,7 +181,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { RefreshRight } from '@element-plus/icons-vue';
+import { RefreshRight, MagicStick } from '@element-plus/icons-vue';
 
 const logs = ref([]);
 const total = ref(0);
@@ -187,6 +200,7 @@ let refreshTimer = null;
 
 const detailVisible = ref(false);
 const detailLog = ref(null);
+const detailLoading = ref(false);
 const showStack = ref(false);
 const showBody = ref(true);
 const showQuery = ref(true);
@@ -296,16 +310,67 @@ async function deleteLog(id) {
   } catch (e) { ElMessage.error('删除失败'); }
 }
 
-function showDetail(log) {
-  detailLog.value = log;
+async function showDetail(log) {
+  detailLog.value = log; // 先用列表数据快速展示基本信息
   showStack.value = false;
   showBody.value = true;
   showQuery.value = true;
   showHeaders.value = false;
   detailVisible.value = true;
+  // 异步拉取完整数据（含 body / headers / stack）
+  if (log._id) {
+    detailLoading.value = true;
+    try {
+      const res = await fetch(`/api/v1/error-logs/${log._id}`, { headers: { Authorization: `Bearer ${token()}` } });
+      const json = await res.json();
+      if (json.data) detailLog.value = json.data;
+    } catch {}
+    finally { detailLoading.value = false; }
+  }
 }
 
 function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : ''; }
+
+// ===== AI 分析 =====
+const analyzing = ref(false);
+const aiResult = ref(null);
+const aiBlocks = computed(() => {
+  if (!aiResult.value) return [];
+  // 解析 AI 返回的文本为结构化 blocks
+  const text = aiResult.value;
+  const blocks = [];
+  const sections = text.split(/\n(?=##\s)/);
+  sections.forEach(s => {
+    const lines = s.trim().split('\n');
+    const title = lines[0].replace(/^##\s*/, '').trim();
+    const body = lines.slice(1).join('\n').trim();
+    if (body.startsWith('```') && body.endsWith('```')) {
+      blocks.push({ title, code: body.replace(/^```\w*\n?/, '').replace(/\n?```$/, '') });
+    } else {
+      blocks.push({ title, text: body });
+    }
+  });
+  return blocks.length ? blocks : [{ title: '分析结果', text }];
+});
+
+async function aiAnalyze() {
+  if (!detailLog.value) return;
+  analyzing.value = true;
+  aiResult.value = null;
+  try {
+    const res = await fetch(`/api/v1/error-logs/${detailLog.value._id}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+    });
+    const data = await res.json();
+    if (data.data?.analysis) {
+      aiResult.value = data.data.analysis;
+    } else {
+      ElMessage.error(data.message || 'AI 分析失败');
+    }
+  } catch (e) { ElMessage.error('AI 分析请求失败: ' + (e.message || '')); }
+  finally { analyzing.value = false; }
+}
 
 function relativeTime(t) {
   if (!t) return '';

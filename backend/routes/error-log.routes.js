@@ -77,7 +77,38 @@ router.delete('/:id', adminRequired, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 获取统计摘要
+// AI 分析错误日志
+router.post('/:id/analyze', adminRequired, async (req, res, next) => {
+  try {
+    const log = await ErrorLog.findById(req.params.id).lean();
+    if (!log) return res.status(404).json({ message: '记录不存在' });
+
+    const { callLLM } = require('../utils/llm-client');
+    const prompt = `你是全栈调试专家。分析以下服务器错误并给出修复方案。
+
+错误信息:
+- HTTP ${log.statusCode} ${log.method} ${log.url || log.path}
+- 消息: ${log.message}
+- 环境: ${log.nodeEnv || 'production'} / ${log.hostname}
+- 请求体: ${JSON.stringify(log.body || {})}
+- URL参数: ${JSON.stringify(log.query || {})}
+- 堆栈: ${(log.stack || '').substring(0, 800)}
+
+请严格按照以下格式输出（不要多余内容）：
+
+## 错误原因
+[用1-2句话说明根本原因]
+
+## 影响范围
+[说明影响哪些功能/用户]
+
+## 修复方案
+[具体的修复步骤或代码修改建议，如涉及代码用代码块包裹]`;
+
+    const result = await callLLM(prompt, { maxTokens: 1000, temperature: 0.3 });
+    res.json({ data: { analysis: result } });
+  } catch (e) { next(e); }
+});
 router.get('/stats/summary', adminRequired, async (req, res, next) => {
   try {
     const [total, unresolved, todayCount, topPaths] = await Promise.all([
