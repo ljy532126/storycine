@@ -83,6 +83,10 @@ router.post('/:id/analyze', adminRequired, async (req, res, next) => {
     const log = await ErrorLog.findById(req.params.id).lean();
     if (!log) return res.status(404).json({ message: '记录不存在' });
 
+    // 加载当前用户的 LLM 配置，否则 callLLM 会读到其他用户（或空）的 Key
+    const appConfig = require('../config/app.config');
+    await appConfig.loadUserConfig(req.user._id);
+
     const { callLLM } = require('../utils/llm-client');
     const systemPrompt = '你是全栈调试专家。分析以下服务器错误并给出修复方案。请严格按照格式输出：## 错误原因 / ## 影响范围 / ## 修复方案';
     const userPrompt = `错误信息:
