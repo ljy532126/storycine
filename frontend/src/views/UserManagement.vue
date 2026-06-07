@@ -72,12 +72,12 @@
             <el-button size="small" circle class="um-more-btn"><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu class="um-drop-menu">
-                <el-dropdown-item command="logs" class="um-drop-item"><span class="udot blue"></span><el-icon><List /></el-icon> 登录日志</el-dropdown-item>
-                <el-dropdown-item command="active" v-if="u.status !== 'active'" class="um-drop-item"><span class="udot green"></span><el-icon><Check /></el-icon> 启 用</el-dropdown-item>
-                <el-dropdown-item command="disabled" v-if="u.status === 'active'" class="um-drop-item"><span class="udot orange"></span><el-icon><Close /></el-icon> 禁 用</el-dropdown-item>
-                <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided class="um-drop-item"><span class="udot red"></span><el-icon><CircleCloseFilled /></el-icon> 封 禁</el-dropdown-item>
-                <el-dropdown-item command="resetPwd" class="um-drop-item"><span class="udot gold"></span><el-icon><Key /></el-icon> 重置密码</el-dropdown-item>
-                <el-dropdown-item command="delete" divided class="um-drop-item um-drop-item-danger"><span class="udot red"></span><el-icon><Delete /></el-icon> 删除用户</el-dropdown-item>
+                <el-dropdown-item command="logs" class="um-drop-item um-di-logs"><span class="udot blue"></span><el-icon><List /></el-icon> 日 志</el-dropdown-item>
+                <el-dropdown-item command="active" v-if="u.status !== 'active'" class="um-drop-item um-di-green"><span class="udot green"></span><el-icon><Check /></el-icon> 启 用</el-dropdown-item>
+                <el-dropdown-item command="disabled" v-if="u.status === 'active'" class="um-drop-item um-di-orange"><span class="udot orange"></span><el-icon><Close /></el-icon> 禁 用</el-dropdown-item>
+                <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided class="um-drop-item um-di-red"><span class="udot red"></span><el-icon><CircleCloseFilled /></el-icon> 封 禁</el-dropdown-item>
+                <el-dropdown-item command="resetPwd" class="um-drop-item um-di-gold"><span class="udot gold"></span><el-icon><Key /></el-icon> 重置密码</el-dropdown-item>
+                <el-dropdown-item command="delete" divided class="um-drop-item um-di-delete"><span class="udot red"></span><el-icon><Delete /></el-icon> 删除用户</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -113,18 +113,18 @@
           <el-descriptions-item label="锁定期限">{{ detailUser.lockedUntil ? fmt(detailUser.lockedUntil) : '—' }}</el-descriptions-item>
         </el-descriptions>
         <div class="um-detail-actions">
-          <el-button size="default" class="um-act-btn" @click="handleAction('logs', detailUser); detailVisible = false"><el-icon><List /></el-icon> 登录日志</el-button>
-          <el-button size="default" class="um-act-btn um-act-success" v-if="detailUser.status !== 'active'" @click="handleAction('active', detailUser)"><el-icon><Check /></el-icon> 启 用</el-button>
-          <el-button size="default" class="um-act-btn um-act-warning" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)"><el-icon><Close /></el-icon> 禁 用</el-button>
-          <el-button size="default" class="um-act-btn um-act-danger" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)"><el-icon><CircleCloseFilled /></el-icon> 封 禁</el-button>
-          <el-button size="default" class="um-act-btn um-act-warning" @click="handleAction('resetPwd', detailUser)"><el-icon><Key /></el-icon> 重置密码</el-button>
-          <el-button size="default" class="um-act-btn um-act-danger" @click="handleAction('delete', detailUser); detailVisible = false"><el-icon><Delete /></el-icon> 删除用户</el-button>
+          <el-button size="default" class="um-act-btn um-act-blue" @click="handleAction('logs', detailUser); detailVisible = false"><el-icon><List /></el-icon> 日 志</el-button>
+          <el-button size="default" class="um-act-btn um-act-green" v-if="detailUser.status !== 'active'" @click="handleAction('active', detailUser)"><el-icon><Check /></el-icon> 启 用</el-button>
+          <el-button size="default" class="um-act-btn um-act-orange" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)"><el-icon><Close /></el-icon> 禁 用</el-button>
+          <el-button size="default" class="um-act-btn um-act-red" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)"><el-icon><CircleCloseFilled /></el-icon> 封 禁</el-button>
+          <el-button size="default" class="um-act-btn um-act-gold" @click="handleAction('resetPwd', detailUser)"><el-icon><Key /></el-icon> 重置密码</el-button>
+          <el-button size="default" class="um-act-btn um-act-red" @click="handleAction('delete', detailUser); detailVisible = false"><el-icon><Delete /></el-icon> 删除用户</el-button>
         </div>
       </template>
     </el-drawer>
 
     <!-- 登录日志弹窗 -->
-    <el-dialog v-model="logVisible" :title="'登录日志 — ' + logUser" width="760px" destroy-on-close>
+    <el-dialog v-model="logVisible" :title="'日 志 — ' + logUser" width="760px" destroy-on-close>
       <el-table :data="logs" stripe max-height="450" v-loading="logLoading" size="small">
         <el-table-column label="时间" width="160"><template #default="{ row }">{{ fmt(row.createdAt) }}</template></el-table-column>
         <el-table-column prop="ip" label="IP" width="140" />
@@ -426,12 +426,40 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
 .um-pager { display: flex; justify-content: center; margin-top: 20px; }
 
 /* 下拉菜单美化 */
-.udot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; }
+.um-drop-menu { padding: 6px !important; min-width: 150px !important; }
+.um-drop-item { padding: 10px 14px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 8px !important; margin: 2px 4px !important; transition: all 0.2s !important; }
+.um-drop-item:hover { transform: translateX(4px); }
+.udot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
 .udot.blue { background: #409eff; box-shadow: 0 0 6px rgba(64,158,255,0.5); }
-.udot.green { background: #67c23a; box-shadow: 0 0 6px rgba(103,194,58,0.5); }
-.udot.orange { background: #e6a23c; box-shadow: 0 0 6px rgba(230,162,60,0.5); }
-.udot.red { background: #f56c6c; box-shadow: 0 0 6px rgba(245,108,108,0.5); }
+.udot.green { background: #67c23a; box-shadow: 0 0 6px rgba(103,194,58,0.4); }
+.udot.orange { background: #e6a23c; box-shadow: 0 0 6px rgba(230,162,60,0.4); }
+.udot.red { background: #f56c6c; box-shadow: 0 0 6px rgba(245,108,108,0.4); }
 .udot.gold { background: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.5); }
+
+/* 下拉各项独立配色 */
+.um-di-logs { color: #409eff !important; }
+.um-di-logs .el-icon { color: #409eff !important; }
+.um-di-logs:hover { background: rgba(64,158,255,0.06) !important; }
+
+.um-di-green { color: #67c23a !important; }
+.um-di-green .el-icon { color: #67c23a !important; }
+.um-di-green:hover { background: rgba(103,194,58,0.06) !important; }
+
+.um-di-orange { color: #e6a23c !important; }
+.um-di-orange .el-icon { color: #e6a23c !important; }
+.um-di-orange:hover { background: rgba(230,162,60,0.06) !important; }
+
+.um-di-red { color: #f56c6c !important; }
+.um-di-red .el-icon { color: #f56c6c !important; }
+.um-di-red:hover { background: rgba(245,108,108,0.06) !important; }
+
+.um-di-gold { color: var(--gold-dark) !important; }
+.um-di-gold .el-icon { color: var(--gold) !important; }
+.um-di-gold:hover { background: rgba(201,168,76,0.06) !important; }
+
+.um-di-delete { color: #f56c6c !important; font-weight: 700 !important; }
+.um-di-delete .el-icon { color: #f56c6c !important; }
+.um-di-delete:hover { background: rgba(245,108,108,0.1) !important; transform: translateX(4px) scale(1.02); }
 
 /* 抽屉操作按钮 */
 .um-detail-actions {
@@ -445,12 +473,12 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
   display: flex !important; align-items: center; gap: 6px;
   transition: all 0.25s !important;
 }
-.um-act-btn:hover {
-  transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-}
-.um-act-success:hover { border-color: #67c23a !important; color: #67c23a !important; background: rgba(103,194,58,0.06) !important; }
-.um-act-warning:hover { border-color: #e6a23c !important; color: #e6a23c !important; background: rgba(230,162,60,0.06) !important; }
-.um-act-danger:hover { border-color: #f56c6c !important; color: #f56c6c !important; background: rgba(245,108,108,0.06) !important; }
+.um-act-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+.um-act-blue:hover { border-color: #409eff !important; color: #409eff !important; background: rgba(64,158,255,0.06) !important; box-shadow: 0 4px 16px rgba(64,158,255,0.12); }
+.um-act-green:hover { border-color: #67c23a !important; color: #67c23a !important; background: rgba(103,194,58,0.06) !important; box-shadow: 0 4px 16px rgba(103,194,58,0.12); }
+.um-act-orange:hover { border-color: #e6a23c !important; color: #e6a23c !important; background: rgba(230,162,60,0.06) !important; box-shadow: 0 4px 16px rgba(230,162,60,0.12); }
+.um-act-red:hover { border-color: #f56c6c !important; color: #f56c6c !important; background: rgba(245,108,108,0.06) !important; box-shadow: 0 4px 16px rgba(245,108,108,0.12); }
+.um-act-gold:hover { border-color: var(--gold) !important; color: var(--gold-dark) !important; background: rgba(201,168,76,0.06) !important; box-shadow: 0 4px 16px rgba(201,168,76,0.15); }
 
 @media (max-width: 768px) {
   .um-stats { grid-template-columns: repeat(2, 1fr); }
