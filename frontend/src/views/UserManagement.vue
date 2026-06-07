@@ -71,13 +71,13 @@
           <el-dropdown trigger="click" @command="(cmd) => handleAction(cmd, u)">
             <el-button size="small" circle class="um-more-btn"><el-icon><MoreFilled /></el-icon></el-button>
             <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="logs"><el-icon><List /></el-icon> 登录日志</el-dropdown-item>
-                <el-dropdown-item command="active" v-if="u.status !== 'active'"><el-icon><Check /></el-icon> 启用</el-dropdown-item>
-                <el-dropdown-item command="disabled" v-if="u.status === 'active'"><el-icon><Close /></el-icon> 禁用</el-dropdown-item>
-                <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided><el-icon><CircleCloseFilled /></el-icon> 封禁</el-dropdown-item>
-                <el-dropdown-item command="resetPwd"><el-icon><Key /></el-icon> 重置密码</el-dropdown-item>
-                <el-dropdown-item command="delete" divided><el-icon><Delete /></el-icon> 删除用户</el-dropdown-item>
+              <el-dropdown-menu class="um-drop-menu">
+                <el-dropdown-item command="logs" class="um-drop-item"><span class="udot blue"></span><el-icon><List /></el-icon> 登录日志</el-dropdown-item>
+                <el-dropdown-item command="active" v-if="u.status !== 'active'" class="um-drop-item"><span class="udot green"></span><el-icon><Check /></el-icon> 启 用</el-dropdown-item>
+                <el-dropdown-item command="disabled" v-if="u.status === 'active'" class="um-drop-item"><span class="udot orange"></span><el-icon><Close /></el-icon> 禁 用</el-dropdown-item>
+                <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided class="um-drop-item"><span class="udot red"></span><el-icon><CircleCloseFilled /></el-icon> 封 禁</el-dropdown-item>
+                <el-dropdown-item command="resetPwd" class="um-drop-item"><span class="udot gold"></span><el-icon><Key /></el-icon> 重置密码</el-dropdown-item>
+                <el-dropdown-item command="delete" divided class="um-drop-item um-drop-item-danger"><span class="udot red"></span><el-icon><Delete /></el-icon> 删除用户</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -112,13 +112,13 @@
           <el-descriptions-item label="登录失败次数">{{ detailUser.loginAttempts || 0 }}</el-descriptions-item>
           <el-descriptions-item label="锁定期限">{{ detailUser.lockedUntil ? fmt(detailUser.lockedUntil) : '—' }}</el-descriptions-item>
         </el-descriptions>
-        <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:8px">
-          <el-button size="small" @click="handleAction('logs', detailUser); detailVisible = false"><el-icon><List /></el-icon> 登录日志</el-button>
-          <el-button size="small" type="success" v-if="detailUser.status !== 'active'" @click="handleAction('active', detailUser)"><el-icon><Check /></el-icon> 启用</el-button>
-          <el-button size="small" type="warning" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)"><el-icon><Close /></el-icon> 禁用</el-button>
-          <el-button size="small" type="danger" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)"><el-icon><CircleCloseFilled /></el-icon> 封禁</el-button>
-          <el-button size="small" type="warning" @click="handleAction('resetPwd', detailUser)"><el-icon><Key /></el-icon> 重置密码</el-button>
-          <el-button size="small" type="danger" @click="handleAction('delete', detailUser); detailVisible = false"><el-icon><Delete /></el-icon> 删除用户</el-button>
+        <div class="um-detail-actions">
+          <el-button size="default" class="um-act-btn" @click="handleAction('logs', detailUser); detailVisible = false"><el-icon><List /></el-icon> 登录日志</el-button>
+          <el-button size="default" class="um-act-btn um-act-success" v-if="detailUser.status !== 'active'" @click="handleAction('active', detailUser)"><el-icon><Check /></el-icon> 启 用</el-button>
+          <el-button size="default" class="um-act-btn um-act-warning" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)"><el-icon><Close /></el-icon> 禁 用</el-button>
+          <el-button size="default" class="um-act-btn um-act-danger" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)"><el-icon><CircleCloseFilled /></el-icon> 封 禁</el-button>
+          <el-button size="default" class="um-act-btn um-act-warning" @click="handleAction('resetPwd', detailUser)"><el-icon><Key /></el-icon> 重置密码</el-button>
+          <el-button size="default" class="um-act-btn um-act-danger" @click="handleAction('delete', detailUser); detailVisible = false"><el-icon><Delete /></el-icon> 删除用户</el-button>
         </div>
       </template>
     </el-drawer>
@@ -424,6 +424,33 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
 .um-geo-badge { background: rgba(201,168,76,0.08); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: var(--gold-dark); }
 
 .um-pager { display: flex; justify-content: center; margin-top: 20px; }
+
+/* 下拉菜单美化 */
+.udot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; }
+.udot.blue { background: #409eff; box-shadow: 0 0 6px rgba(64,158,255,0.5); }
+.udot.green { background: #67c23a; box-shadow: 0 0 6px rgba(103,194,58,0.5); }
+.udot.orange { background: #e6a23c; box-shadow: 0 0 6px rgba(230,162,60,0.5); }
+.udot.red { background: #f56c6c; box-shadow: 0 0 6px rgba(245,108,108,0.5); }
+.udot.gold { background: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.5); }
+
+/* 抽屉操作按钮 */
+.um-detail-actions {
+  margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.um-act-btn {
+  border: 1.5px solid var(--bg-300) !important;
+  background: var(--bg-100) !important;
+  color: var(--text-100) !important;
+  font-weight: 600 !important; letter-spacing: 0.5px;
+  display: flex !important; align-items: center; gap: 6px;
+  transition: all 0.25s !important;
+}
+.um-act-btn:hover {
+  transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.um-act-success:hover { border-color: #67c23a !important; color: #67c23a !important; background: rgba(103,194,58,0.06) !important; }
+.um-act-warning:hover { border-color: #e6a23c !important; color: #e6a23c !important; background: rgba(230,162,60,0.06) !important; }
+.um-act-danger:hover { border-color: #f56c6c !important; color: #f56c6c !important; background: rgba(245,108,108,0.06) !important; }
 
 @media (max-width: 768px) {
   .um-stats { grid-template-columns: repeat(2, 1fr); }
