@@ -305,8 +305,8 @@ async function fetchAnnouncements() {
       const dismissed = getDismissedToday();
       const fresh = json.data.filter(a => !dismissed.has(a._id));
       unreadAnnounceCount.value = fresh.length;
-      // 有新公告时自动弹窗（延迟等页面渲染完，取消旧定时器防抖）
-      if (fresh.length > 0) {
+      // 有新公告时自动弹窗（仅限于后台页面，不在 Landing/Login/Register 弹出）
+      if (fresh.length > 0 && !['Landing','Login','Register'].includes(route.name)) {
         clearTimeout(_annPopupTimer);
         _annPopupTimer = setTimeout(() => {
           const first = fresh[0];
