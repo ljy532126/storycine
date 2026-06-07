@@ -35,7 +35,7 @@
                   <span :class="['bell-item-dot', a.type]"></span>
                   <div class="bell-item-body">
                     <div class="bell-item-title">{{ a.title }}</div>
-                    <div class="bell-item-content" v-if="a.content">{{ a.content.substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
+                    <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
                     <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
                   </div>
                 </div>
@@ -164,7 +164,7 @@
     <div v-if="annPopupData">
       <div :class="['ann-pop-type', annPopupData.type]">{{ typeLabel(annPopupData.type) }}</div>
       <div class="ann-pop-title">{{ annPopupData.title }}</div>
-      <div class="ann-pop-content" v-html="linkifyText(annPopupData.content || '暂无详细内容')"></div>
+      <div class="ann-pop-content" v-html="renderContent(annPopupData.content || '暂无详细内容', annPopupData.enableMarkdown)"></div>
     </div>
     <template #footer>
       <el-button @click="dismissToday">今日不再提示</el-button>
@@ -234,6 +234,7 @@ import { useProjectStore } from './stores/project';
 import { useScriptStore } from './stores/script';
 import { useAssetStore } from './stores/asset';
 import { useSocket } from './components/useSocket';
+import { marked } from 'marked';
 
 const route = useRoute();
 const router = useRouter();
@@ -377,20 +378,41 @@ function openAnnounceDetail(a) {
   annPopupVisible.value = true;
 }
 
-// URL 自动识别为可点击链接
-function linkifyText(text) {
+// URL 自动识别 + Markdown 渲染
+function sanitizeMD(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
+}
+function renderContent(text, enableMd) {
   if (!text) return '';
-  // 先转义 HTML 防止 XSS
+  if (enableMd) return sanitizeMD(marked.parse(text));
+  // 纯文本模式：转义 + URL 自动链接
   const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-  // 匹配 http/https URL，转为可点击链接（新窗口打开）
   return escaped.replace(
     /(https?:\/\/[^\s<>"'，。；]+)/g,
     '<a href="$1" target="_blank" rel="noopener" class="ann-link">$1</a>'
   );
+}
+function linkifyText(text) { return renderContent(text, false); }
+
+// 去掉 Markdown 标记，取纯文本用于列表预览
+function stripMd(text) {
+  if (!text) return '';
+  return text
+    .replace(/^#{1,6}\s/gm, '')
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`{1,3}[^`]+`{1,3}/g, '')
+    .replace(/^>\s/gm, '')
+    .replace(/^[-*+]\s/gm, '');
 }
 
 const activeMenu = computed(() => {

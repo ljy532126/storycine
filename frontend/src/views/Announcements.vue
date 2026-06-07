@@ -55,7 +55,10 @@
               <el-tag size="small" :type="a.target === 'admin' ? 'warning' : ''" effect="plain">{{ a.target === 'admin' ? '仅管理员' : '所有人' }}</el-tag>
             </div>
           </div>
-          <div class="ann-content" v-if="a.content">{{ a.content }}</div>
+          <div class="ann-content" v-if="a.content">
+            <div v-if="a.enableMarkdown" v-html="renderMD(a.content.length > 200 ? a.content.substring(0, 200) + '...' : a.content)"></div>
+            <template v-else>{{ a.content }}</template>
+          </div>
           <div class="ann-meta">
             <span class="ann-meta-item">{{ typeLabel(a.type) }}</span>
             <span class="ann-sep">·</span>
@@ -89,6 +92,16 @@
         </el-form-item>
         <el-form-item label="内容">
           <el-input v-model="form.content" type="textarea" :rows="5" placeholder="支持纯文本，输入 URL 自动转为可点击链接" maxlength="2000" show-word-limit />
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+            <el-switch v-model="form.enableMarkdown" active-text="Markdown 渲染" inactive-text="纯文本" size="small" />
+            <el-button size="small" v-if="form.enableMarkdown && form.content" @click="showPreview = !showPreview">
+              {{ showPreview ? '收起预览' : '预览效果' }}
+            </el-button>
+          </div>
+          <div v-if="showPreview && form.enableMarkdown && form.content" class="ann-md-preview">
+            <div class="ann-md-preview-title">预览</div>
+            <div class="ann-md-preview-body" v-html="renderMD(form.content)"></div>
+          </div>
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="8">
@@ -134,6 +147,22 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Edit, Delete } from '@element-plus/icons-vue';
 import { People, User } from '@icon-park/vue-next';
+import { marked } from 'marked';
+
+// 简易 XSS 过滤：去掉 script / on* / javascript:
+function sanitizeMD(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
+}
+
+function renderMD(text) {
+  if (!text) return '';
+  return sanitizeMD(marked.parse(text));
+}
 
 const list = ref([]);
 const total = ref(0);
@@ -148,7 +177,8 @@ const dialogVisible = ref(false);
 const isEditing = ref(false);
 const editingId = ref('');
 const submitting = ref(false);
-const form = reactive({ title: '', content: '', type: 'info', target: 'all', isPinned: false, isActive: true });
+const form = reactive({ title: '', content: '', type: 'info', target: 'all', isPinned: false, isActive: true, enableMarkdown: false });
+const showPreview = ref(false);
 
 const statCards = computed(() => {
   const active = list.value.filter(a => a.isActive).length;
@@ -186,13 +216,15 @@ async function fetchList() {
 
 function openCreate() {
   isEditing.value = false; editingId.value = '';
-  Object.assign(form, { title: '', content: '', type: 'info', target: 'all', isPinned: false, isActive: true });
+  Object.assign(form, { title: '', content: '', type: 'info', target: 'all', isPinned: false, isActive: true, enableMarkdown: false });
+  showPreview.value = false;
   dialogVisible.value = true;
 }
 
 function openEdit(a) {
   isEditing.value = true; editingId.value = a._id;
-  Object.assign(form, { title: a.title, content: a.content, type: a.type, target: a.target, isPinned: a.isPinned, isActive: a.isActive });
+  Object.assign(form, { title: a.title, content: a.content, type: a.type, target: a.target, isPinned: a.isPinned, isActive: a.isActive, enableMarkdown: a.enableMarkdown || false });
+  showPreview.value = false;
   dialogVisible.value = true;
 }
 
@@ -351,6 +383,51 @@ onMounted(() => { fetchList(); });
 }
 
 .ann-pager { display: flex; justify-content: center; margin-top: 20px; }
+
+/* Markdown 预览 */
+.ann-md-preview {
+  margin-top: 10px; border: 1px solid var(--bg-300); border-radius: 10px;
+  overflow: hidden;
+}
+.ann-md-preview-title {
+  font-size: 11px; color: var(--text-200); background: var(--bg-200);
+  padding: 6px 12px; border-bottom: 1px solid var(--bg-300);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.ann-md-preview-body {
+  padding: 12px 14px; font-size: 13px; line-height: 1.8; color: var(--text-100);
+  max-height: 280px; overflow-y: auto;
+}
+.ann-md-preview-body :deep(h1), .ann-md-preview-body :deep(h2), .ann-md-preview-body :deep(h3) {
+  margin: 8px 0 4px; font-weight: 700;
+}
+.ann-md-preview-body :deep(h1) { font-size: 18px; }
+.ann-md-preview-body :deep(h2) { font-size: 16px; }
+.ann-md-preview-body :deep(h3) { font-size: 14px; }
+.ann-md-preview-body :deep(p) { margin: 4px 0; }
+.ann-md-preview-body :deep(ul), .ann-md-preview-body :deep(ol) { padding-left: 20px; margin: 4px 0; }
+.ann-md-preview-body :deep(code) {
+  background: var(--bg-200); padding: 1px 5px; border-radius: 3px; font-size: 12px;
+}
+.ann-md-preview-body :deep(pre) {
+  background: var(--navy); color: #e2e8f0; padding: 10px 14px; border-radius: 8px;
+  overflow-x: auto; font-size: 12px; line-height: 1.5;
+}
+.ann-md-preview-body :deep(a) { color: var(--gold-dark); }
+.ann-md-preview-body :deep(blockquote) {
+  border-left: 3px solid var(--gold); padding-left: 12px; margin: 8px 0;
+  color: var(--text-200);
+}
+
+/* 列表卡片内的 MD 简易渲染 */
+.ann-content :deep(h1), .ann-content :deep(h2), .ann-content :deep(h3) {
+  font-size: 13px; font-weight: 700; margin: 0;
+}
+.ann-content :deep(p) { margin: 0; display: inline; }
+.ann-content :deep(ul), .ann-content :deep(ol) { padding-left: 16px; margin: 2px 0; }
+.ann-content :deep(code) { font-size: 11px; background: var(--bg-200); padding: 1px 3px; border-radius: 2px; }
+.ann-content :deep(pre) { display: none; }
+.ann-content :deep(blockquote) { border-left: 2px solid var(--gold); padding-left: 8px; margin: 2px 0; }
 
 @media (max-width: 768px) {
   .ann-stats { grid-template-columns: repeat(2, 1fr); }

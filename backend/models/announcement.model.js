@@ -9,6 +9,7 @@ const announcementSchema = new mongoose.Schema({
   target: { type: String, enum: ['all', 'admin'], default: 'all' },
   isPinned: { type: Boolean, default: false },     // 置顶
   isActive: { type: Boolean, default: true },       // 是否发布
+  enableMarkdown: { type: Boolean, default: false }, // 启用 Markdown 渲染
   createdBy: { type: String, default: '' },
 }, { timestamps: true });
 

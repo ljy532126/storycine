@@ -64,7 +64,7 @@ router.post('/', adminRequired, async (req, res, next) => {
 
 router.put('/:id', adminRequired, async (req, res, next) => {
   try {
-    const allowed = ['title', 'content', 'type', 'target', 'isPinned', 'isActive'];
+    const allowed = ['title', 'content', 'type', 'target', 'isPinned', 'isActive', 'enableMarkdown'];
     const update = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
     const ann = await Announcement.findByIdAndUpdate(req.params.id, update, { new: true });
