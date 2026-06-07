@@ -98,18 +98,20 @@
     </div>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="错误详情" width="760px" destroy-on-close top="3vh">
+    <el-dialog v-model="detailVisible" title="错误详情" width="780px" destroy-on-close top="3vh">
       <template v-if="detailLog">
         <el-descriptions :column="2" border size="small" style="margin-bottom:16px">
           <el-descriptions-item label="状态码">
             <el-tag :type="detailLog.statusCode >= 500 ? 'danger' : 'warning'" size="small">{{ detailLog.statusCode }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="时间">{{ formatTime(detailLog.createdAt) }}</el-descriptions-item>
-          <el-descriptions-item label="请求">{{ detailLog.method }} {{ detailLog.path }}</el-descriptions-item>
+          <el-descriptions-item label="请求" :span="2">{{ detailLog.method }} {{ detailLog.url || detailLog.path }}</el-descriptions-item>
           <el-descriptions-item label="用户">{{ detailLog.username || '匿名' }}<span v-if="detailLog.userRole"> ({{ detailLog.userRole }})</span></el-descriptions-item>
-          <el-descriptions-item label="环境">{{ detailLog.nodeEnv }} / {{ detailLog.hostname }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
+          <el-descriptions-item label="环境">{{ detailLog.nodeEnv || 'production' }} / {{ detailLog.hostname }}</el-descriptions-item>
+          <el-descriptions-item label="处理状态" :span="2">
             <el-tag :type="detailLog.resolved ? 'success' : 'danger'" size="small">{{ detailLog.resolved ? '已处理' : '未处理' }}</el-tag>
+            <span v-if="detailLog.resolvedAt" style="margin-left:8px;font-size:11px;color:var(--text-200)">于 {{ formatTime(detailLog.resolvedAt) }}</span>
+            <span v-if="detailLog.resolveNote" style="margin-left:8px;font-size:11px;color:var(--text-200)">备注: {{ detailLog.resolveNote }}</span>
           </el-descriptions-item>
         </el-descriptions>
 
@@ -118,25 +120,40 @@
           <div class="detail-msg">{{ detailLog.message }}</div>
         </div>
 
+        <!-- 请求体 — 默认展开 -->
+        <div v-if="hasBody" class="detail-section">
+          <div class="detail-section-title" @click="showBody = !showBody" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px">
+            <span class="detail-toggle">{{ showBody ? '▾' : '▸' }}</span> 请求体
+          </div>
+          <pre v-if="showBody" class="detail-pre">{{ prettyBody }}</pre>
+        </div>
+
+        <!-- URL 查询参数 -->
+        <div v-if="hasQuery" class="detail-section">
+          <div class="detail-section-title" @click="showQuery = !showQuery" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px">
+            <span class="detail-toggle">{{ showQuery ? '▾' : '▸' }}</span> URL 参数 (Query String)
+          </div>
+          <pre v-if="showQuery" class="detail-pre">{{ JSON.stringify(detailLog.query, null, 2) }}</pre>
+        </div>
+
+        <!-- 请求头 -->
+        <div v-if="hasHeaders" class="detail-section">
+          <div class="detail-section-title" @click="showHeaders = !showHeaders" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px">
+            <span class="detail-toggle">{{ showHeaders ? '▾' : '▸' }}</span> 请求头
+          </div>
+          <pre v-if="showHeaders" class="detail-pre">{{ JSON.stringify(detailLog.headers, null, 2) }}</pre>
+        </div>
+
+        <!-- 堆栈 -->
         <div v-if="detailLog.stack" class="detail-section">
-          <div class="detail-section-title" @click="showStack = !showStack" style="cursor:pointer;user-select:none">
-            堆栈跟踪 {{ showStack ? '▾' : '▸' }}
+          <div class="detail-section-title" @click="showStack = !showStack" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px">
+            <span class="detail-toggle">{{ showStack ? '▾' : '▸' }}</span> 堆栈跟踪
           </div>
           <pre v-if="showStack" class="detail-pre">{{ detailLog.stack }}</pre>
         </div>
 
-        <div v-if="detailLog.body && Object.keys(detailLog.body).length" class="detail-section">
-          <div class="detail-section-title" @click="showBody = !showBody" style="cursor:pointer;user-select:none">
-            请求体 {{ showBody ? '▾' : '▸' }}
-          </div>
-          <pre v-if="showBody" class="detail-pre">{{ JSON.stringify(detailLog.body, null, 2) }}</pre>
-        </div>
-
-        <div v-if="detailLog.headers && Object.keys(detailLog.headers).length" class="detail-section">
-          <div class="detail-section-title" @click="showHeaders = !showHeaders" style="cursor:pointer;user-select:none">
-            请求头 {{ showHeaders ? '▾' : '▸' }}
-          </div>
-          <pre v-if="showHeaders" class="detail-pre">{{ JSON.stringify(detailLog.headers, null, 2) }}</pre>
+        <div v-if="!hasBody && !hasQuery && !hasHeaders && !detailLog.stack" class="detail-empty" style="text-align:center;padding:24px;color:var(--text-200);font-size:13px">
+          暂无额外请求信息
         </div>
       </template>
       <template #footer>
@@ -171,8 +188,18 @@ let refreshTimer = null;
 const detailVisible = ref(false);
 const detailLog = ref(null);
 const showStack = ref(false);
-const showBody = ref(false);
+const showBody = ref(true);
+const showQuery = ref(true);
 const showHeaders = ref(false);
+
+const hasBody = computed(() => detailLog.value?.body && Object.keys(detailLog.value.body).length > 0);
+const hasQuery = computed(() => detailLog.value?.query && Object.keys(detailLog.value.query).length > 0);
+const hasHeaders = computed(() => detailLog.value?.headers && Object.keys(detailLog.value.headers).length > 0);
+const prettyBody = computed(() => {
+  const b = detailLog.value?.body;
+  if (!b) return '';
+  try { return JSON.stringify(b, null, 2); } catch { return String(b); }
+});
 
 const token = () => localStorage.getItem('token');
 
@@ -272,7 +299,8 @@ async function deleteLog(id) {
 function showDetail(log) {
   detailLog.value = log;
   showStack.value = false;
-  showBody.value = false;
+  showBody.value = true;
+  showQuery.value = true;
   showHeaders.value = false;
   detailVisible.value = true;
 }
@@ -369,6 +397,7 @@ onUnmounted(() => { clearInterval(refreshTimer); });
 /* 详情 */
 .detail-section { margin-bottom: 14px; }
 .detail-section-title { font-size: 13px; font-weight: 700; color: var(--text-100); margin-bottom: 6px; }
+.detail-toggle { font-size: 10px; color: var(--gold); width: 14px; text-align: center; transition: transform 0.15s; }
 .detail-msg { font-size: 14px; color: #f56c6c; padding: 10px 14px; background: #fef0f0; border-radius: 6px; line-height: 1.6; word-break: break-all; }
 .detail-pre {
   background: #1a1a2e; color: #ccc; padding: 12px 14px; border-radius: 6px;
