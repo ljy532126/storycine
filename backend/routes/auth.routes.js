@@ -211,8 +211,43 @@ router.put('/password', authRequired, async (req, res) => {
   } catch (e) { console.error('[password] 修改失败:', e.message); res.status(500).json({ message: '修改失败' }); }
 });
 
-// ===== 管理员：用户列表（含统计） =====
-router.get('/users', adminRequired, async (req, res) => {
+// ===== 管理员：创建用户 =====
+router.post('/users', adminRequired, async (req, res) => {
+  try {
+    const { username, password, role, nickname } = req.body;
+    if (!username || username.length < 3 || username.length > 30) return res.status(400).json({ message: '账号长度3-30个字符' });
+    if (!password || password.length < 8) return res.status(400).json({ message: '密码至少8位' });
+    const exists = await User.findOne({ username });
+    if (exists) return res.status(400).json({ message: '该账号已存在' });
+    const hashed = await bcrypt.hash(password, 12);
+    const user = await User.create({
+      username,
+      password: hashed,
+      nickname: nickname || username,
+      role: role === 'admin' ? 'admin' : 'user',
+    });
+    // 同步创建设置文档
+    const Settings = require('../models/settings.model');
+    await Settings.create({ userId: user._id });
+    res.status(201).json({ message: '用户创建成功', data: { id: user._id, uid: user.uid, username, nickname: user.nickname, role: user.role, status: user.status, createdAt: user.createdAt } });
+  } catch (e) { res.status(500).json({ message: '创建失败' }); }
+});
+
+// ===== 管理员：删除用户 =====
+router.delete('/users/:id', adminRequired, async (req, res) => {
+  try {
+    if (req.params.id === req.user._id.toString()) return res.status(400).json({ message: '不能删除自己' });
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: '用户不存在' });
+    // 清理关联数据
+    try {
+      const Settings = require('../models/settings.model');
+      await Settings.deleteOne({ userId: req.params.id });
+    } catch {}
+    await LoginLog.deleteMany({ username: user.username });
+    res.json({ message: '已删除' });
+  } catch (e) { res.status(500).json({ message: '删除失败' }); }
+});
   try {
     const { page = 1, size = 20, search, status, role } = req.query;
     const filter = {};

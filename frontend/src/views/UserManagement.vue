@@ -33,6 +33,7 @@
         <el-button type="primary" size="default" @click="fetchUsers" class="um-search-btn"><el-icon><Search /></el-icon> 搜索</el-button>
       </div>
       <div class="um-tb-right">
+        <el-button type="primary" size="default" @click="openCreate"><el-icon><Plus /></el-icon> 新建用户</el-button>
         <el-button size="default" circle @click="fetchUsers" :loading="loading"><el-icon><Refresh /></el-icon></el-button>
         <span class="um-total">共 <b>{{ total }}</b> 个用户</span>
       </div>
@@ -76,6 +77,7 @@
                 <el-dropdown-item command="disabled" v-if="u.status === 'active'"><el-icon><Close /></el-icon> 禁用</el-dropdown-item>
                 <el-dropdown-item command="banned" v-if="u.status !== 'banned'" divided><el-icon><CircleCloseFilled /></el-icon> 封禁</el-dropdown-item>
                 <el-dropdown-item command="resetPwd"><el-icon><Key /></el-icon> 重置密码</el-dropdown-item>
+                <el-dropdown-item command="delete" divided><el-icon><Delete /></el-icon> 删除用户</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -116,6 +118,7 @@
           <el-button size="small" type="warning" v-if="detailUser.status === 'active'" @click="handleAction('disabled', detailUser)"><el-icon><Close /></el-icon> 禁用</el-button>
           <el-button size="small" type="danger" v-if="detailUser.status !== 'banned'" @click="handleAction('banned', detailUser)"><el-icon><CircleCloseFilled /></el-icon> 封禁</el-button>
           <el-button size="small" type="warning" @click="handleAction('resetPwd', detailUser)"><el-icon><Key /></el-icon> 重置密码</el-button>
+          <el-button size="small" type="danger" @click="handleAction('delete', detailUser); detailVisible = false"><el-icon><Delete /></el-icon> 删除用户</el-button>
         </div>
       </template>
     </el-drawer>
@@ -148,6 +151,31 @@
         <el-button type="primary" @click="doResetPwd" :loading="resetting">确认重置</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新建用户弹窗 -->
+    <el-dialog v-model="createVisible" title="新建用户" width="420px" destroy-on-close>
+      <el-form :model="createForm" label-position="top" size="default" @keyup.enter="doCreate">
+        <el-form-item label="账号" required>
+          <el-input v-model="createForm.username" placeholder="3-30个字符" maxlength="30" />
+        </el-form-item>
+        <el-form-item label="密码" required>
+          <el-input v-model="createForm.password" type="password" show-password placeholder="至少8位" />
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="createForm.nickname" placeholder="留空则与账号一致" maxlength="30" />
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-radio-group v-model="createForm.role">
+            <el-radio value="user">普通用户</el-radio>
+            <el-radio value="admin">管理员</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createVisible = false">取消</el-button>
+        <el-button type="primary" @click="doCreate" :loading="creating">确认创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -155,7 +183,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
-import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled } from '@element-plus/icons-vue';
+import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete } from '@element-plus/icons-vue';
 
 const users = ref([]);
 const loading = ref(false);
@@ -188,6 +216,10 @@ const resetVisible = ref(false);
 const resetUser = ref(null);
 const newPassword = ref('');
 const resetting = ref(false);
+
+const createVisible = ref(false);
+const creating = ref(false);
+const createForm = reactive({ username: '', password: '', nickname: '', role: 'user' });
 
 function fmt(d) { return d ? new Date(d).toLocaleString('zh-CN') : '-'; }
 function statusTagType(s) { return s === 'active' ? 'success' : s === 'banned' ? 'danger' : 'warning'; }
@@ -248,6 +280,7 @@ async function copyUID(uid) {
 function handleAction(cmd, u) {
   if (cmd === 'logs') { viewLogs(u); return; }
   if (cmd === 'resetPwd') { resetUser.value = u; newPassword.value = ''; resetVisible.value = true; return; }
+  if (cmd === 'delete') { deleteUser(u); return; }
   setStatus(u, cmd);
 }
 
@@ -283,6 +316,34 @@ async function viewLogs(row) {
     logs.value = data.data?.logs || [];
   } catch (e) { logs.value = []; }
   finally { logLoading.value = false; }
+}
+
+function openCreate() {
+  Object.assign(createForm, { username: '', password: '', nickname: '', role: 'user' });
+  createVisible.value = true;
+}
+
+async function doCreate() {
+  if (!createForm.username || createForm.username.length < 3) { ElMessage.warning('账号至少3个字符'); return; }
+  if (!createForm.password || createForm.password.length < 8) { ElMessage.warning('密码至少8位'); return; }
+  creating.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/users', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() }, body: JSON.stringify(createForm) });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success(data.message || '创建成功'); createVisible.value = false; fetchUsers(); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('创建失败'); }
+  finally { creating.value = false; }
+}
+
+async function deleteUser(u) {
+  try { await ElMessageBox.confirm(`确定删除用户 "${u.username}"？\n该用户的所有数据（登录日志、设置等）将被一并清除，不可恢复。`, '删除用户', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }); } catch { return; }
+  try {
+    const res = await fetch(`/api/v1/auth/users/${u._id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token() } });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success('已删除'); fetchUsers(); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('删除失败'); }
 }
 
 onMounted(() => fetchUsers());
