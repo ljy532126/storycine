@@ -154,12 +154,12 @@
 
     <!-- 新建用户弹窗 -->
     <el-dialog v-model="createVisible" title="新建用户" width="420px" destroy-on-close>
-      <el-form :model="createForm" label-position="top" size="default" @keyup.enter="doCreate">
+      <el-form :model="createForm" label-position="top" size="default" @keyup.enter="doCreate" autocomplete="off">
         <el-form-item label="账号" required>
-          <el-input v-model="createForm.username" placeholder="3-30个字符" maxlength="30" />
+          <el-input v-model="createForm.username" placeholder="3-30个字符" maxlength="30" autocomplete="off" />
         </el-form-item>
         <el-form-item label="密码" required>
-          <el-input v-model="createForm.password" type="password" show-password placeholder="至少8位" />
+          <el-input v-model="createForm.password" type="password" show-password placeholder="至少8位" autocomplete="new-password" />
         </el-form-item>
         <el-form-item label="昵称">
           <el-input v-model="createForm.nickname" placeholder="留空则与账号一致" maxlength="30" />
