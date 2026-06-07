@@ -682,10 +682,17 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .ann-pop-type.warning { background: #fdf6ec; color: #e6a23c; }
 .ann-pop-type.success { background: #f0f9eb; color: #67c23a; }
 .ann-pop-type.danger { background: #fef0f0; color: #f56c6c; }
-.ann-pop-title { font-size: 17px; font-weight: 700; color: var(--text-100); margin-bottom: 12px; }
-.ann-pop-content { font-size: 14px; color: var(--text-200); line-height: 1.8; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-.ann-link { color: #409eff; text-decoration: underline; word-break: break-all; }
-.ann-link:hover { color: #337ecc; }
+.ann-pop-title { font-size: 15px; font-weight: 700; color: var(--text-100); margin-bottom: 10px; }
+.ann-pop-content { font-size: 13px; color: var(--text-200); line-height: 1.6; max-height: 300px; overflow-y: auto; }
+.ann-pop-content p { margin: 0 0 6px; }
+.ann-pop-content ul, .ann-pop-content ol { margin: 4px 0; padding-left: 18px; }
+.ann-pop-content li { margin-bottom: 2px; }
+.ann-pop-content h1, .ann-pop-content h2, .ann-pop-content h3 { font-size: 14px; margin: 8px 0 4px; }
+.ann-pop-content code { font-size: 11px; background: var(--bg-100); padding: 1px 4px; border-radius: 3px; }
+.ann-pop-content pre { font-size: 11px; background: var(--navy); color: #e2e8f0; padding: 8px 12px; border-radius: 6px; overflow-x: auto; }
+.ann-pop-content blockquote { border-left: 2px solid var(--gold); padding-left: 10px; margin: 6px 0; color: var(--text-200); }
+.ann-pop-content a { color: #409eff; text-decoration: underline; word-break: break-all; }
+.ann-pop-content a:hover { color: #337ecc; }
 .github-link {
   display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;
   border-radius: 4px; color: var(--gold-light); text-decoration: none;
