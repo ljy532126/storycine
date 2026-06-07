@@ -393,30 +393,11 @@ router.get('/user-regions', async (req, res, next) => {
       if (c) cityCount[c] = (cityCount[c] || 0) + 1;
     });
 
-    let cities;
-    if (Object.keys(cityCount).length > 3) {
-      // 有真实数据：直接用
-      cities = Object.entries(cityCount).map(([name, value]) => ({ name, value }));
-      cities.sort((a, b) => b.value - a.value);
-      console.log('[user-regions] 真实城市数据: ' + cities.length + ' cities, first=' + (cities[0]?.name||'none'));
-    } else {
-      // 无真实数据：mock 兜底
-      const CITY_MOCK = [
-        { n:'广州',v:132 },{ n:'深圳',v:118 },{ n:'东莞',v:85 },{ n:'佛山',v:72 },
-        { n:'上海',v:128 },{ n:'南京',v:88 },{ n:'苏州',v:82 },{ n:'杭州',v:105 },
-        { n:'北京',v:115 },{ n:'成都',v:78 },{ n:'武汉',v:65 },{ n:'郑州',v:52 },{ n:'长沙',v:45 },
-        { n:'福州',v:38 },{ n:'合肥',v:42 },{ n:'济南',v:55 },{ n:'青岛',v:50 },
-        { n:'西安',v:48 },{ n:'重庆',v:52 },{ n:'天津',v:48 },{ n:'沈阳',v:35 },
-        { n:'昆明',v:38 },{ n:'厦门',v:35 },{ n:'石家庄',v:32 },{ n:'哈尔滨',v:28 },
-        { n:'南宁',v:28 },{ n:'贵阳',v:22 },{ n:'南昌',v:32 },{ n:'太原',v:22 },
-        { n:'大连',v:32 },{ n:'长春',v:25 },{ n:'兰州',v:15 },{ n:'乌鲁木齐',v:18 },
-        { n:'呼和浩特',v:16 },{ n:'海口',v:18 },{ n:'银川',v:12 },{ n:'西宁',v:10 },
-        { n:'拉萨',v:8 },{ n:'三亚',v:22 },{ n:'桂林',v:22 },
-      ];
-      cities = CITY_MOCK.map(m => ({ name: m.n, value: m.v }));
-      cities.sort((a, b) => b.value - a.value);
-      console.log('[user-regions] 无真实数据，使用 mock');
-    }
+    // 过滤空城市名，始终用真实数据
+    const validCities = Object.entries(cityCount).filter(([name]) => name && name.trim());
+    const cities = validCities.map(([name, value]) => ({ name, value }));
+    cities.sort((a, b) => b.value - a.value);
+    console.log('[user-regions] 城市数据: ' + cities.length + ' cities' + (cities[0] ? ', first=' + cities[0].name : ''));
 
     const totalVal = cities.reduce((s, p) => s + p.value, 0) || 1;
     cities.forEach(p => { p.pct = Number((p.value / totalVal * 100).toFixed(1)); });
