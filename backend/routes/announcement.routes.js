@@ -41,7 +41,7 @@ router.get('/', adminRequired, async (req, res, next) => {
 
 router.post('/', adminRequired, async (req, res, next) => {
   try {
-    const { title, content, type, target, isPinned, isActive } = req.body;
+    const { title, content, type, target, isPinned, isActive, enableMarkdown } = req.body;
     if (!title?.trim()) return res.status(400).json({ message: '标题不能为空' });
     const ann = await Announcement.create({
       title: title.trim(),
@@ -50,6 +50,7 @@ router.post('/', adminRequired, async (req, res, next) => {
       target: target || 'all',
       isPinned: !!isPinned,
       isActive: isActive !== false,
+      enableMarkdown: !!enableMarkdown,
       createdBy: req.user.username || req.user._id,
     });
     // Socket 推送
