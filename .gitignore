@@ -10,6 +10,7 @@ minio_data/
 .codegraph/
 uploads/
 backend/uploads/
+backend/output/
 backend/.env
 scripts/
 promo/storycine.tar.gz

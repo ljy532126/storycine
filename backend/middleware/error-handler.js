@@ -91,6 +91,13 @@ function errorHandler(err, req, res, _next) {
     return res.status(409).json({ message: '数据已存在，违反唯一约束' });
   }
 
+  // Multer 文件上传错误
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: '文件大小不能超过10MB' });
+    if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') return res.status(413).json({ message: '单次最多上传9张图片' });
+    return res.status(400).json({ message: err.message });
+  }
+
   // 余额/额度/鉴权相关 — 生产环境也要暴露
   const isBalanceError = /balance|余额|额度|quota|billing|insufficient|credit|充值|扣费|payment required/i.test(err.message);
   const isAuthError = /api.?key|unauthorized|鉴权|认证|密钥|invalid.*key|token/i.test(err.message);

@@ -89,6 +89,17 @@ export const assetAPI = {
   generatePrompt: (data) => api.post('/assets/generate-prompt', data),
   // 图片生成
   generateImage: (data) => api.post('/assets/generate-image', data),
+  // 参考图文件上传/删除
+  uploadReferenceFiles: (files) => {
+    const fd = new FormData();
+    for (const f of files) fd.append('images', f);
+    return api.post('/assets/upload-reference-file', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  deleteReferenceFile: (url) => {
+    // 从 /uploads/references/ref-xxx.png 提取文件名
+    const filename = url.split('/').pop();
+    return api.delete(`/assets/reference-file/${filename}`);
+  },
 };
 
 // ===== 分镜 =====

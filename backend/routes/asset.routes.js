@@ -52,7 +52,24 @@ const upload = multer({
   },
 });
 
-// 角色三视图标准后缀（全局复用）
+// 参考图上传专用 multer（保存到 uploads/references/）
+const refUploadsDir = path.join(__dirname, '..', 'uploads', 'references');
+if (!fs.existsSync(refUploadsDir)) fs.mkdirSync(refUploadsDir, { recursive: true });
+const refStorage = multer.diskStorage({
+  destination: refUploadsDir,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `ref-${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`);
+  },
+});
+const refUpload = multer({
+  storage: refStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIMES.includes(file.mimetype)) { cb(null, true); }
+    else { cb(new Error('仅允许上传 PNG / JPEG / WebP / GIF 格式的图片')); }
+  },
+});
 const THREE_VIEW_SUFFIX = `左区：角色正脸特写，面部占满左区，五官/发型/配饰清晰，无身体入镜、无遮挡变形；右区：标准角色设定三视图，横向依次排列侧视图、正视图和背视图，三个视图严格呈现侧视、正视和背视，从头到脚完整无遮挡；核心约束：特写与三视图为同一角色，五官/服装/配饰/体态100%一致；右区尺寸：三视图角色高度画面高度的80%，三视图高度统一；无多余元素的浅灰色背景，角色无阴影；超高清分辨率，统一85mm焦距，无畸变，角色无动作，平视；中性表情（无喜怒哀乐），眼神平静，自然站立，双手自然下垂，空手（无手持物），身上无任何背负物（无背包/无武器背负）；严禁画面出现不相关的文字；古风/仙侠风格下严禁光腿、严禁腿部裸露、严禁服饰残缺暴露`;
 const { buildCharacterMap, buildShotPrompt } = require('../services/asset.service');
 
@@ -1055,6 +1072,34 @@ router.post('/upload-reference', async (req, res, next) => {
     }
 
     res.json({ data: { url: imageUrl } });
+  } catch (error) { next(error); }
+});
+
+// ===== 上传参考图文件（multipart，存服务器本地） =====
+router.post('/upload-reference-file', refUpload.array('images', 9), async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: '请选择至少一张图片' });
+    }
+    const urls = req.files.map(f => `/uploads/references/${f.filename}`);
+    res.json({ data: { urls } });
+  } catch (error) { next(error); }
+});
+
+// ===== 删除参考图文件 =====
+router.delete('/reference-file/:filename', async (req, res, next) => {
+  try {
+    const { filename } = req.params;
+    // 防止目录穿越
+    if (!/^ref-[\w-]+\.(png|jpe?g|webp|gif)$/i.test(filename)) {
+      return res.status(400).json({ message: '无效的文件名' });
+    }
+    const filepath = path.join(refUploadsDir, filename);
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+      console.log(`[reference-file] 已删除: ${filename}`);
+    }
+    res.json({ data: { ok: true } });
   } catch (error) { next(error); }
 });
 
