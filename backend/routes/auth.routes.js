@@ -248,6 +248,9 @@ router.delete('/users/:id', adminRequired, async (req, res) => {
     res.json({ message: '已删除' });
   } catch (e) { res.status(500).json({ message: '删除失败' }); }
 });
+
+// ===== 管理员：用户列表（含统计） =====
+router.get('/users', adminRequired, async (req, res) => {
   try {
     const { page = 1, size = 20, search, status, role } = req.query;
     const filter = {};
