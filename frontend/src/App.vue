@@ -160,7 +160,7 @@
   <div class="global-loading-bar" :class="{ 'loading-active': isLoading }"></div>
 
   <!-- 新公告弹窗 -->
-  <el-dialog v-model="annPopupVisible" title="📢 新公告" width="480px" :close-on-click-modal="false">
+  <el-dialog v-model="annPopupVisible" title="📢 新公告" width="480px" destroy-on-close>
     <div v-if="annPopupData">
       <div :class="['ann-pop-type', annPopupData.type]">{{ typeLabel(annPopupData.type) }}</div>
       <div class="ann-pop-title">{{ annPopupData.title }}</div>
@@ -285,6 +285,7 @@ const bellPopVisible = ref(false);
 const annPopupVisible = ref(false);
 const annPopupData = ref(null);
 let _lastAnnFetch = 0;
+let _annPopupTimer = null;
 
 function getDismissedToday() {
   try { return new Set(JSON.parse(localStorage.getItem('ad_dismissed_ann') || '[]')); } catch { return new Set(); }
@@ -304,9 +305,10 @@ async function fetchAnnouncements() {
       const dismissed = getDismissedToday();
       const fresh = json.data.filter(a => !dismissed.has(a._id));
       unreadAnnounceCount.value = fresh.length;
-      // 有新公告时自动弹窗（延迟一点等页面渲染完）
+      // 有新公告时自动弹窗（延迟等页面渲染完，取消旧定时器防抖）
       if (fresh.length > 0) {
-        setTimeout(() => {
+        clearTimeout(_annPopupTimer);
+        _annPopupTimer = setTimeout(() => {
           const first = fresh[0];
           if (first && !isDismissedToday(first._id)) {
             annPopupData.value = first;
@@ -481,6 +483,8 @@ function onKeydown(e) {
 
 // 路由变化时刷新用户信息（解决登录后 App 不重载的问题）
 watch(() => route.path, () => { if (localStorage.getItem('token')) refreshUser(); });
+// 用户登录后首次加载公告（onMounted 可能在登录前就执行过了）
+watch(currentUser, (u) => { if (u && u.username) fetchAnnouncements(); });
 
 // 进入错误日志页面时清零红点
 watch(() => route.path, (p) => { if (p === '/error-logs') errorUnreadCount.value = 0; });
