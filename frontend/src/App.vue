@@ -278,7 +278,12 @@ let _lastAnnFetch = 0;
 let _annPopupTimer = null;
 
 function getDismissedToday() {
-  try { return new Set(JSON.parse(localStorage.getItem('ad_dismissed_ann') || '[]')); } catch { return new Set(); }
+  const key = 'ad_dismissed_' + (currentUser.value?.username || 'anon');
+  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); }
+}
+function saveDismissed(set) {
+  const key = 'ad_dismissed_' + (currentUser.value?.username || 'anon');
+  localStorage.setItem(key, JSON.stringify([...set]));
 }
 function isDismissedToday(id) { return getDismissedToday().has(id); }
 
@@ -296,26 +301,24 @@ async function fetchAnnouncements() {
       unreadAnnounceCount.value = fresh.length;
 
       // 有新公告 → 开轮询 + 3秒后铃铛提示
-      if (fresh.length > 0) {
-        startAnnPoll(); // 确保轮询开着
-        if (!['Landing','Login','Register'].includes(route.name)) {
-          clearTimeout(_bellHintTimer);
-          _bellHintTimer = setTimeout(() => {
-            bellShaking.value = true;
-            bellHintVisible.value = true;
-            setTimeout(() => { bellShaking.value = false; }, 1200);
-            setTimeout(() => { bellHintVisible.value = false; }, 8000);
-          }, 3000);
-          clearTimeout(_annPopupTimer);
-          _annPopupTimer = setTimeout(() => {
-            const first = fresh[0];
-            if (first && !isDismissedToday(first._id) && first.title) {
-              annPopupData.value = first;
-              annPopupVisible.value = true;
-            }
-          }, 800);
-        }
-      } else {
+      if (fresh.length > 0 && currentUser.value?.username) {
+        startAnnPoll();
+        clearTimeout(_bellHintTimer);
+        _bellHintTimer = setTimeout(() => {
+          bellShaking.value = true;
+          bellHintVisible.value = true;
+          setTimeout(() => { bellShaking.value = false; }, 1200);
+          setTimeout(() => { bellHintVisible.value = false; }, 8000);
+        }, 3000);
+        clearTimeout(_annPopupTimer);
+        _annPopupTimer = setTimeout(() => {
+          const first = fresh[0];
+          if (first && !isDismissedToday(first._id) && first.title) {
+            annPopupData.value = first;
+            annPopupVisible.value = true;
+          }
+        }, 800);
+      } else if (fresh.length === 0) {
         // 全部已读 → 停止轮询，省性能
         stopAnnPoll();
       }
@@ -336,7 +339,7 @@ function markAnnouncementsRead() {
   if (allIds.length === 0) return;
   const dismissed = getDismissedToday();
   allIds.forEach(id => dismissed.add(id));
-  localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
+  saveDismissed(dismissed);
   unreadAnnounceCount.value = 0;
   bellHintVisible.value = false;
   stopAnnPoll(); // 全部已读，停止轮询
@@ -350,7 +353,7 @@ function dismissAnnPopup() {
   if (annPopupData.value) {
     const dismissed = getDismissedToday();
     dismissed.add(annPopupData.value._id);
-    localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
+    saveDismissed(dismissed);
     fetch(`/api/v1/announcements/${annPopupData.value._id}/read`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => {});
     const next = announcements.value.find(a => !isDismissedToday(a._id));
     if (next) {
@@ -366,7 +369,7 @@ function dismissToday() {
   // 全部标记为已读，今日不再弹出
   const dismissed = getDismissedToday();
   announcements.value.forEach(a => dismissed.add(a._id));
-  localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
+  saveDismissed(dismissed);
   annPopupVisible.value = false;
   unreadAnnounceCount.value = 0;
 }
