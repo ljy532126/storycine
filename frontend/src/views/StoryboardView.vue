@@ -419,23 +419,7 @@
       </template>
     </el-dialog>
 
-    <!-- 图片查看器 -->
-    <el-dialog v-model="imgViewerVisible" title="图片预览" width="90%" top="2vh" destroy-on-close>
-      <div class="img-viewer-toolbar">
-        <el-button size="small" @click="imgScale = Math.max(0.2, imgScale - 0.2)">−</el-button>
-        <span class="img-scale-text">{{ Math.round(imgScale * 100) }}%</span>
-        <el-button size="small" @click="imgScale = Math.min(5, imgScale + 0.2)">+</el-button>
-        <el-button size="small" @click="imgScale = 1; imgViewerVisible = false">关闭</el-button>
-      </div>
-      <div class="img-viewer-body"
-        @wheel.prevent="(e) => { e.deltaY < 0 ? imgScale = Math.min(5, imgScale + 0.1) : imgScale = Math.max(0.2, imgScale - 0.1) }"
-        @mousedown="onImgDragStart" @mousemove="onImgDragMove" @mouseup="onImgDragEnd" @mouseleave="onImgDragEnd"
-        :style="{ cursor: imgDragStart ? 'grabbing' : 'grab' }">
-        <img v-if="imgViewerSrc" :src="imgViewerSrc"
-          :style="{ transform: `translate(${imgX}px,${imgY}px) scale(${imgScale})` }"
-          draggable="false" />
-      </div>
-    </el-dialog>
+    <ImageLightbox v-model:visible="imgViewerVisible" :url="imgViewerSrc || ''" title="图片预览" />
 
     <!-- 导入弹窗 -->
     <el-dialog v-model="showImportDialog" title="导入分镜数据" width="600px">
@@ -492,6 +476,7 @@ import { useAssetStore } from '../stores/asset';
 import { storyboardAPI, assetAPI } from '../api';
 import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
+import ImageLightbox from '../components/ImageLightbox.vue';
 
 const projectStore = useProjectStore();
 const scriptStore = useScriptStore();
@@ -1162,10 +1147,6 @@ async function removeRefImage(i) {
 
 const imgViewerVisible = ref(false);
 const imgViewerSrc = ref('');
-const imgScale = ref(1);
-const imgX = ref(0);
-const imgY = ref(0);
-let imgDragStart = false, imgStartX = 0, imgStartY = 0, imgOrigX = 0, imgOrigY = 0;
 
 function openVideoPreview(url) {
   if (!url) return;
@@ -1174,14 +1155,8 @@ function openVideoPreview(url) {
 function openImgViewer(src) {
   if (!src) return;
   imgViewerSrc.value = src;
-  imgScale.value = 1;
-  imgX.value = 0;
-  imgY.value = 0;
   imgViewerVisible.value = true;
 }
-function onImgDragStart(e) { imgDragStart = true; imgStartX = e.clientX; imgStartY = e.clientY; imgOrigX = imgX.value; imgOrigY = imgY.value; }
-function onImgDragMove(e) { if (!imgDragStart) return; imgX.value = imgOrigX + e.clientX - imgStartX; imgY.value = imgOrigY + e.clientY - imgStartY; }
-function onImgDragEnd() { imgDragStart = false; }
 
 function applyMaterialToShot(s) {
   if (!currentShot.value || !s.renderedImage) return;
