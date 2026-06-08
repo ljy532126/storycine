@@ -26,26 +26,26 @@
         <!-- 快速模板 -->
         <div class="quick-templates">
           <span class="qt-label">快速模板：</span>
-          <span v-for="t in quickTemplates" :key="t.name" class="qt-chip" @click="applyQuickTemplate(t)">{{ t.icon }} {{ t.name }}</span>
+          <span v-for="t in quickTemplates" :key="t.name" class="qt-chip" @click="applyQuickTemplate(t)">{{ t.name }}</span>
         </div>
         <el-alert v-if="scripts.length > 0" type="info" :closable="false" show-icon style="margin-bottom:8px"><template #title>续写模式：以下标签仅作记录，不会影响续写内容。续写基于已有剧本自动延续。</template></el-alert>
         <el-form size="default" inline class="tag-form">
-          <el-form-item label="题材 🎭">
+          <el-form-item label="题材">
             <el-select v-model="tags.genre" placeholder="搜索或输入" style="width:160px" filterable allow-create clearable :disabled="scripts.length > 0" @create="(v) => addCustomOption('genre', v)">
               <el-option v-for="g in genreOptions" :key="g" :label="g" :value="g" />
             </el-select>
           </el-form-item>
-          <el-form-item label="热门梗 📌">
+          <el-form-item label="热门梗">
             <el-select v-model="tags.plots" multiple placeholder="搜索或输入" :disabled="scripts.length > 0" style="width:260px" filterable allow-create clearable @create="(v) => addCustomOption('plots', v)">
               <el-option v-for="p in plotOptions" :key="p" :label="p" :value="p" />
             </el-select>
           </el-form-item>
-          <el-form-item label="类型 🏷️">
+          <el-form-item label="类型">
             <el-select v-model="tags.type" placeholder="搜索或输入" :disabled="scripts.length > 0" style="width:140px" filterable allow-create clearable @create="(v) => addCustomOption('types', v)">
               <el-option v-for="t in typeOptions" :key="t" :label="t" :value="t" />
             </el-select>
           </el-form-item>
-          <el-form-item label="风格 🎨">
+          <el-form-item label="风格">
             <el-select v-model="tags.style" placeholder="搜索或输入" :disabled="scripts.length > 0" style="width:140px" filterable allow-create clearable @create="(v) => addCustomOption('styles', v)">
               <el-option v-for="s in styleOptions" :key="s" :label="s" :value="s" />
             </el-select>
@@ -53,10 +53,11 @@
           <el-form-item>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre">
-                {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集 📖' : 'AI 开写！✍️' }}
+                <MagicWand v-if="!scriptStore.generating" theme="outline" size="18" fill="currentColor" />
+                {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集' : 'AI 开写剧本' }}
               </el-button>
               <el-tooltip content="开启后生成内心独白字段，可加深角色层次；关闭可加快生成速度" placement="top">
-                <el-checkbox v-model="showInnerThought" border size="large" :disabled="scriptStore.generating">💭 内心独白</el-checkbox>
+                <el-checkbox v-model="showInnerThought" border size="large" :disabled="scriptStore.generating"><Edit theme="outline" size="14" fill="currentColor" /> 内心独白</el-checkbox>
               </el-tooltip>
             </div>
           </el-form-item>
@@ -95,8 +96,8 @@
           <div class="card-header-row">
             <span class="card-title">创作记录 ({{ scripts.length }} 集)</span>
             <div class="card-header-btns">
-              <el-button type="warning" @click="showStoryline">📖 故事线总览</el-button>
-              <el-button type="success" @click="handleContinue" :loading="scriptStore.generating">续写下一集 📖</el-button>
+              <el-button type="warning" @click="showStoryline"><Film theme="outline" size="14" fill="currentColor" /> 故事线总览</el-button>
+              <el-button type="success" @click="handleContinue" :loading="scriptStore.generating"><MagicWand theme="outline" size="14" fill="currentColor" /> 续写下一集</el-button>
             </div>
           </div>
         </template>
@@ -176,10 +177,10 @@
 
       <!-- 没历史也没进度 -->
       <div v-if="scripts.length === 0 && !scriptStore.generating && !generationResult" class="welcome-placeholder">
-        <div class="welcome-icon">🎬</div>
+        <div class="welcome-icon"><Film theme="outline" size="48" fill="var(--gold)" /></div>
         <h3>开始创作你的第一部短剧</h3>
-        <p>选好题材标签，点击「AI 开写！」</p>
-        <p>或点击顶部「已有剧本？直接导入」粘贴已有剧本</p>
+        <p>选好题材标签，点击「AI 开写剧本」</p>
+        <p>或点击顶部「导入剧本」粘贴已有剧本</p>
       </div>
 
       <!-- 悬浮日志 -->
@@ -211,8 +212,8 @@
 
     <!-- 空状态 -->
     <div v-if="!currentProjectId" class="welcome-placeholder full">
-      <div class="welcome-icon">📽️</div>
-      <h3>欢迎来到剧本创作间 🎬</h3>
+      <div class="welcome-icon"><Film theme="outline" size="48" fill="var(--gold)" /></div>
+      <h3>欢迎来到剧本创作间</h3>
       <p>选个片场，我们开写吧！</p>
     </div>
 
@@ -326,13 +327,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onActivated, nextTick, watch, markRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useSocket } from '../components/useSocket';
 import api, { scriptAPI } from '../api';
+import { FolderUpload, MagicWand, Film, Edit, Delete, Download, ImportAndExport } from '@icon-park/vue-next';
 
 const router = useRouter();
 const projectStore = useProjectStore();
