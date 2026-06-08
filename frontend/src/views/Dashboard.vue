@@ -130,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, markRaw } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
@@ -159,21 +159,21 @@ const monthLabel = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 
 const weekLabel = '星期' + ['日','一','二','三','四','五','六'][new Date().getDay()];
 
 const stats = ref([
-  { label: '我的片场', value: 0, icon: Film, iconFill: '#fff', gradient: 'linear-gradient(135deg, #1A1A2E, #2d2d4a)', pattern: '🎬', delay: '0ms' },
-  { label: '剧本集数', value: 0, icon: EditTwo, iconFill: 'var(--navy)', gradient: 'linear-gradient(135deg, #c9a84c, #e8c97a)', pattern: '📝', delay: '80ms' },
-  { label: '故事板', value: 0, icon: PictureOne, iconFill: '#fff', gradient: 'linear-gradient(135deg, #8B7355, #a89070)', pattern: '🎞️', delay: '160ms' },
-  { label: '角色资产', value: 0, icon: User, iconFill: '#fff', gradient: 'linear-gradient(135deg, #6b8fa3, #8aafc2)', pattern: '🎭', delay: '240ms' },
+  { label: '我的片场', value: 0, icon: markRaw(Film), iconFill: '#fff', gradient: 'linear-gradient(135deg, #1A1A2E, #2d2d4a)', pattern: '🎬', delay: '0ms' },
+  { label: '剧本集数', value: 0, icon: markRaw(EditTwo), iconFill: 'var(--navy)', gradient: 'linear-gradient(135deg, #c9a84c, #e8c97a)', pattern: '📝', delay: '80ms' },
+  { label: '故事板', value: 0, icon: markRaw(PictureOne), iconFill: '#fff', gradient: 'linear-gradient(135deg, #8B7355, #a89070)', pattern: '🎞️', delay: '160ms' },
+  { label: '角色资产', value: 0, icon: markRaw(User), iconFill: '#fff', gradient: 'linear-gradient(135deg, #6b8fa3, #8aafc2)', pattern: '🎭', delay: '240ms' },
 ]);
 
 const recentProjects = computed(() => projectStore.projects.slice(0, 5));
 
 const quickActions = [
-  { label: '开拍新短剧', desc: '创建项目', icon: Film, color: 'var(--navy)', bg: 'rgba(26,26,46,0.06)', route: '/projects' },
-  { label: '剧本工坊', desc: 'AI 智能编剧', icon: EditTwo, color: '#c9a84c', bg: 'rgba(201,168,76,0.08)', route: '/script-generate' },
-  { label: '演员库', desc: '角色场景道具', icon: User, color: '#8B7355', bg: 'rgba(139,115,85,0.08)', route: '/assets' },
-  { label: '镜头板', desc: '分镜与生图', icon: PictureOne, color: '#6b8fa3', bg: 'rgba(107,143,163,0.08)', route: '/storyboard' },
-  { label: '分镜台本', desc: '场次台词编辑', icon: SettingTwo, color: '#7b6ba3', bg: 'rgba(123,107,163,0.08)', route: '/script-edit' },
-  { label: '剪辑室', desc: '视频合成预览', icon: Play, color: '#c97a4c', bg: 'rgba(201,122,76,0.08)', route: '/composition' },
+  { label: '开拍新短剧', desc: '创建项目', icon: markRaw(Film), color: 'var(--navy)', bg: 'rgba(26,26,46,0.06)', route: '/projects' },
+  { label: '剧本工坊', desc: 'AI 智能编剧', icon: markRaw(EditTwo), color: '#c9a84c', bg: 'rgba(201,168,76,0.08)', route: '/script-generate' },
+  { label: '演员库', desc: '角色场景道具', icon: markRaw(User), color: '#8B7355', bg: 'rgba(139,115,85,0.08)', route: '/assets' },
+  { label: '镜头板', desc: '分镜与生图', icon: markRaw(PictureOne), color: '#6b8fa3', bg: 'rgba(107,143,163,0.08)', route: '/storyboard' },
+  { label: '分镜台本', desc: '场次台词编辑', icon: markRaw(SettingTwo), color: '#7b6ba3', bg: 'rgba(123,107,163,0.08)', route: '/script-edit' },
+  { label: '剪辑室', desc: '视频合成预览', icon: markRaw(Play), color: '#c97a4c', bg: 'rgba(201,122,76,0.08)', route: '/composition' },
 ];
 
 function goToProject(p) {
