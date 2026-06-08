@@ -15,33 +15,36 @@
               <h2>StoryCine</h2>
               <p>全自动AI短剧生成</p>
             </div>
-            <!-- 通知铃铛（logo行右侧） -->
-            <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
-              <template #reference>
-                <div class="bell-icon" :class="{ 'bell-collapsed': collapsed }">
-                  <el-icon :size="19"><Bell /></el-icon>
-                  <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
-                </div>
-              </template>
-              <div class="bell-pop">
-                <div class="bell-pop-head">
-                  <span>公告 & 通知</span>
-                  <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
-                </div>
-                <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
-                <div v-for="a in announcements.slice(0, 10)" :key="a._id"
-                  :class="['bell-item', a.type]"
-                  @click="openAnnounceDetail(a)">
-                  <span :class="['bell-item-dot', a.type]"></span>
-                  <div class="bell-item-body">
-                    <div class="bell-item-title">{{ a.title }}</div>
-                    <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
-                    <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+            <!-- 通知铃铛 + 提示文字 -->
+            <div class="bell-wrap">
+              <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
+                <template #reference>
+                  <div class="bell-icon" :class="{ 'bell-collapsed': collapsed, 'bell-shake': bellShaking, 'bell-has-new': unreadAnnounceCount > 0 }">
+                    <el-icon :size="19"><Bell /></el-icon>
+                    <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
                   </div>
+                </template>
+                <div class="bell-pop">
+                  <div class="bell-pop-head">
+                    <span>公告 & 通知</span>
+                    <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
+                  </div>
+                  <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
+                  <div v-for="a in announcements.slice(0, 10)" :key="a._id"
+                    :class="['bell-item', a.type]"
+                    @click="openAnnounceDetail(a)">
+                    <span :class="['bell-item-dot', a.type]"></span>
+                    <div class="bell-item-body">
+                      <div class="bell-item-title">{{ a.title }}</div>
+                      <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
+                      <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+                    </div>
+                  </div>
+                  <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
                 </div>
-                <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
-              </div>
-            </el-popover>
+              </el-popover>
+              <span v-if="bellHintVisible && !collapsed" class="bell-hint">有新公告啦！</span>
+            </div>
           </div>
         </div>
 
@@ -268,6 +271,9 @@ const unreadAnnounceCount = ref(0);
 const bellPopVisible = ref(false);
 const annPopupVisible = ref(false);
 const annPopupData = ref(null);
+const bellShaking = ref(false);
+const bellHintVisible = ref(false);
+let _bellHintTimer = null;
 let _lastAnnFetch = 0;
 let _annPopupTimer = null;
 
@@ -289,8 +295,16 @@ async function fetchAnnouncements() {
       const dismissed = getDismissedToday();
       const fresh = json.data.filter(a => !dismissed.has(a._id));
       unreadAnnounceCount.value = fresh.length;
-      // 有新公告时自动弹窗（仅限于后台页面，不在 Landing/Login/Register 弹出）
+      // 有新公告时：3秒后铃铛抖动 + 提示文字
       if (fresh.length > 0 && !['Landing','Login','Register'].includes(route.name)) {
+        clearTimeout(_bellHintTimer);
+        _bellHintTimer = setTimeout(() => {
+          bellShaking.value = true;
+          bellHintVisible.value = true;
+          setTimeout(() => { bellShaking.value = false; }, 1200);
+          setTimeout(() => { bellHintVisible.value = false; }, 8000);
+        }, 3000);
+        // 弹窗
         clearTimeout(_annPopupTimer);
         _annPopupTimer = setTimeout(() => {
           const first = fresh[0];
@@ -306,7 +320,10 @@ async function fetchAnnouncements() {
 
 function onBellToggle(v) {
   bellPopVisible.value = v;
-  if (v) markAnnouncementsRead();
+  if (v) {
+    bellHintVisible.value = false;
+    markAnnouncementsRead();
+  }
 }
 
 function markAnnouncementsRead() {
@@ -316,6 +333,7 @@ function markAnnouncementsRead() {
   allIds.forEach(id => dismissed.add(id));
   localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
   unreadAnnounceCount.value = 0;
+  bellHintVisible.value = false;
   // 上报已读到服务端
   allIds.forEach(id => {
     fetch(`/api/v1/announcements/${id}/read`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => {});
@@ -646,6 +664,36 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
   border-radius: 8px; background: #f56c6c; color: #fff;
   font-size: 10px; font-weight: 700; text-align: center;
+}
+
+/* 铃铛抖动动画 */
+.bell-shake {
+  animation: bellShake 0.5s ease-in-out 3;
+}
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(12deg); }
+  30% { transform: rotate(-10deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(3deg); }
+  90% { transform: rotate(-2deg); }
+}
+
+/* 铃铛提示文字 */
+.bell-wrap {
+  position: relative; display: flex; align-items: center; flex-shrink: 0;
+}
+.bell-hint {
+  position: absolute; left: 42px; white-space: nowrap;
+  font-size: 12px; color: var(--gold-dark); font-weight: 700;
+  background: rgba(201,168,76,0.12); padding: 4px 12px; border-radius: 14px;
+  animation: hintFadeIn 0.4s ease-out;
+  pointer-events: none; z-index: 10;
+}
+@keyframes hintFadeIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* 铃铛下拉 */
