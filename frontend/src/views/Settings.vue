@@ -238,7 +238,13 @@
         <div class="st-card pf-card-edit">
           <h3 class="st-card-title"><EditTwo theme="outline" size="17" fill="var(--gold)" /> 编辑资料</h3>
           <div class="st-field"><label class="st-field-label">账号</label><el-input :model-value="profileUser.username" disabled /></div>
-          <div class="st-field"><label class="st-field-label">昵称</label><el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" /></div>
+          <div class="st-field">
+            <label class="st-field-label">昵称</label>
+            <div class="input-counter-wrap">
+              <el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" />
+              <span v-if="profileForm.nickname" class="input-counter">{{ profileForm.nickname.length }}/20</span>
+            </div>
+          </div>
           <el-button class="pf-btn" @click="saveProfile" :loading="savingProfile"><CheckOne theme="outline" size="16" fill="currentColor" /> 保存资料</el-button>
         </div>
 
@@ -246,9 +252,9 @@
         <div class="st-card pf-card-pwd">
           <h3 class="st-card-title"><Lock theme="outline" size="17" fill="var(--gold)" /> 修改密码</h3>
           <el-form ref="pwdForm" :model="pwd" :rules="pwdRules" label-position="top" size="default">
-            <el-form-item label="原密码" prop="oldPassword"><el-input v-model="pwd.oldPassword" type="password" show-password placeholder="输入当前密码" /></el-form-item>
-            <el-form-item label="新密码" prop="newPassword"><el-input v-model="pwd.newPassword" type="password" show-password placeholder="至少6位" /></el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd"><el-input v-model="pwd.confirmPwd" type="password" show-password placeholder="再次输入" /></el-form-item>
+            <el-form-item label="原密码" prop="oldPassword"><div class="input-counter-wrap"><el-input v-model="pwd.oldPassword" type="password" show-password placeholder="输入当前密码" maxlength="50" /><span v-if="pwd.oldPassword" class="input-counter">{{ pwd.oldPassword.length }}/50</span></div></el-form-item>
+            <el-form-item label="新密码" prop="newPassword"><div class="input-counter-wrap"><el-input v-model="pwd.newPassword" type="password" show-password placeholder="至少6位" maxlength="50" /><span v-if="pwd.newPassword" class="input-counter">{{ pwd.newPassword.length }}/50</span></div></el-form-item>
+            <el-form-item label="确认新密码" prop="confirmPwd"><div class="input-counter-wrap"><el-input v-model="pwd.confirmPwd" type="password" show-password placeholder="再次输入" maxlength="50" /><span v-if="pwd.confirmPwd" class="input-counter">{{ pwd.confirmPwd.length }}/50</span></div></el-form-item>
             <el-button class="pf-btn pf-btn-primary" @click="changePwd" :loading="changingPwd"><CheckOne theme="outline" size="16" fill="currentColor" /> 更新密码</el-button>
           </el-form>
         </div>
@@ -502,5 +508,15 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
   .pf-card-main, .pf-card-info { grid-column: span 1; }
   .pf-detail-grid { grid-template-columns: 1fr 1fr; }
   .settings-tabs { flex-wrap: wrap; }
+}
+
+/* 输入框字符计数 */
+.input-counter-wrap { position: relative; width: 100%; }
+.input-counter {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--text-200); background: var(--bg-100);
+  padding: 1px 8px; border-radius: 4px; pointer-events: none;
+  font-weight: 600; z-index: 2; font-family: 'DM Sans', sans-serif;
+  transition: color 0.2s;
 }
 </style>

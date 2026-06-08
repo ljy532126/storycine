@@ -11,16 +11,25 @@
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large" @keyup.enter="handleLogin">
         <el-form-item label="账号" prop="username">
-          <el-input v-model="form.username" placeholder="请输入账号" prefix-icon="User" />
+          <div class="input-counter-wrap">
+            <el-input v-model="form.username" placeholder="请输入账号" prefix-icon="User" maxlength="30" />
+            <span v-if="form.username" class="input-counter">{{ form.username.length }}/30</span>
+          </div>
         </el-form-item>
         <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" prefix-icon="Lock" />
+          <div class="input-counter-wrap">
+            <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" prefix-icon="Lock" maxlength="50" />
+            <span v-if="form.password" class="input-counter">{{ form.password.length }}/50</span>
+          </div>
         </el-form-item>
 
         <!-- 验证码 -->
         <el-form-item label="验证码" prop="captchaText">
           <div class="captcha-row">
-            <el-input v-model="form.captchaText" placeholder="请输入验证码" maxlength="4" style="flex:1" />
+            <div class="input-counter-wrap" style="flex:1">
+              <el-input v-model="form.captchaText" placeholder="请输入验证码" maxlength="4" />
+              <span v-if="form.captchaText" class="input-counter">{{ form.captchaText.length }}/4</span>
+            </div>
             <div class="captcha-svg" v-html="captchaSvg" @click="refreshCaptcha" title="点击刷新验证码"></div>
           </div>
         </el-form-item>
@@ -118,5 +127,15 @@ async function handleLogin() {
   .auth-header { margin-bottom: 24px; }
   .auth-header h1 { font-size: 20px; }
   .auth-card h2 { font-size: 18px; margin-bottom: 20px; }
+}
+
+/* 输入计数 */
+.input-counter-wrap { position: relative; width: 100%; }
+.input-counter {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--text-200); background: var(--bg-100);
+  padding: 1px 8px; border-radius: 4px; pointer-events: none;
+  font-weight: 600; z-index: 2; font-family: 'DM Sans', sans-serif;
+  transition: color 0.2s;
 }
 </style>
