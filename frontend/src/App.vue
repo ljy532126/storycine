@@ -144,7 +144,7 @@
   <div class="global-loading-bar" :class="{ 'loading-active': isLoading }"></div>
 
   <!-- 新公告弹窗 -->
-  <el-dialog v-model="annPopupVisible" title="📢 新公告" width="480px" destroy-on-close>
+  <el-dialog v-model="annPopupVisible" v-if="annPopupData" title="📢 新公告" width="480px" destroy-on-close>
     <div v-if="annPopupData">
       <div :class="['ann-pop-type', annPopupData.type]">{{ typeLabel(annPopupData.type) }}</div>
       <div class="ann-pop-title">{{ annPopupData.title }}</div>
@@ -294,7 +294,7 @@ async function fetchAnnouncements() {
         clearTimeout(_annPopupTimer);
         _annPopupTimer = setTimeout(() => {
           const first = fresh[0];
-          if (first && !isDismissedToday(first._id)) {
+          if (first && !isDismissedToday(first._id) && first.title) {
             annPopupData.value = first;
             annPopupVisible.value = true;
           }
