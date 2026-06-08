@@ -346,7 +346,7 @@ docker exec storycine-app ls /app/backups/</pre>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, markRaw } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
 import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload, Loading } from '@element-plus/icons-vue';
@@ -363,10 +363,10 @@ const statusMap = { active: '正常', disabled: '已禁用', banned: '已封禁'
 const statCounts = reactive({ active: 0, todayNew: 0, admin: 0 });
 
 const statCards = computed(() => [
-  { label: '注册用户', value: total.value, icon: People, iconFill: '#fff', cssClass: 'um-sc-total' },
-  { label: '正常用户', value: statCounts.active, icon: User, iconFill: '#fff', cssClass: 'um-sc-active' },
-  { label: '今日新增', value: statCounts.todayNew, icon: People, iconFill: '#fff', cssClass: 'um-sc-today' },
-  { label: '管理员', value: statCounts.admin, icon: User, iconFill: '#fff', cssClass: 'um-sc-admin' },
+  { label: '注册用户', value: total.value, icon: markRaw(People), iconFill: '#fff', cssClass: 'um-sc-total' },
+  { label: '正常用户', value: statCounts.active, icon: markRaw(User), iconFill: '#fff', cssClass: 'um-sc-active' },
+  { label: '今日新增', value: statCounts.todayNew, icon: markRaw(People), iconFill: '#fff', cssClass: 'um-sc-today' },
+  { label: '管理员', value: statCounts.admin, icon: markRaw(User), iconFill: '#fff', cssClass: 'um-sc-admin' },
 ]);
 
 const detailVisible = ref(false);

@@ -426,7 +426,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch, markRaw } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
@@ -443,11 +443,11 @@ const autoRefresh = ref(false);
 let refreshTimer = null;
 
 const overviewCards = ref([
-  { label: '新增用户', value: '-', icon: People, iconFill: '#fff', gradient: 'linear-gradient(135deg, #c9a84c, #e0b860)', pattern: '👤', delay: '0ms' },
-  { label: '新增项目', value: '-', icon: FolderOpen, iconFill: '#fff', gradient: 'linear-gradient(135deg, #1A1A2E, #2d2d4a)', pattern: '📁', delay: '80ms' },
-  { label: '剧本生成', value: '-', icon: EditTwo, iconFill: '#fff', gradient: 'linear-gradient(135deg, #8B7355, #a89070)', pattern: '📝', delay: '160ms' },
-  { label: '成片合成', value: '-', icon: PlayTwo, iconFill: '#fff', gradient: 'linear-gradient(135deg, #6b8fa3, #8aafc2)', pattern: '🎥', delay: '240ms' },
-  { label: '成功率', value: '-', icon: CheckOne, iconFill: '#fff', gradient: 'linear-gradient(135deg, #67a35c, #7bc06e)', pattern: '✅', delay: '320ms' },
+  { label: '新增用户', value: '-', icon: markRaw(People), iconFill: '#fff', gradient: 'linear-gradient(135deg, #c9a84c, #e0b860)', pattern: '👤', delay: '0ms' },
+  { label: '新增项目', value: '-', icon: markRaw(FolderOpen), iconFill: '#fff', gradient: 'linear-gradient(135deg, #1A1A2E, #2d2d4a)', pattern: '📁', delay: '80ms' },
+  { label: '剧本生成', value: '-', icon: markRaw(EditTwo), iconFill: '#fff', gradient: 'linear-gradient(135deg, #8B7355, #a89070)', pattern: '📝', delay: '160ms' },
+  { label: '成片合成', value: '-', icon: markRaw(PlayTwo), iconFill: '#fff', gradient: 'linear-gradient(135deg, #6b8fa3, #8aafc2)', pattern: '🎥', delay: '240ms' },
+  { label: '成功率', value: '-', icon: markRaw(CheckOne), iconFill: '#fff', gradient: 'linear-gradient(135deg, #67a35c, #7bc06e)', pattern: '✅', delay: '320ms' },
 ]);
 
 const topGenres = ref([]);
