@@ -406,13 +406,6 @@ async function doImport() {
     }
   } catch { importResult.value = '恢复失败'; }
   finally { importing.value = false; }
-      importFile.value = null;
-      fetchBackupList(); fetchUsers();
-    } else {
-      importResult.value = data.message || '恢复失败';
-    }
-  } catch { importResult.value = '恢复失败'; }
-  finally { importing.value = false; }
 }
 
 async function downloadBackup(filename) {
