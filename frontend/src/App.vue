@@ -507,12 +507,13 @@ watch(currentUser, (u) => { if (u && u.username) fetchAnnouncements(); });
 watch(() => route.path, (p) => { if (p === '/error-logs') errorUnreadCount.value = 0; });
 
 onMounted(async () => {
+  // 必须在所有 await 之前调用 useSocket，否则 onUnmounted 注册失败
+  const { on: sOn, connect: sConnect } = useSocket();
+  sConnect();
+
   await refreshUser();
   fetchAnnouncements();
 
-  // 连接 Socket 监听实时推送（新公告 + 新错误）
-  const { on: sOn, connect: sConnect } = useSocket();
-  sConnect();
   sOn('announcement:new', () => { fetchAnnouncements(); });
   if (userRole.value === 'admin') {
     sOn('error-log:new', () => { errorUnreadCount.value++; });

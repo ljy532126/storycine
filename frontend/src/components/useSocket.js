@@ -1,25 +1,17 @@
 import { io } from 'socket.io-client';
 import { ref, onUnmounted } from 'vue';
 
-const SOCKET_URL = import.meta.env.DEV ? '/' : '/';
+const SOCKET_URL = '/';
 const socket = io(SOCKET_URL, { autoConnect: false, transports: ['websocket', 'polling'] });
 
-// 全局调试
-socket.on('connect', () => {
-  console.log('[socket] 已连接 id=' + socket.id);
-});
-socket.on('disconnect', (reason) => {
-  console.log('[socket] 断开连接 reason=' + reason);
-});
-socket.on('connect_error', (err) => {
-  console.error('[socket] 连接错误', err.message);
-});
+socket.on('connect', () => {});
+socket.on('disconnect', () => {});
+socket.on('connect_error', () => {});
 
 export function useSocket() {
   const connected = ref(false);
 
   function connect() {
-    console.log('[socket] connect() 调用, 当前状态 connected=' + socket.connected);
     if (!socket.connected) {
       socket.connect();
     }
@@ -33,7 +25,6 @@ export function useSocket() {
   }
 
   function joinProject(projectId) {
-    console.log('[socket] joinProject ' + projectId);
     socket.emit('join-project', projectId);
   }
 
@@ -41,13 +32,8 @@ export function useSocket() {
     socket.emit('leave-project', projectId);
   }
 
-  // 包装所有监听器加日志
   function _on(event, callback) {
-    console.log('[socket] 注册监听: ' + event);
-    socket.on(event, (...args) => {
-      console.log('[socket] 收到事件: ' + event, args[0]);
-      callback(...args);
-    });
+    socket.on(event, (...args) => { callback(...args); });
   }
 
   function onScriptGenerationProgress(callback) { _on('script-generation-progress', callback); }
@@ -58,7 +44,6 @@ export function useSocket() {
   function onCompositionComplete(callback) { _on('composition-complete', callback); }
 
   function offAll() {
-    console.log('[socket] 清除所有监听');
     socket.off('script-generation-progress');
     socket.off('script-generation-complete');
     socket.off('script-generation-error');
