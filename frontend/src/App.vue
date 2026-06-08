@@ -62,25 +62,9 @@
             <el-icon><Folder /></el-icon>
             <template #title>片场管理</template>
           </el-menu-item>
-          <el-menu-item index="/script-generate">
+          <el-menu-item index="/workspace">
             <el-icon><MagicStick /></el-icon>
-            <template #title>剧本工坊</template>
-          </el-menu-item>
-          <el-menu-item index="/script-edit">
-            <el-icon><Edit /></el-icon>
-            <template #title>分镜台本</template>
-          </el-menu-item>
-          <el-menu-item index="/assets">
-            <el-icon><UserFilled /></el-icon>
-            <template #title>演员库</template>
-          </el-menu-item>
-          <el-menu-item index="/storyboard">
-            <el-icon><Film /></el-icon>
-            <template #title>镜头板</template>
-          </el-menu-item>
-          <el-menu-item index="/composition">
-            <el-icon><VideoCameraFilled /></el-icon>
-            <template #title>剪辑室</template>
+            <template #title>工作台</template>
           </el-menu-item>
           <el-menu-item index="/media-library">
             <el-icon><PictureFilled /></el-icon>
@@ -417,8 +401,11 @@ function stripMd(text) {
     .replace(/^[-*+]\s/gm, '');
 }
 
+const WORKSPACE_ROUTES = ['/script-generate', '/script-edit', '/assets', '/storyboard', '/composition', '/workspace'];
+
 const activeMenu = computed(() => {
   mobileMenuOpen.value = false;
+  if (WORKSPACE_ROUTES.includes(route.path)) return '/workspace';
   return route.path;
 });
 

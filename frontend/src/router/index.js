@@ -1,25 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-// 路由懒加载：每个页面独立 chunk，按需加载，大幅减少首屏体积
 const Landing = () => import('../views/Landing.vue');
 const Login = () => import('../views/Login.vue');
 const Register = () => import('../views/Register.vue');
 const Dashboard = () => import('../views/Dashboard.vue');
 const ProjectList = () => import('../views/ProjectList.vue');
-const ScriptGenerate = () => import('../views/ScriptGenerate.vue');
-const ScriptEdit = () => import('../views/ScriptEdit.vue');
-const AssetManager = () => import('../views/AssetManager.vue');
-const StoryboardView = () => import('../views/StoryboardView.vue');
-const CompositionView = () => import('../views/CompositionView.vue');
 const Settings = () => import('../views/Settings.vue');
 const Statistics = () => import('../views/Statistics.vue');
 const AIConfig = () => import('../views/AIConfig.vue');
 const AIStorageConfig = () => import('../views/AIStorageConfig.vue');
 const MediaLibrary = () => import('../views/MediaLibrary.vue');
 const TTSLibrary = () => import('../views/TTSLibrary.vue');
+const WorkspaceView = () => import('../views/WorkspaceView.vue');
 const UserManagement = () => import('../views/UserManagement.vue');
-const Profile = () => import('../views/Profile.vue');
-
 const ErrorLog = () => import('../views/ErrorLog.vue');
 const Announcements = () => import('../views/Announcements.vue');
 
@@ -29,17 +22,18 @@ const routes = [
   { path: '/register', name: 'Register', component: Register },
   { path: '/dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
   { path: '/projects', name: 'ProjectList', component: ProjectList, meta: { requiresAuth: true } },
-  { path: '/script-generate', name: 'ScriptGenerate', component: ScriptGenerate, meta: { requiresAuth: true } },
-  { path: '/script-edit', name: 'ScriptEdit', component: ScriptEdit, meta: { requiresAuth: true } },
-  { path: '/assets', name: 'AssetManager', component: AssetManager, meta: { requiresAuth: true } },
-  { path: '/storyboard', name: 'StoryboardView', component: StoryboardView, meta: { requiresAuth: true } },
-  { path: '/composition', name: 'CompositionView', component: CompositionView, meta: { requiresAuth: true } },
+  { path: '/script-generate', redirect: '/workspace?ws=script-generate' },
+  { path: '/script-edit', redirect: '/workspace?ws=script-edit' },
+  { path: '/assets', redirect: '/workspace?ws=assets' },
+  { path: '/storyboard', redirect: '/workspace?ws=storyboard' },
+  { path: '/composition', redirect: '/workspace?ws=composition' },
   { path: '/settings', name: 'Settings', component: Settings, meta: { requiresAuth: true } },
   { path: '/statistics', name: 'Statistics', component: Statistics, meta: { requiresAuth: true } },
   { path: '/ai-config', name: 'AIConfig', component: AIConfig, meta: { requiresAuth: true } },
   { path: '/ai-storage', name: 'AIStorageConfig', component: AIStorageConfig, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/media-library', name: 'MediaLibrary', component: MediaLibrary, meta: { requiresAuth: true } },
   { path: '/tts-library', name: 'TTSLibrary', component: TTSLibrary, meta: { requiresAuth: true } },
+  { path: '/workspace', name: 'WorkspaceView', component: WorkspaceView, meta: { requiresAuth: true } },
   { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/error-logs', name: 'ErrorLog', component: ErrorLog, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/announcements', name: 'Announcements', component: Announcements, meta: { requiresAuth: true, requiresAdmin: true } },

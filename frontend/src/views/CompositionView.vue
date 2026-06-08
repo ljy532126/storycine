@@ -1,6 +1,6 @@
 <template>
   <div class="comp-root">
-    <div class="breadcrumb">
+    <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
       <span class="bc-sep"> &gt; </span>
       <span class="bc-current">成片合成</span>

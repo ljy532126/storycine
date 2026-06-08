@@ -1,6 +1,6 @@
 <template>
   <div class="script-edit-root">
-    <div class="breadcrumb">
+    <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
       <span class="bc-sep"> &gt; </span>
       <router-link to="/script-generate" class="bc-link">剧本工坊</router-link>
