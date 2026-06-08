@@ -19,195 +19,154 @@
       </div>
     </div>
 
-    <!-- 上下布局主体 -->
-    <div class="sg-main" v-if="currentProjectId">
-      <!-- 第一行：标签表单（横向） -->
-      <el-card shadow="never" class="tag-card">
-        <!-- 快速模板 -->
-        <div class="quick-templates">
-          <span class="qt-label">快速模板：</span>
-          <span v-for="t in quickTemplates" :key="t.name" class="qt-chip" @click="applyQuickTemplate(t)">{{ t.name }}</span>
-        </div>
-        <el-alert v-if="scripts.length > 0" type="info" :closable="false" show-icon style="margin-bottom:8px"><template #title>续写模式：以下标签仅作记录，不会影响续写内容。续写基于已有剧本自动延续。</template></el-alert>
-        <el-form size="default" inline class="tag-form">
-          <el-form-item label="题材">
-            <el-select v-model="tags.genre" placeholder="搜索或输入" style="width:160px" filterable allow-create clearable :disabled="scripts.length > 0" @create="(v) => addCustomOption('genre', v)">
-              <el-option v-for="g in genreOptions" :key="g" :label="g" :value="g" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="热门梗">
-            <el-select v-model="tags.plots" multiple placeholder="搜索或输入" :disabled="scripts.length > 0" style="width:260px" filterable allow-create clearable @create="(v) => addCustomOption('plots', v)">
-              <el-option v-for="p in plotOptions" :key="p" :label="p" :value="p" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="类型">
-            <el-select v-model="tags.type" placeholder="搜索或输入" :disabled="scripts.length > 0" style="width:140px" filterable allow-create clearable @create="(v) => addCustomOption('types', v)">
-              <el-option v-for="t in typeOptions" :key="t" :label="t" :value="t" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="风格">
-            <el-select v-model="tags.style" placeholder="搜索或输入" :disabled="scripts.length > 0" style="width:140px" filterable allow-create clearable @create="(v) => addCustomOption('styles', v)">
-              <el-option v-for="s in styleOptions" :key="s" :label="s" :value="s" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre">
-                <MagicWand v-if="!scriptStore.generating" theme="outline" size="18" fill="currentColor" />
-                {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集' : 'AI 开写剧本' }}
-              </el-button>
-              <el-tooltip content="开启后生成内心独白字段，可加深角色层次；关闭可加快生成速度" placement="top">
-                <el-checkbox v-model="showInnerThought" border size="large" :disabled="scriptStore.generating"><Edit theme="outline" size="14" fill="currentColor" /> 内心独白</el-checkbox>
-              </el-tooltip>
-            </div>
-          </el-form-item>
-        </el-form>
-      </el-card>
+	    <!-- 两栏布局 -->
+	    <div class="sg-layout" v-if="currentProjectId">
+	      <aside class="sg-palette">
+	        <div class="sg-palette-inner">
+	          <div class="sg-palette-head">
+	            <MagicWand theme="outline" size="18" fill="var(--gold)" />
+	            <span>创作标签</span>
+	            <span class="sg-palette-badge" v-if="tags.genre">已配置</span>
+	          </div>
 
-      <!-- 第二行：进度卡片（生成中时展示） -->
-      <el-card v-if="scriptStore.generating" shadow="never" class="gen-progress-card">
-        <div class="gp-head">
-          <div class="gp-head-left">
-            <span class="gp-head-icon">
-              <MagicWand theme="outline" size="20" fill="var(--gold)" />
-            </span>
-            <div>
-              <span class="gp-title">{{ flowType === 'continue' ? 'AI 续写进行中' : 'AI 正在创作剧本' }}</span>
-              <span class="gp-sub">七步协作，为你写一个精彩故事</span>
-            </div>
-          </div>
-          <div class="gp-head-right">
-            <span class="gp-timer"><Time theme="outline" size="14" fill="currentColor" /> 预计 {{ estTime }}</span>
-            <el-progress :percentage="stepPercentage" :stroke-width="6" style="width:120px" />
-          </div>
-        </div>
+	          <el-alert v-if="scripts.length > 0" type="info" :closable="false" show-icon class="sg-continue-alert"><template #title>续写模式：标签仅作记录</template></el-alert>
 
-        <!-- 横向步骤条 -->
-        <div class="gp-steps-row">
-          <div
-            v-for="(s, i) in currentStepLabels" :key="s.step"
-            :class="['gp-step', { done: s.step < currentStep, active: s.step === currentStep, wait: s.step > currentStep }]"
-          >
-            <div class="gp-step-dot">
-              <span v-if="s.step < currentStep">✓</span>
-              <span v-else-if="s.step === currentStep" class="gp-spin"></span>
-              <span v-else>{{ s.step }}</span>
-            </div>
-            <span class="gp-step-label">{{ s.title }}</span>
-            <div v-if="i < currentStepLabels.length - 1" class="gp-step-line"></div>
-          </div>
-        </div>
+	          <div class="sg-palette-group">
+	            <span class="sg-palette-label">快捷模板</span>
+	            <div class="sg-template-chips">
+	              <span v-for="t in quickTemplates" :key="t.name" class="sg-tpl-chip" @click="applyQuickTemplate(t)">{{ t.name }}</span>
+	            </div>
+	          </div>
 
-        <!-- 日志区（嵌入卡片内） -->
-        <div class="gp-log" ref="logBody">
-          <div v-if="logLines.length === 0" class="gp-log-empty">等待创作任务...</div>
-          <div v-for="(line, i) in logLines" :key="i" :class="['gp-log-line', 'log-' + line.level]">
-            <span class="gp-log-time">{{ line.time }}</span>
-            <span class="gp-log-msg">{{ line.msg }}</span>
-          </div>
-        </div>
-      </el-card>
+	          <div class="sg-palette-group">
+	            <span class="sg-palette-label">题材</span>
+	            <el-select v-model="tags.genre" placeholder="选择题材" style="width:100%" filterable allow-create clearable :disabled="scripts.length > 0" @create="(v) => addCustomOption('genre', v)" size="default">
+	              <el-option v-for="g in genreOptions" :key="g" :label="g" :value="g" />
+	            </el-select>
+	            <span v-if="tags.genre" class="sg-selected-tags"><span class="sg-stag">{{ tags.genre }}<span class="sg-stag-x" @click.stop="tags.genre = ''">×</span></span></span>
+	          </div>
 
-      <!-- 第三行：创作记录（响应式卡片列表） -->
-      <el-card v-if="scripts.length > 0" shadow="never" class="history-fill">
-        <template #header>
-          <div class="card-header-row">
-            <span class="card-title">创作记录 ({{ scripts.length }} 集)</span>
-            <div class="card-header-btns">
-              <el-button type="warning" @click="showStoryline"><Film theme="outline" size="14" fill="currentColor" /> 故事线总览</el-button>
-              <el-button type="success" @click="handleContinue" :loading="scriptStore.generating"><MagicWand theme="outline" size="14" fill="currentColor" /> 续写下一集</el-button>
-            </div>
-          </div>
-        </template>
-        <!-- PC 端表格 -->
-        <div v-if="screenWidth >= 768" class="history-scroll">
-          <el-table ref="scriptTableRef" :data="scripts" stripe style="width:100%;min-width:820px" max-height="360" @row-click="openScript" @selection-change="onScriptSelectionChange">
-            <el-table-column type="selection" width="40" />
-            <el-table-column prop="episodeNumber" label="集数" width="70">
-              <template #default="{ row }">第{{ row.episodeNumber }}集</template>
-            </el-table-column>
-            <el-table-column prop="episodeTitle" label="标题" min-width="160">
-              <template #default="{ row }">{{ row.episodeTitle || '未命名' }}</template>
-            </el-table-column>
-            <el-table-column label="来源" width="90">
-              <template #default="{ row }">
-                <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">{{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="wordCount" label="字数" width="70" />
-            <el-table-column label="场次" width="60">
-              <template #default="{ row }">{{ row.scenes?.length || 0 }}</template>
-            </el-table-column>
-            <el-table-column prop="createdAt" label="时间" width="150">
-              <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
-            </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" type="primary" link @click.stop="openScript(row)">进片场</el-button>
-                <el-button size="small" type="success" link @click.stop="exportScriptText(row)">导出</el-button>
-                <el-button size="small" type="danger" link @click.stop="handleDeleteScript(row)">移除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-        <!-- 移动端卡片列表 -->
-        <div v-else class="script-card-list">
-          <div v-for="row in scripts" :key="row._id" class="sc-card" @click="mobileDetailScript = row; mobileDetailVisible = true">
-            <div class="sc-card-top">
-              <span class="sc-ep-num">第{{ row.episodeNumber }}集</span>
-              <el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">{{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}</el-tag>
-            </div>
-            <div class="sc-title">{{ row.episodeTitle || '未命名' }}</div>
-            <div class="sc-meta">
-              <span>{{ row.wordCount || 0 }} 字</span>
-              <span>{{ row.scenes?.length || 0 }} 场次</span>
-              <span>{{ formatDate(row.createdAt) }}</span>
-            </div>
-            <div class="sc-actions">
-              <el-button size="small" type="primary" @click.stop="openScript(row)">进片场</el-button>
-              <el-button size="small" type="success" @click.stop="exportScriptText(row)">导出</el-button>
-              <el-button size="small" type="danger" @click.stop="handleDeleteScript(row)">移除</el-button>
-            </div>
-          </div>
-        </div>
-        <div v-if="selectedScripts.length > 0" class="batch-bar">
-          <span>已选 {{ selectedScripts.length }} 集</span>
-          <el-button size="small" type="danger" @click="batchDeleteScripts">批量移除</el-button>
-          <el-button size="small" link @click="toggleScriptSelectAll">{{ selectedScripts.length === scripts.length ? '取消全选' : '全选' }}</el-button>
-        </div>
-      </el-card>
+	          <div class="sg-palette-group">
+	            <span class="sg-palette-label">热门梗<span class="sg-label-hint">多选</span></span>
+	            <el-select v-model="tags.plots" multiple placeholder="选择梗" :disabled="scripts.length > 0" style="width:100%" filterable allow-create clearable @create="(v) => addCustomOption('plots', v)" size="default" collapse-tags :collapse-tags-tooltip="true">
+	              <el-option v-for="p in plotOptions" :key="p" :label="p" :value="p" />
+	            </el-select>
+	            <div class="sg-selected-tags" v-if="tags.plots.length">
+	              <span v-for="p in tags.plots" :key="p" class="sg-stag">{{ p }}<span class="sg-stag-x" @click.stop="tags.plots = tags.plots.filter(x => x !== p)">×</span></span>
+	            </div>
+	          </div>
 
-      <!-- 生成结果（仅首次生成展示，有创作记录后隐藏） -->
-      <el-card v-if="generationResult && scripts.length === 0 && !scriptStore.generating" shadow="never" style="margin-top:12px">
-        <template #header><span class="card-title">刚刚出炉的剧本 🔥</span></template>
-        <el-tabs>
-          <el-tab-pane label="大纲">
-            <pre class="json-preview">{{ JSON.stringify(generationResult.outline, null, 2) }}</pre>
-          </el-tab-pane>
-          <el-tab-pane label="角色">
-            <div v-for="c in generationResult.characters" :key="c.name" class="char-card">
-              <strong>{{ c.name }}</strong> ({{ c.role_type }})
-              <p>{{ c.appearance }}</p>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
-      </el-card>
+	          <div class="sg-palette-group">
+	            <span class="sg-palette-label">类型</span>
+	            <el-select v-model="tags.type" placeholder="选择类型" style="width:100%" filterable allow-create clearable :disabled="scripts.length > 0" @create="(v) => addCustomOption('types', v)" size="default">
+	              <el-option v-for="t in typeOptions" :key="t" :label="t" :value="t" />
+	            </el-select>
+	          </div>
 
-      <!-- 没历史也没进度 -->
-      <div v-if="scripts.length === 0 && !scriptStore.generating && !generationResult" class="welcome-placeholder">
-        <div class="welcome-icon"><Film theme="outline" size="48" fill="var(--gold)" /></div>
-        <h3>开始创作你的第一部短剧</h3>
-        <p>选好题材标签，点击「AI 开写剧本」</p>
-        <p>或点击顶部「导入剧本」粘贴已有剧本</p>
-      </div>
+	          <div class="sg-palette-group">
+	            <span class="sg-palette-label">风格</span>
+	            <el-select v-model="tags.style" placeholder="选择风格" style="width:100%" filterable allow-create clearable :disabled="scripts.length > 0" @create="(v) => addCustomOption('styles', v)" size="default">
+	              <el-option v-for="s in styleOptions" :key="s" :label="s" :value="s" />
+	            </el-select>
+	          </div>
 
-    </div>
+	          <div class="sg-palette-group">
+	            <el-tooltip content="开启后生成内心独白字段，可加深角色层次；关闭可加快生成速度" placement="top">
+	              <div class="sg-check-row">
+	                <el-checkbox v-model="showInnerThought" :disabled="scriptStore.generating"><Edit theme="outline" size="14" fill="currentColor" /> 内心独白</el-checkbox>
+	              </div>
+	            </el-tooltip>
+	          </div>
 
-    <!-- 空状态 -->
-    <div v-if="!currentProjectId" class="welcome-placeholder full">
-      <div class="welcome-icon"><Film theme="outline" size="48" fill="var(--gold)" /></div>
-      <h3>欢迎来到剧本创作间</h3>
-      <p>选个片场，我们开写吧！</p>
+	          <div class="sg-palette-actions">
+	            <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre" style="width:100%">
+	              <MagicWand v-if="!scriptStore.generating" theme="outline" size="18" fill="currentColor" />
+	              {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集' : 'AI 开写剧本' }}
+	            </el-button>
+	            <el-button plain size="default" @click="showImportDialog = true" style="width:100%">
+	              <FolderUpload theme="outline" size="16" fill="currentColor" /> 导入剧本
+	            </el-button>
+	          </div>
+	        </div>
+	      </aside>
+
+	      <main class="sg-main-right">
+	        <!-- 进度卡片 -->
+	        <el-card v-if="scriptStore.generating" shadow="never" class="gen-progress-card">
+	          <div class="gp-head">
+	            <div class="gp-head-left">
+	              <span class="gp-head-icon"><MagicWand theme="outline" size="20" fill="var(--gold)" /></span>
+	              <div>
+	                <span class="gp-title">{{ flowType === 'continue' ? 'AI 续写进行中' : 'AI 正在创作剧本' }}</span>
+	                <span class="gp-sub">七步协作，为你写一个精彩故事</span>
+	              </div>
+	            </div>
+	            <div class="gp-head-right">
+	              <span class="gp-timer"><Time theme="outline" size="14" fill="currentColor" /> 预计 {{ estTime }}</span>
+	              <el-progress :percentage="stepPercentage" :stroke-width="6" style="width:120px" />
+	            </div>
+	          </div>
+	          <div class="gp-steps-row">
+	            <div v-for="(s, i) in currentStepLabels" :key="s.step" :class="['gp-step', { done: s.step < currentStep, active: s.step === currentStep, wait: s.step > currentStep }]">
+	              <div class="gp-step-dot"><span v-if="s.step < currentStep">✓</span><span v-else-if="s.step === currentStep" class="gp-spin"></span><span v-else>{{ s.step }}</span></div>
+	              <span class="gp-step-label">{{ s.title }}</span>
+	              <div v-if="i < currentStepLabels.length - 1" class="gp-step-line"></div>
+	            </div>
+	          </div>
+	          <div class="gp-log" ref="logBody">
+	            <div v-if="logLines.length === 0" class="gp-log-empty">等待创作任务...</div>
+	            <div v-for="(line, i) in logLines" :key="i" :class="['gp-log-line', 'log-' + line.level]"><span class="gp-log-time">{{ line.time }}</span><span class="gp-log-msg">{{ line.msg }}</span></div>
+	          </div>
+	        </el-card>
+
+	        <!-- 创作记录 -->
+	        <el-card v-if="scripts.length > 0" shadow="never" class="history-fill">
+	          <template #header>
+	            <div class="card-header-row"><span class="card-title">创作记录 ({{ scripts.length }} 集)</span>
+	              <div class="card-header-btns">
+	                <el-button type="warning" @click="showStoryline"><Film theme="outline" size="14" fill="currentColor" /> 故事线总览</el-button>
+	                <el-button type="success" @click="handleContinue" :loading="scriptStore.generating"><MagicWand theme="outline" size="14" fill="currentColor" /> 续写下一集</el-button>
+	              </div>
+	            </div>
+	          </template>
+	          <div v-if="screenWidth >= 768" class="history-scroll">
+	            <el-table ref="scriptTableRef" :data="scripts" stripe style="width:100%;min-width:820px" max-height="360" @row-click="openScript" @selection-change="onScriptSelectionChange">
+	              <el-table-column type="selection" width="40" />
+	              <el-table-column prop="episodeNumber" label="集数" width="70"><template #default="{ row }">第{{ row.episodeNumber }}集</template></el-table-column>
+	              <el-table-column prop="episodeTitle" label="标题" min-width="160"><template #default="{ row }">{{ row.episodeTitle || '未命名' }}</template></el-table-column>
+	              <el-table-column label="来源" width="90"><template #default="{ row }"><el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">{{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}</el-tag></template></el-table-column>
+	              <el-table-column prop="wordCount" label="字数" width="70" />
+	              <el-table-column label="场次" width="60"><template #default="{ row }">{{ row.scenes?.length || 0 }}</template></el-table-column>
+	              <el-table-column prop="createdAt" label="时间" width="150"><template #default="{ row }">{{ formatDate(row.createdAt) }}</template></el-table-column>
+	              <el-table-column label="操作" width="200" fixed="right">
+	                <template #default="{ row }"><el-button size="small" type="primary" link @click.stop="openScript(row)">进片场</el-button><el-button size="small" type="success" link @click.stop="exportScriptText(row)">导出</el-button><el-button size="small" type="danger" link @click.stop="handleDeleteScript(row)">移除</el-button></template>
+	              </el-table-column>
+	            </el-table>
+	          </div>
+	          <div v-else class="script-card-list">
+	            <div v-for="row in scripts" :key="row._id" class="sc-card" @click="mobileDetailScript = row; mobileDetailVisible = true">
+	              <div class="sc-card-top"><span class="sc-ep-num">第{{ row.episodeNumber }}集</span><el-tag :type="row.source === 'ai_generated' ? 'success' : 'info'" size="small">{{ row.source === 'ai_generated' ? 'AI生成' : row.source === 'ai_continue' ? '续写' : '导入' }}</el-tag></div>
+	              <div class="sc-title">{{ row.episodeTitle || '未命名' }}</div>
+	              <div class="sc-meta"><span>{{ row.wordCount || 0 }} 字</span><span>{{ row.scenes?.length || 0 }} 场次</span><span>{{ formatDate(row.createdAt) }}</span></div>
+	              <div class="sc-actions"><el-button size="small" type="primary" @click.stop="openScript(row)">进片场</el-button><el-button size="small" type="success" @click.stop="exportScriptText(row)">导出</el-button><el-button size="small" type="danger" @click.stop="handleDeleteScript(row)">移除</el-button></div>
+	            </div>
+	          </div>
+	          <div v-if="selectedScripts.length > 0" class="batch-bar"><span>已选 {{ selectedScripts.length }} 集</span><el-button size="small" type="danger" @click="batchDeleteScripts">批量移除</el-button><el-button size="small" link @click="toggleScriptSelectAll">{{ selectedScripts.length === scripts.length ? '取消全选' : '全选' }}</el-button></div>
+	        </el-card>
+
+	        <!-- 生成结果 -->
+	        <el-card v-if="generationResult && scripts.length === 0 && !scriptStore.generating" shadow="never" class="history-fill">
+	          <template #header><span class="card-title">刚刚出炉的剧本</span></template>
+	          <el-tabs><el-tab-pane label="大纲"><pre class="json-preview">{{ JSON.stringify(generationResult.outline, null, 2) }}</pre></el-tab-pane><el-tab-pane label="角色"><div v-for="c in generationResult.characters" :key="c.name" class="char-card"><strong>{{ c.name }}</strong> ({{ c.role_type }})<p>{{ c.appearance }}</p></div></el-tab-pane></el-tabs>
+	        </el-card>
+
+	        <!-- 空状态 -->
+	        <div v-if="scripts.length === 0 && !scriptStore.generating && !generationResult" class="welcome-placeholder">
+	          <div class="welcome-icon"><Film theme="outline" size="48" fill="var(--gold)" /></div>
+	          <h3>开始创作你的第一部短剧</h3>
+	          <p>在左侧选好题材标签，点击「AI 开写剧本」</p>
+	        </div>
+	      </main>
     </div>
 
     <!-- 故事线弹窗 -->
@@ -867,6 +826,28 @@ function applyQuickTemplate(t) {
 .qt-chip{padding:5px 12px;border-radius:16px;font-size:12px;cursor:pointer;background:var(--bg-100);border:1px solid var(--bg-300);color:var(--text-100);transition:all 0.15s;white-space:nowrap;user-select:none}
 .qt-chip:hover{border-color:var(--gold);background:var(--gold-light);transform:translateY(-1px)}
 .tag-form .el-form-item { margin-right: 16px; margin-bottom: 4px; }
+
+/* ===== 侧边栏调色板 ===== */
+.sg-layout { display: flex; gap: 16px; align-items: flex-start; }
+.sg-palette { width: 268px; flex-shrink: 0; position: sticky; top: 12px; }
+.sg-palette-inner { background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+.sg-palette-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-100); padding-bottom: 12px; border-bottom: 1px solid var(--bg-300); }
+.sg-palette-badge { margin-left: auto; font-size: 10px; font-weight: 600; color: #67c23a; background: rgba(103,194,58,0.1); padding: 2px 8px; border-radius: 4px; }
+.sg-continue-alert { margin: -6px 0; }
+.sg-continue-alert :deep(.el-alert__title) { font-size: 11px !important; }
+.sg-palette-group { display: flex; flex-direction: column; gap: 6px; }
+.sg-palette-label { font-size: 12px; font-weight: 600; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
+.sg-label-hint { font-weight: 400; color: var(--text-200); font-size: 10px; margin-left: 5px; text-transform: none; letter-spacing: 0; }
+.sg-template-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.sg-tpl-chip { font-size: 11px; padding: 4px 10px; border-radius: 12px; cursor: pointer; background: var(--bg-100); border: 1px solid var(--bg-300); color: var(--text-100); transition: all 0.15s; white-space: nowrap; user-select: none; font-weight: 500; }
+.sg-tpl-chip:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+.sg-selected-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.sg-stag { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(64,158,255,0.08); color: #409eff; font-weight: 500; }
+.sg-stag-x { cursor: pointer; opacity: 0.5; margin-left: 2px; font-weight: 700; }
+.sg-stag-x:hover { opacity: 1; }
+.sg-check-row { padding: 2px 0; }
+.sg-palette-actions { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; border-top: 1px solid var(--bg-300); }
+.sg-main-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 
 /* ===== 横向进度卡 ===== */
 .gen-progress-card { margin-top: 12px; background: linear-gradient(135deg, var(--bg-200) 0%, rgba(201,168,76,0.03) 100%) !important; border: 1px solid var(--bg-300) !important; }
