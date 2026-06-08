@@ -228,7 +228,7 @@
 
       <!-- 备份存储说明 -->
       <div class="bk-section">
-        <h4 class="bk-sec-title">存储位置</h4>
+        <h4 class="bk-sec-title">备份文件存哪里</h4>
         <div class="bk-path-hint">
           <el-icon><FolderOpened /></el-icon>
           <code>{{ backupPath }}</code>
@@ -239,42 +239,86 @@
             <span v-else>{{ mountStatusText }}</span>
           </button>
         </div>
-        <el-collapse style="margin-top:10px;border:none;background:transparent">
-          <el-collapse-item title="Docker 挂载教程（点击展开）" style="background:var(--bg-100);border-radius:8px;padding:0 12px">
-            <div class="bk-guide">
-              <p class="bk-guide-p"><strong>为什么需要挂载？</strong>Docker 容器销毁后，容器内文件全部丢失。必须将宿主机目录挂载到容器内 <code>/app/backups</code>。</p>
+        <p class="bk-path-tip">💡 导出的备份会存在服务器的这个目录里。如果用的是 Docker 部署，要确保这个目录和宿主机打通，不然容器删了备份也没了。点下面教程看具体怎么做 👇</p>
 
-              <h5>方法一：docker run</h5>
-              <pre class="bk-guide-pre">mkdir -p /data/storycine/backups
+        <el-collapse style="margin-top:6px;border:none;background:transparent">
+          <el-collapse-item title="📖 新手教程：怎么保护备份文件不丢失（点击展开）" style="background:var(--bg-100);border-radius:8px;padding:0 12px">
+            <div class="bk-guide">
+
+              <div class="bk-guide-box">
+                <h5>🤔 先搞懂：为什么备份会丢？</h5>
+                <p>你的网站跑在一个叫 Docker 的"虚拟盒子"里。备份文件存在盒子内部的 <code>/app/backups</code> 文件夹。如果盒子被删了（比如重装、升级），盒子里的所有东西都没了——包括备份。</p>
+                <p>解决办法：让盒子里这个文件夹，对应到服务器上真实的一个文件夹。盒子删了，服务器上的文件还在。这就叫「挂载」。</p>
+              </div>
+
+              <div class="bk-guide-box">
+                <h5>🎯 判断你是哪种部署方式</h5>
+                <table class="bk-guide-table">
+                  <tr><td class="bk-gt-q">你怎么启动的？</td><td class="bk-gt-a">👉 看下面对应的方法</td></tr>
+                  <tr><td class="bk-gt-q">用了 <code>docker-compose.yml</code></td><td class="bk-gt-a">👉 方法一（最简单）</td></tr>
+                  <tr><td class="bk-gt-q">用了 <code>docker run ...</code> 命令</td><td class="bk-gt-a">👉 方法二</td></tr>
+                  <tr><td class="bk-gt-q">不确定 / 别人帮我部署的</td><td class="bk-gt-a">👉 方法三（万能）</td></tr>
+                </table>
+              </div>
+
+              <div class="bk-guide-box bk-guide-green">
+                <h5>✅ 方法一：docker-compose 用户（推荐）</h5>
+                <p>你的项目里已经有 <code>docker-compose.yml</code> 文件了，只需要加一小段配置。打开这个文件，找到 <code>app:</code> 下面的 <code>volumes:</code>，改成：</p>
+                <pre class="bk-guide-pre">app:
+  volumes:
+    - ./backups:/app/backups      ← 加这一行
+    - uploads_data:/app/uploads</pre>
+                <p>然后在服务器上项目目录里执行：</p>
+                <pre class="bk-guide-pre">mkdir -p backups
+docker-compose down
+docker-compose up -d --build</pre>
+                <p>搞定！以后所有备份都会存在你项目目录下的 <code>backups/</code> 文件夹里，容器怎么删都不会丢。</p>
+              </div>
+
+              <div class="bk-guide-box bk-guide-blue">
+                <h5>✅ 方法二：docker run 用户</h5>
+                <p>如果你是用 <code>docker run</code> 启动的，加一个 <code>-v</code> 参数：</p>
+                <pre class="bk-guide-pre"># 先创建服务器上的备份文件夹
+mkdir -p /data/storycine/backups
+
+# 重启容器时加上 -v 参数
 docker run -d --name storycine-app -p 3012:3012 \
   -v /data/storycine/backups:/app/backups \
-  -v /data/storycine/uploads:/app/uploads \
-  storycine-app:latest</pre>
+  你的镜像名</pre>
+              </div>
 
-              <h5>方法二：docker-compose（项目已配好）</h5>
-              <p class="bk-guide-p">项目 <code>docker-compose.yml</code> 已配置 <code>backups_data</code> 卷，直接启动即可。如需指定宿主机路径，修改为：</p>
-              <pre class="bk-guide-pre">app:
-  volumes:
-    - ./backups:/app/backups
-    - uploads_data:/app/uploads</pre>
-              <p class="bk-guide-p">然后 <code>mkdir -p backups && docker-compose up -d --build</code></p>
+              <div class="bk-guide-box bk-guide-orange">
+                <h5>✅ 方法三（万能）：不管怎么部署的，手动进出</h5>
+                <p>如果以上两种都看不懂，就用最笨但最安全的方法——手动拿进拿出。每次导出备份后，到服务器上操作：</p>
+                <pre class="bk-guide-pre"># 第 1 步：看容器叫啥名字
+docker ps
+# 输出里找到你的网站容器名，比如 storycine-app
 
-              <h5>方法三：已运行容器手动复制</h5>
-              <pre class="bk-guide-pre"># 查看容器名
-docker ps | grep storycine
+# 第 2 步：从容器里把备份复制到服务器上
+# 把下面 xxx.json.gz 换成你在页面上看到的文件名
+docker cp storycine-app:/app/backups/xxx.json.gz ./我的备份.json.gz
 
-# 从容器复制备份到宿主机
-docker cp storycine-app:/app/backups/backup-xxx.json.gz ./my-backup.json.gz
+# 第 3 步：把这个文件下载到自己电脑存好</pre>
+                <p>恢复的时候反过来：</p>
+                <pre class="bk-guide-pre"># 先把备份文件传到服务器，再复制进容器
+docker cp ./我的备份.json.gz storycine-app:/app/backups/
+# 然后回到这个页面 → 点击「导入恢复」→ 选文件</pre>
+              </div>
 
-# 恢复时，先复制进容器，再在页面导入
-docker cp ./my-backup.json.gz storycine-app:/app/backups/</pre>
+              <div class="bk-guide-box">
+                <h5>🔍 怎么确认备份真的安全了？</h5>
+                <p>1. 先点这个页面上的「导出备份」<br>2. 再到服务器上执行：</p>
+                <pre class="bk-guide-pre"># 如果用方法一（docker-compose）
+ls -la backups/
 
-              <h5>验证挂载是否生效</h5>
-              <p class="bk-guide-p">1. 页面导出一次备份<br>2. SSH 到服务器执行 <code>ls /data/storycine/backups/</code>，看到 <code>.json.gz</code> 文件即成功</p>
+# 如果用方法二
+ls -la /data/storycine/backups/
 
-              <h5>可选：同步到云存储</h5>
-              <pre class="bk-guide-pre"># cron 每天凌晨 3 点同步
-0 3 * * * rsync -avz /data/storycine/backups/ user@nas:/backups/</pre>
+# 如果用方法三
+docker exec storycine-app ls /app/backups/</pre>
+                <p>看到有 <code>backup-2026-xxx.json.gz</code> 这样的文件就对了 ✅</p>
+              </div>
+
             </div>
           </el-collapse-item>
         </el-collapse>
@@ -862,11 +906,20 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
   0%, 100% { box-shadow: 0 0 4px rgba(245,108,108,0.4); }
   50% { box-shadow: 0 0 14px rgba(245,108,108,0.7); }
 }
-.bk-guide { font-size: 12px; color: var(--text-200); line-height: 1.7; padding: 4px 0 8px; }
-.bk-guide h5 { font-size: 13px; font-weight: 700; color: var(--text-100); margin: 14px 0 6px; }
-.bk-guide h5:first-child { margin-top: 4px; }
-.bk-guide-p { margin: 4px 0 8px; }
-.bk-guide-p code { font-size: 11px; padding: 1px 5px; }
-.bk-guide-pre { background: var(--bg-300); color: var(--text-100); padding: 10px 14px; border-radius: 6px; font-size: 11px; line-height: 1.6; overflow-x: auto; margin: 4px 0 10px; font-family: 'Courier New', monospace; white-space: pre-wrap; word-break: break-all; }
+.bk-path-tip { font-size: 12px; color: var(--text-200); margin: 8px 0 0 0; line-height: 1.7; }
+.bk-guide { font-size: 13px; color: var(--text-100); line-height: 1.8; padding: 8px 0; }
+.bk-guide h5 { font-size: 14px; font-weight: 700; color: var(--text-100); margin: 0 0 8px 0; }
+.bk-guide p { margin: 6px 0; color: var(--text-200); }
+.bk-guide code { font-size: 12px; padding: 2px 6px; }
+.bk-guide-box { background: #fff; border: 1px solid var(--bg-300); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+.bk-guide-box h5 { line-height: 1.5; }
+.bk-guide-green { border-left: 4px solid #67c23a; }
+.bk-guide-blue { border-left: 4px solid #409eff; }
+.bk-guide-orange { border-left: 4px solid #e6a23c; }
+.bk-guide-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+.bk-guide-table td { padding: 8px 10px; border-bottom: 1px solid var(--bg-300); }
+.bk-gt-q { color: var(--text-200); width: 200px; }
+.bk-gt-a { color: var(--text-100); font-weight: 600; }
+.bk-guide-pre { background: var(--bg-300); color: var(--text-100); padding: 12px 16px; border-radius: 8px; font-size: 12px; line-height: 1.7; overflow-x: auto; margin: 6px 0 12px; font-family: 'Courier New', monospace; white-space: pre-wrap; word-break: break-all; }
 .st-empty-hint { text-align: center; padding: 20px; color: var(--text-200); font-size: 13px; }
 </style>
