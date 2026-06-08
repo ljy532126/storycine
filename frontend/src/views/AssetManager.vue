@@ -326,31 +326,11 @@
       </template>
     </el-dialog>
 
-    <!-- ===== 图片查看器 ===== -->
-    <el-dialog v-model="viewerVisible" :title="viewerChar?.name || '图片查看'" width="90%" top="2vh" fullscreen class="img-viewer-dialog" destroy-on-close>
-      <div class="viewer-toolbar">
-        <el-button-group>
-          <el-button size="small" @click="viewerScale = Math.max(0.2, viewerScale - 0.2)">− 缩小</el-button>
-          <el-button size="small" @click="viewerScale = Math.min(5, viewerScale + 0.2)">+ 放大</el-button>
-          <el-button size="small" @click="viewerScale = 1; viewerRotate = 0; viewerX = 0; viewerY = 0">重置</el-button>
-          <el-button size="small" @click="viewerRotate = (viewerRotate - 90) % 360">↺ 旋转</el-button>
-        </el-button-group>
-        <span style="color:var(--primary-300);font-size:13px">{{ Math.round(viewerScale * 100) }}%</span>
-      </div>
-      <div class="viewer-body"
-        @wheel.prevent="onViewerWheel"
-        @mousedown="onViewerDragStart"
-        @mousemove="onViewerDragMove"
-        @mouseup="onViewerDragEnd"
-        @mouseleave="onViewerDragEnd"
-        :style="{ cursor: dragging ? 'grabbing' : 'grab' }"
-      >
-        <img :src="viewerSrc"
-          :style="{ transform: `translate(${viewerX}px,${viewerY}px) scale(${viewerScale}) rotate(${viewerRotate}deg)` }"
-          draggable="false"
-        />
-      </div>
-    </el-dialog>
+    <ImageLightbox
+      v-model:visible="viewerVisible"
+      :url="viewerSrc"
+      :title="viewerChar?.name || viewerChar?.sceneName || viewerChar?.propName || ''"
+    />
   </div>
 </template>
 
@@ -361,6 +341,7 @@ import { PictureFilled, Plus } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI } from '../api';
+import ImageLightbox from '../components/ImageLightbox.vue';
 
 const projectStore = useProjectStore();
 const assetStore = useAssetStore();
@@ -447,60 +428,20 @@ const charVoice = computed({
 function getCharThumb(c) {
   return c.morphs?.[0]?.referenceImage || c.morphs?.[0]?.generatedImages?.front || c.referenceImage || c.generatedImage || '';
 }
+function getSceneThumb(s) { return s.generatedImage || s.referenceImage || ''; }
+function getPropThumb(p) { return p.generatedImage || p.referenceImage || ''; }
 
 const viewerVisible = ref(false);
 const viewerChar = ref(null);
 const viewerSrc = ref('');
-const viewerScale = ref(1);
-const viewerRotate = ref(0);
-const viewerX = ref(0);
-const viewerY = ref(0);
-const dragging = ref(false);
-let dragStartX = 0, dragStartY = 0, origX = 0, origY = 0;
-
-function onViewerWheel(e) {
-  const step = 0.1;
-  if (e.deltaY < 0) viewerScale.value = Math.min(5, viewerScale.value + step);
-  else viewerScale.value = Math.max(0.2, viewerScale.value - step);
-}
-
-function onViewerDragStart(e) {
-  dragging.value = true;
-  dragStartX = e.clientX; dragStartY = e.clientY;
-  origX = viewerX.value; origY = viewerY.value;
-}
-function onViewerDragMove(e) {
-  if (!dragging.value) return;
-  viewerX.value = origX + e.clientX - dragStartX;
-  viewerY.value = origY + e.clientY - dragStartY;
-}
-function onViewerDragEnd() { dragging.value = false; }
 
 function openImageViewer(c) {
   viewerChar.value = c;
   viewerSrc.value = getCharThumb(c) || '';
-  viewerScale.value = 1;
-  viewerRotate.value = 0;
-  viewerX.value = 0;
-  viewerY.value = 0;
   viewerVisible.value = true;
 }
-
-function getSceneThumb(s) { return s.generatedImage || s.referenceImage || ''; }
-function getPropThumb(p) { return p.generatedImage || p.referenceImage || ''; }
-
-function openSceneViewer(s) {
-  viewerChar.value = { name: s.sceneName };
-  viewerSrc.value = getSceneThumb(s) || '';
-  viewerScale.value = 1; viewerRotate.value = 0; viewerX.value = 0; viewerY.value = 0;
-  viewerVisible.value = true;
-}
-function openPropViewer(p) {
-  viewerChar.value = { name: p.propName };
-  viewerSrc.value = getPropThumb(p) || '';
-  viewerScale.value = 1; viewerRotate.value = 0; viewerX.value = 0; viewerY.value = 0;
-  viewerVisible.value = true;
-}
+function openSceneViewer(s) { viewerChar.value = { name: s.sceneName }; viewerSrc.value = getSceneThumb(s) || ''; viewerVisible.value = true; }
+function openPropViewer(p) { viewerChar.value = { name: p.propName }; viewerSrc.value = getPropThumb(p) || ''; viewerVisible.value = true; }
 
 async function onSceneImageUpload(s, e) {
   const file = e.target.files?.[0];
