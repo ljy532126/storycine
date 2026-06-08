@@ -118,37 +118,44 @@
     </div>
 
     <!-- 预览弹窗 -->
-    <el-dialog v-model="previewVisible" :title="previewItem?.name || '预览'" width="85%" top="1vh" destroy-on-close>
-      <div class="ml-viewer">
-        <div class="ml-viewer-main">
-          <video v-if="previewItem?.isVideo" :src="previewItem.url" controls class="ml-viewer-media" />
-          <img v-else :src="previewItem?.url" class="ml-viewer-media" />
-        </div>
-        <div class="ml-viewer-side">
-          <div class="ml-viewer-info">
-            <span class="ml-viewer-title">{{ previewItem?.name }}</span>
-            <div class="ml-viewer-tags">
-              <el-tag size="small" :type="tagType(previewItem?.type)">{{ previewItem?.type }}</el-tag>
-              <el-tag size="small" type="info">{{ previewItem?.subType }}</el-tag>
-              <el-tag size="small" :type="isCloudUrl(previewItem?.url) ? 'success' : ''">
-                <Cloudy v-if="isCloudUrl(previewItem?.url)" theme="outline" size="12" fill="currentColor" style="vertical-align:-2px" />
-                <FolderDownload v-else theme="outline" size="12" fill="currentColor" style="vertical-align:-2px" />
+    <Teleport to="body">
+      <div v-if="previewVisible" class="ml-lightbox" @click.self="previewVisible = false" @keydown.escape="previewVisible = false">
+        <!-- 顶部栏 -->
+        <div class="ml-lb-topbar">
+          <div class="ml-lb-top-left">
+            <span class="ml-lb-name">{{ previewItem?.name || '预览' }}</span>
+            <div class="ml-lb-tags">
+              <el-tag size="small" :type="tagType(previewItem?.type)" effect="dark">{{ previewItem?.type }}</el-tag>
+              <el-tag size="small" type="info" effect="dark">{{ previewItem?.subType }}</el-tag>
+              <el-tag size="small" effect="dark" :type="isCloudUrl(previewItem?.url) ? 'success' : 'warning'">
+                <Cloudy v-if="isCloudUrl(previewItem?.url)" theme="outline" size="12" fill="currentColor" />
+                <FolderDownload v-else theme="outline" size="12" fill="currentColor" />
                 {{ isCloudUrl(previewItem?.url) ? '云端' : '本地' }}
               </el-tag>
             </div>
-            <div class="ml-viewer-url" :title="previewItem?.url">{{ previewItem?.url }}</div>
           </div>
-          <div class="ml-viewer-btns">
-            <el-button size="default" @click="downloadItem(previewItem)" style="width:100%">
-              <el-icon><Download /></el-icon> 下载
-            </el-button>
-            <el-button size="default" type="danger" plain @click="deleteItem(previewItem); previewVisible = false" style="width:100%">
-              <el-icon><Delete /></el-icon> 删除
-            </el-button>
+          <div class="ml-lb-top-right">
+            <el-button circle @click="downloadItem(previewItem)" title="下载"><el-icon size="18"><Download /></el-icon></el-button>
+            <el-button circle type="danger" plain @click="deleteItem(previewItem); previewVisible = false" title="删除"><el-icon size="18"><Delete /></el-icon></el-button>
+            <el-button circle @click="previewVisible = false" title="关闭"><el-icon size="20"><Close /></el-icon></el-button>
           </div>
         </div>
+
+        <!-- 主内容区 -->
+        <div class="ml-lb-stage">
+          <div class="ml-lb-frame" :class="{ 'portrait': isPreviewPortrait }">
+            <video v-if="previewItem?.isVideo" :src="previewItem.url" controls autoplay class="ml-lb-media" />
+            <img v-else :src="previewItem?.url" class="ml-lb-media" @load="onPreviewLoad" />
+          </div>
+        </div>
+
+        <!-- 底部信息条 -->
+        <div class="ml-lb-bottombar">
+          <span class="ml-lb-url" :title="previewItem?.url">{{ previewItem?.url }}</span>
+          <span class="ml-lb-ratio" v-if="previewRatio">{{ previewRatio }}</span>
+        </div>
       </div>
-    </el-dialog>
+    </Teleport>
   </div>
 </template>
 
@@ -168,6 +175,8 @@ const items = ref([]);
 const filterType = ref('');
 const previewVisible = ref(false);
 const previewItem = ref(null);
+const isPreviewPortrait = ref(false);
+const previewRatio = ref('');
 const selectedItems = ref([]);
 const multiSelect = ref(false);
 const downloading = ref(false);
@@ -259,7 +268,24 @@ async function loadMedia() {
   } catch { items.value = []; }
 }
 
-function openPreview(item) { previewItem.value = item; previewVisible.value = true; }
+function openPreview(item) {
+  previewItem.value = item;
+  isPreviewPortrait.value = false;
+  previewRatio.value = '';
+  previewVisible.value = true;
+}
+function onPreviewLoad(e) {
+  const w = e.target.naturalWidth || e.target.videoWidth || 0;
+  const h = e.target.naturalHeight || e.target.videoHeight || 0;
+  if (w && h) {
+    isPreviewPortrait.value = h > w;
+    const ratio = w / h;
+    if (ratio > 1.7) previewRatio.value = '超宽 ' + w + '×' + h;
+    else if (ratio > 1.3) previewRatio.value = '16:9';
+    else if (ratio > 0.7) previewRatio.value = '1:1';
+    else previewRatio.value = '9:16 竖屏';
+  }
+}
 
 function downloadItem(item) {
   const a = document.createElement('a');
@@ -370,21 +396,67 @@ async function deleteItem(item) {
 .ml-empty p { font-size: 15px; color: var(--text-100); font-weight: 600; margin: 0 0 4px; }
 .ml-empty-sub { font-size: 12px; color: var(--text-200); }
 
-/* ===== 预览弹窗 ===== */
-.ml-viewer { display: flex; gap: 20px; min-height: 420px; }
-.ml-viewer-main { flex: 1; display: flex; align-items: center; justify-content: center; background: #0d0d0d; border-radius: 12px; padding: 24px; min-width: 0; }
-.ml-viewer-media { max-width: 100%; max-height: 72vh; object-fit: contain; border-radius: 6px; }
-.ml-viewer-side { width: 210px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
-.ml-viewer-info { flex: 1; }
-.ml-viewer-title { font-size: 16px; font-weight: 700; color: var(--text-100); display: block; margin-bottom: 10px; }
-.ml-viewer-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-.ml-viewer-url { font-size: 10px; color: var(--text-200); word-break: break-all; opacity: 0.5; line-height: 1.5; }
-.ml-viewer-btns { display: flex; flex-direction: column; gap: 8px; }
+/* ===== Lightbox 预览 ===== */
+.ml-lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(8, 10, 16, 0.96); backdrop-filter: blur(20px);
+  display: flex; flex-direction: column;
+  animation: ml-lb-in 0.2s ease-out;
+}
+@keyframes ml-lb-in { from { opacity: 0; } to { opacity: 1; } }
+
+.ml-lb-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ml-lb-top-left { display: flex; align-items: center; gap: 14px; }
+.ml-lb-name { font-size: 15px; font-weight: 700; color: #e0d6c2; }
+.ml-lb-tags { display: flex; gap: 6px; }
+.ml-lb-top-right { display: flex; gap: 8px; }
+.ml-lb-top-right .el-button--circle {
+  width: 38px; height: 38px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #999;
+}
+.ml-lb-top-right .el-button--circle:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* 主舞台 */
+.ml-lb-stage {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 20px; min-height: 0; overflow: auto;
+}
+.ml-lb-frame {
+  display: flex; align-items: center; justify-content: center;
+  max-width: 90vw; max-height: calc(100vh - 150px);
+  border-radius: 8px; overflow: hidden;
+  box-shadow: 0 0 80px rgba(0,0,0,0.5);
+  background: #0a0a0a;
+}
+.ml-lb-frame.portrait { max-width: min(50vw, 500px); }
+.ml-lb-media {
+  display: block; max-width: 100%; max-height: calc(100vh - 150px);
+  object-fit: contain; border-radius: 6px;
+}
+
+/* 底部栏 */
+.ml-lb-bottombar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 11px; color: rgba(255,255,255,0.3);
+}
+.ml-lb-url { max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; }
+.ml-lb-ratio { color: rgba(255,255,255,0.2); font-weight: 600; }
+
+/* 按需引入的 lightbox 标签样式覆盖 */
+.ml-lightbox .el-tag--dark { border: none; }
+
 
 @media (max-width: 700px) {
-  .ml-viewer { flex-direction: column; }
-  .ml-viewer-side { width: 100%; }
   .ml-bar { flex-direction: column; align-items: stretch; }
+  .ml-lb-name { font-size: 13px; }
+  .ml-lb-tags { display: none; }
+  .ml-lb-topbar { padding: 10px 14px; }
+  .ml-lb-stage { padding: 10px; }
 }
 
 /* 兼容旧 breadcrumb */
