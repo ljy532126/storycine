@@ -33,6 +33,9 @@
         <el-button type="primary" size="default" @click="fetchUsers" class="um-search-btn"><el-icon><Search /></el-icon> 搜索</el-button>
       </div>
       <div class="um-tb-right">
+        <el-button class="bk-toolbar-btn" size="default" @click="openBackup" v-if="isAdmin">
+          <el-icon><FolderOpened /></el-icon> 数据库备份
+        </el-button>
         <el-button type="primary" size="default" @click="openCreate"><el-icon><Plus /></el-icon> 新建用户</el-button>
         <el-button size="default" circle @click="fetchUsers" :loading="loading"><el-icon><Refresh /></el-icon></el-button>
         <span class="um-total">共 <b>{{ total }}</b> 个用户</span>
@@ -176,6 +179,112 @@
         <el-button type="primary" @click="doCreate" :loading="creating">确认创建</el-button>
       </template>
     </el-dialog>
+    <!-- 备份管理弹窗 -->
+    <el-dialog v-model="backupVisible" title="数据库备份管理" width="640px" destroy-on-close @opened="fetchBackupList">
+      <!-- 操作区 -->
+      <div class="bk-section">
+        <h4 class="bk-sec-title">手动操作</h4>
+        <div class="bk-actions">
+          <el-button type="primary" @click="doExport" :loading="exporting" size="default">
+            <el-icon><Download /></el-icon> 导出完整备份
+          </el-button>
+          <el-upload :auto-upload="false" :show-file-list="false" accept=".gz,.json" @change="onImportFile" style="display:inline-block">
+            <el-button type="danger" :loading="importing" size="default" plain>
+              <el-icon><Upload /></el-icon> 导入备份恢复数据
+            </el-button>
+          </el-upload>
+        </div>
+        <div v-if="importFile" style="margin-top:8px;font-size:12px;color:var(--text-200);display:flex;align-items:center;gap:8px">
+          <span>已选择: <strong>{{ importFile.name }}</strong> ({{ fmtSize(importFile.size) }})</span>
+          <el-button size="small" link @click="importFile = null; importResult = ''">取消</el-button>
+        </div>
+        <div v-if="importResult" :style="{ marginTop: '8px', fontSize: '13px', color: importResult.includes('成功') ? '#67c23a' : '#f56c6c', fontWeight: 600 }">{{ importResult }}</div>
+      </div>
+
+      <!-- 自动备份 -->
+      <div class="bk-section">
+        <h4 class="bk-sec-title">自动备份</h4>
+        <div class="bk-auto-row">
+          <el-switch v-model="autoCfg.enabled" @change="saveAutoCfg" size="default" />
+          <span style="font-size:13px;margin-left:8px;color:var(--text-100)">启用定时备份到服务器磁盘</span>
+        </div>
+        <div class="bk-auto-row" style="margin-top:10px">
+          <span style="font-size:12px;color:var(--text-200);width:96px">间隔（小时）</span>
+          <el-input-number v-model="autoCfg.intervalHours" :min="1" :max="168" size="small" @change="saveAutoCfg" style="width:110px" />
+          <el-tooltip content="超过此数量后，自动删除最旧的备份文件，只保留最新的 N 个" placement="top">
+            <span style="font-size:12px;color:var(--text-200);width:96px;margin-left:16px;cursor:help;border-bottom:1px dotted var(--text-200)">最大保留</span>
+          </el-tooltip>
+          <el-input-number v-model="autoCfg.maxBackups" :min="1" :max="100" size="small" @change="saveAutoCfg" style="width:100px" />
+        </div>
+      </div>
+
+      <!-- 备份存储说明 -->
+      <div class="bk-section">
+        <h4 class="bk-sec-title">存储位置</h4>
+        <div class="bk-path-hint">
+          <el-icon><FolderOpened /></el-icon>
+          <code>{{ backupPath }}</code>
+          <el-button size="small" link @click="copyPath">复制路径</el-button>
+        </div>
+        <el-collapse style="margin-top:10px;border:none;background:transparent">
+          <el-collapse-item title="Docker 挂载教程（点击展开）" style="background:var(--bg-100);border-radius:8px;padding:0 12px">
+            <div class="bk-guide">
+              <p class="bk-guide-p"><strong>为什么需要挂载？</strong>Docker 容器销毁后，容器内文件全部丢失。必须将宿主机目录挂载到容器内 <code>/app/backups</code>。</p>
+
+              <h5>方法一：docker run</h5>
+              <pre class="bk-guide-pre">mkdir -p /data/storycine/backups
+docker run -d --name storycine-app -p 3012:3012 \
+  -v /data/storycine/backups:/app/backups \
+  -v /data/storycine/uploads:/app/uploads \
+  storycine-app:latest</pre>
+
+              <h5>方法二：docker-compose（项目已配好）</h5>
+              <p class="bk-guide-p">项目 <code>docker-compose.yml</code> 已配置 <code>backups_data</code> 卷，直接启动即可。如需指定宿主机路径，修改为：</p>
+              <pre class="bk-guide-pre">app:
+  volumes:
+    - ./backups:/app/backups
+    - uploads_data:/app/uploads</pre>
+              <p class="bk-guide-p">然后 <code>mkdir -p backups && docker-compose up -d --build</code></p>
+
+              <h5>方法三：已运行容器手动复制</h5>
+              <pre class="bk-guide-pre"># 查看容器名
+docker ps | grep storycine
+
+# 从容器复制备份到宿主机
+docker cp storycine-app:/app/backups/backup-xxx.json.gz ./my-backup.json.gz
+
+# 恢复时，先复制进容器，再在页面导入
+docker cp ./my-backup.json.gz storycine-app:/app/backups/</pre>
+
+              <h5>验证挂载是否生效</h5>
+              <p class="bk-guide-p">1. 页面导出一次备份<br>2. SSH 到服务器执行 <code>ls /data/storycine/backups/</code>，看到 <code>.json.gz</code> 文件即成功</p>
+
+              <h5>可选：同步到云存储</h5>
+              <pre class="bk-guide-pre"># cron 每天凌晨 3 点同步
+0 3 * * * rsync -avz /data/storycine/backups/ user@nas:/backups/</pre>
+            </div>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
+
+      <!-- 备份列表 -->
+      <div class="bk-section">
+        <h4 class="bk-sec-title">历史备份 ({{ backupFiles.length }})</h4>
+        <div class="bk-file-list" v-if="backupFiles.length">
+          <div v-for="f in backupFiles" :key="f.filename" class="bk-file-row">
+            <span class="bk-file-name">{{ f.createdAt }}</span>
+            <span class="bk-file-size">{{ f.sizeFormatted }}</span>
+            <el-button size="small" @click="downloadBackup(f.filename)" class="bk-btn-icon" title="下载">
+              <el-icon><Download /></el-icon>
+            </el-button>
+            <el-button size="small" @click="deleteBackup(f.filename)" class="bk-btn-icon bk-btn-del" title="删除">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </div>
+        </div>
+        <div v-else class="st-empty-hint">暂无备份文件，点击「导出完整备份」创建第一个</div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -183,7 +292,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
-import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete } from '@element-plus/icons-vue';
+import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload } from '@element-plus/icons-vue';
 
 const users = ref([]);
 const loading = ref(false);
@@ -220,6 +329,124 @@ const resetting = ref(false);
 const createVisible = ref(false);
 const creating = ref(false);
 const createForm = reactive({ username: '', password: '', nickname: '', role: 'user' });
+
+// ===== 备份管理 =====
+const isAdmin = computed(() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin'; } catch { return false; }
+});
+const backupVisible = ref(false);
+const backupFiles = ref([]);
+const autoCfg = reactive({ enabled: false, intervalHours: 24, maxBackups: 7 });
+const exporting = ref(false);
+const importing = ref(false);
+const importFile = ref(null);
+const importResult = ref('');
+const backupPath = ref('backend/backups/');
+
+function fmtSize(s) { return s > 1048576 ? (s / 1048576).toFixed(1) + ' MB' : s > 1024 ? (s / 1024).toFixed(1) + ' KB' : s + ' B'; }
+async function copyPath() { try { await navigator.clipboard.writeText(backupPath.value); ElMessage.success('已复制'); } catch {} }
+
+async function fetchBackupList() {
+  try {
+    const res = await fetch('/api/v1/backup/list', { headers: { Authorization: 'Bearer ' + token() } });
+    const data = await res.json();
+    if (data.code === 0) {
+      backupFiles.value = data.data.files;
+      Object.assign(autoCfg, data.data.autoBackup);
+    }
+  } catch {}
+}
+
+async function doExport() {
+  exporting.value = true;
+  try {
+    const res = await fetch('/api/v1/backup/export', { method: 'POST', headers: { Authorization: 'Bearer ' + token() } });
+    if (!res.ok) throw new Error();
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'backup-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json.gz';
+    a.click();
+    URL.revokeObjectURL(url);
+    ElMessage.success('备份导出完成');
+    fetchBackupList();
+  } catch { ElMessage.error('导出失败'); }
+  finally { exporting.value = false; }
+}
+
+function onImportFile(uploadFile) {
+  importFile.value = uploadFile.raw;
+  importResult.value = '';
+  if (!importFile.value) return;
+  ElMessageBox.confirm(
+    `确认用 "${importFile.value.name}" 恢复数据库？\n\n⚠️ 当前所有数据将被清除并替换为备份中的数据。\n\n💡 安全提示：导入前会自动备份当前数据到历史列表中（文件名含 BEFORE-RESTORE），如有问题可从历史备份中恢复。`,
+    '确认恢复数据库', { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+  ).then(() => doImport()).catch(() => { importFile.value = null; });
+}
+
+async function doImport() {
+  if (!importFile.value) return;
+  importing.value = true;
+  importResult.value = '';
+  try {
+    const form = new FormData();
+    form.append('file', importFile.value);
+    const res = await fetch('/api/v1/backup/import', { method: 'POST', headers: { Authorization: 'Bearer ' + token() }, body: form });
+    const data = await res.json();
+    if (data.code === 0) {
+      const info = data.data;
+      importResult.value = `恢复完成: ${info.inserted} 条记录已导入（回滚备份: ${info.rollbackFile}）`;
+      ElMessage.success('数据恢复完成，如需撤销请从历史备份中恢复 BEFORE-RESTORE 文件');
+      importFile.value = null;
+      fetchBackupList(); fetchUsers();
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      importResult.value = data.message || '恢复失败';
+    }
+  } catch { importResult.value = '恢复失败'; }
+  finally { importing.value = false; }
+      importFile.value = null;
+      fetchBackupList(); fetchUsers();
+    } else {
+      importResult.value = data.message || '恢复失败';
+    }
+  } catch { importResult.value = '恢复失败'; }
+  finally { importing.value = false; }
+}
+
+async function downloadBackup(filename) {
+  try {
+    const res = await fetch('/api/v1/backup/download/' + encodeURIComponent(filename), { headers: { Authorization: 'Bearer ' + token() } });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  } catch { ElMessage.error('下载失败'); }
+}
+
+async function deleteBackup(filename) {
+  try { await ElMessageBox.confirm(`删除备份 "${filename}"？`, '确认', { type: 'warning' }); } catch { return; }
+  try {
+    const res = await fetch('/api/v1/backup/' + encodeURIComponent(filename), { method: 'DELETE', headers: { Authorization: 'Bearer ' + token() } });
+    const data = await res.json();
+    if (data.code === 0) { ElMessage.success('已删除'); fetchBackupList(); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('删除失败'); }
+}
+
+async function saveAutoCfg() {
+  try {
+    const res = await fetch('/api/v1/backup/auto/config', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+      body: JSON.stringify({ enabled: autoCfg.enabled, intervalHours: autoCfg.intervalHours, maxBackups: autoCfg.maxBackups }),
+    });
+    const data = await res.json();
+    if (data.code === 0) ElMessage.success(data.message);
+  } catch { ElMessage.error('保存失败'); }
+}
+
+function openBackup() { backupVisible.value = true; }
 
 function fmt(d) { return d ? new Date(d).toLocaleString('zh-CN') : '-'; }
 function statusTagType(s) { return s === 'active' ? 'success' : s === 'banned' ? 'danger' : 'warning'; }
@@ -379,6 +606,13 @@ onMounted(() => fetchUsers());
 .um-total b { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 16px; }
 .um-search-btn { display: flex; align-items: center; gap: 4px !important; }
 
+/* 备份按钮 */
+.bk-toolbar-btn {
+  border: 1px solid var(--bg-300) !important; background: var(--bg-200) !important; color: var(--text-100) !important;
+  display: flex; align-items: center; gap: 6px;
+}
+.bk-toolbar-btn:hover { border-color: var(--gold) !important; color: var(--gold-dark) !important; background: rgba(201,168,76,0.06) !important; }
+
 /* 卡片列表 */
 .um-list { display: flex; flex-direction: column; gap: 8px; }
 .um-user-card {
@@ -485,4 +719,30 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
   .um-toolbar { flex-direction: column; align-items: stretch; }
   .um-card-row2 { gap: 2px; }
 }
+
+/* ===== 备份管理 ===== */
+.bk-section { margin-bottom: 18px; }
+.bk-sec-title { font-size: 13px; font-weight: 700; color: var(--text-100); margin: 0 0 10px 0; padding-bottom: 8px; border-bottom: 2px solid rgba(201,168,76,0.15); }
+.bk-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bk-auto-row { display: flex; align-items: center; }
+.bk-path-hint { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg-100); border-radius: 8px; font-size: 12px; }
+.bk-path-hint code { font-family: 'Courier New', monospace; font-size: 12px; color: var(--gold-dark); background: rgba(201,168,76,0.08); padding: 3px 8px; border-radius: 4px; }
+.bk-path-note { font-size: 11px; color: var(--text-200); margin: 8px 0 0 0; line-height: 1.6; }
+.bk-file-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.bk-file-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: var(--bg-100); font-size: 12px; }
+.bk-file-row:hover { background: var(--bg-300); }
+.bk-file-name { flex: 1; color: var(--text-100); font-family: monospace; font-size: 11px; }
+.bk-file-size { color: var(--text-200); font-size: 11px; white-space: nowrap; }
+.bk-btn-icon { width: 32px; height: 32px; padding: 0 !important; border: 1px solid var(--bg-300) !important; background: var(--bg-200) !important; color: var(--text-200) !important; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px !important; }
+.bk-btn-icon:hover { border-color: var(--gold) !important; color: var(--gold-dark) !important; }
+.bk-btn-del:hover { border-color: #c44545 !important; color: #c44545 !important; }
+
+/* 挂载教程 */
+.bk-guide { font-size: 12px; color: var(--text-200); line-height: 1.7; padding: 4px 0 8px; }
+.bk-guide h5 { font-size: 13px; font-weight: 700; color: var(--text-100); margin: 14px 0 6px; }
+.bk-guide h5:first-child { margin-top: 4px; }
+.bk-guide-p { margin: 4px 0 8px; }
+.bk-guide-p code { font-size: 11px; padding: 1px 5px; }
+.bk-guide-pre { background: var(--bg-300); color: var(--text-100); padding: 10px 14px; border-radius: 6px; font-size: 11px; line-height: 1.6; overflow-x: auto; margin: 4px 0 10px; font-family: 'Courier New', monospace; white-space: pre-wrap; word-break: break-all; }
+.st-empty-hint { text-align: center; padding: 20px; color: var(--text-200); font-size: 13px; }
 </style>
