@@ -22,8 +22,12 @@
       <span :class="['st-tab', { active: settingsTab === 'tts' }]" @click="settingsTab = 'tts'">
         <Voice theme="outline" size="15" fill="currentColor" /> 语音合成
       </span>
-      <span :class="['st-tab', { active: settingsTab === 'changelog' }]" @click="settingsTab = 'changelog'">更新日志</span>
-      <span :class="['st-tab', { active: settingsTab === 'profile' }]" @click="settingsTab = 'profile'">个人中心</span>
+      <span :class="['st-tab', { active: settingsTab === 'changelog' }]" @click="settingsTab = 'changelog'">
+        <DocDetail theme="outline" size="15" fill="currentColor" /> 更新日志
+      </span>
+      <span :class="['st-tab', { active: settingsTab === 'profile' }]" @click="settingsTab = 'profile'">
+        <User theme="outline" size="15" fill="currentColor" /> 个人中心
+      </span>
     </div>
 
     <!-- ===== LLM 配置 ===== -->
@@ -200,40 +204,53 @@
 
     <!-- ===== 个人中心 ===== -->
     <div v-show="settingsTab === 'profile'" class="st-section">
-      <div class="st-grid pf-grid">
-        <div class="st-card">
-          <h3 class="st-card-title">个人信息</h3>
-          <div class="pf-avatar-row">
-            <div class="pf-avatar" :style="{ background: avatarBg }" @click="triggerUpload">
-              <img v-if="profileForm.avatar" :src="profileForm.avatar" />
-              <span v-else>{{ avatarLetter }}</span>
-              <div class="pf-avatar-edit"><PictureOne theme="outline" size="16" fill="#fff" /></div>
+      <div class="pf-layout">
+        <!-- 头像 + 基础信息卡片 -->
+        <div class="st-card pf-card-main">
+          <div class="pf-hero">
+            <div class="pf-avatar-wrap" @click="triggerUpload">
+              <div class="pf-avatar" :style="{ background: avatarBg }">
+                <img v-if="profileForm.avatar" :src="profileForm.avatar" />
+                <span v-else>{{ avatarLetter }}</span>
+              </div>
+              <div class="pf-avatar-badge"><PictureOne theme="outline" size="14" fill="#fff" /></div>
             </div>
             <input type="file" accept="image/*" ref="fileInput" hidden @change="onFileChange" />
-            <div><p class="pf-hint">点击头像更换照片</p><p class="pf-hint-sub">建议正方形，不超过 2MB</p></div>
+            <div class="pf-hero-info">
+              <span class="pf-hero-name">{{ profileUser.nickname || profileUser.username || '未设置' }}</span>
+              <span class="pf-hero-role"><span :class="['pf-role-dot', profileUser.role === 'admin' ? 'admin' : 'user']"></span>{{ profileUser.role === 'admin' ? '管理员' : '普通用户' }}</span>
+              <span class="pf-hero-sub">{{ profileUser.lastLoginAt ? '最后登录 ' + fmt(profileUser.lastLoginAt) : '' }}</span>
+            </div>
           </div>
-          <div class="st-field" style="margin-top:16px"><label class="st-field-label">账号</label><el-input :model-value="profileUser.username" disabled /></div>
-          <div class="st-field"><label class="st-field-label">昵称</label><el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" /></div>
-          <el-button type="primary" size="small" @click="saveProfile" :loading="savingProfile">保存</el-button>
         </div>
 
-        <div class="st-card">
-          <h3 class="st-card-title">修改密码</h3>
+        <!-- 登录信息 -->
+        <div class="st-card pf-card-info">
+          <h3 class="st-card-title"><IdCard theme="outline" size="17" fill="var(--gold)" /> 账号详情</h3>
+          <div class="pf-detail-grid">
+            <div class="pf-detail-item"><span class="pf-detail-label">用户 ID</span><span class="pf-detail-val pf-uid" @click="copyUid">{{ profileUser.uid || '-' }}<span v-if="copiedUid" class="pf-copied">✓ 已复制</span></span></div>
+            <div class="pf-detail-item"><span class="pf-detail-label">注册时间</span><span class="pf-detail-val">{{ fmt(profileUser.createdAt) }}</span></div>
+            <div class="pf-detail-item"><span class="pf-detail-label">最后登录 IP</span><span class="pf-detail-val">{{ profileUser.lastLoginIp || '-' }}</span></div>
+          </div>
+        </div>
+
+        <!-- 编辑资料 -->
+        <div class="st-card pf-card-edit">
+          <h3 class="st-card-title"><EditTwo theme="outline" size="17" fill="var(--gold)" /> 编辑资料</h3>
+          <div class="st-field"><label class="st-field-label">账号</label><el-input :model-value="profileUser.username" disabled /></div>
+          <div class="st-field"><label class="st-field-label">昵称</label><el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" /></div>
+          <el-button class="pf-btn" @click="saveProfile" :loading="savingProfile"><CheckOne theme="outline" size="16" fill="currentColor" /> 保存资料</el-button>
+        </div>
+
+        <!-- 修改密码 -->
+        <div class="st-card pf-card-pwd">
+          <h3 class="st-card-title"><Lock theme="outline" size="17" fill="var(--gold)" /> 修改密码</h3>
           <el-form ref="pwdForm" :model="pwd" :rules="pwdRules" label-position="top" size="default">
             <el-form-item label="原密码" prop="oldPassword"><el-input v-model="pwd.oldPassword" type="password" show-password placeholder="输入当前密码" /></el-form-item>
             <el-form-item label="新密码" prop="newPassword"><el-input v-model="pwd.newPassword" type="password" show-password placeholder="至少6位" /></el-form-item>
             <el-form-item label="确认新密码" prop="confirmPwd"><el-input v-model="pwd.confirmPwd" type="password" show-password placeholder="再次输入" /></el-form-item>
-            <el-button type="primary" @click="changePwd" :loading="changingPwd">修改密码</el-button>
+            <el-button class="pf-btn pf-btn-primary" @click="changePwd" :loading="changingPwd"><CheckOne theme="outline" size="16" fill="currentColor" /> 更新密码</el-button>
           </el-form>
-        </div>
-
-        <div class="st-card pf-info-card">
-          <h3 class="st-card-title">登录信息</h3>
-          <div class="pf-info-row"><span>用户ID</span><strong class="pf-uid" @click="copyUid" :title="copiedUid ? '已复制' : '点击复制'">{{ profileUser.uid || '-' }}</strong></div>
-          <div class="pf-info-row"><span>角色</span><strong>{{ profileUser.role === 'admin' ? '管理员' : '普通用户' }}</strong></div>
-          <div class="pf-info-row"><span>注册时间</span><strong>{{ fmt(profileUser.createdAt) }}</strong></div>
-          <div class="pf-info-row"><span>最后登录</span><strong>{{ fmt(profileUser.lastLoginAt) }}</strong></div>
-          <div class="pf-info-row"><span>登录IP</span><strong>{{ profileUser.lastLoginIp || '-' }}</strong></div>
         </div>
       </div>
     </div>
@@ -244,7 +261,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Refresh } from '@element-plus/icons-vue';
-import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield } from '@icon-park/vue-next';
+import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield, DocDetail, User, CheckOne, Lock, IdCard, EditTwo } from '@icon-park/vue-next';
 import { useRoute } from 'vue-router';
 import { configAPI } from '../api';
 
@@ -449,20 +466,41 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
 .cl-tag.perf { background: #f0e6f6; color: #9b59b6; }
 
 /* ===== 个人中心 ===== */
-.pf-grid { max-width: 800px; }
-.pf-avatar-row { display: flex; align-items: center; gap: 16px; }
-.pf-avatar { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; font-size: 28px; font-weight: 700; color: var(--navy); flex-shrink: 0; }
+.pf-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 860px; }
+.pf-card-main { grid-column: span 2; }
+.pf-card-info { grid-column: span 2; }
+.pf-hero { display: flex; align-items: center; gap: 24px; }
+.pf-avatar-wrap { position: relative; cursor: pointer; flex-shrink: 0; }
+.pf-avatar { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 32px; font-weight: 700; color: var(--navy); border: 3px solid var(--bg-300); transition: border-color 0.2s; }
+.pf-avatar-wrap:hover .pf-avatar { border-color: var(--gold); }
 .pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.pf-avatar-edit { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); text-align: center; padding: 4px 0; opacity: 0; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; }
-.pf-avatar:hover .pf-avatar-edit { opacity: 1; }
-.pf-hint { font-size: 13px; color: var(--text-100); margin: 0; }
-.pf-hint-sub { font-size: 11px; color: var(--text-200); margin: 2px 0 0; }
-.pf-info-card { grid-column: span 2; }
-.pf-info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--bg-300); font-size: 13px; }
-.pf-info-row span { color: var(--text-200); }
-.pf-info-row strong { color: var(--text-100); }
-.pf-uid { cursor: pointer; font-family: 'Courier New', monospace; letter-spacing: 1px; user-select: all; }
-.pf-uid:hover { color: var(--gold); }
+.pf-avatar-badge { position: absolute; bottom: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-200); }
+.pf-hero-info { display: flex; flex-direction: column; gap: 4px; }
+.pf-hero-name { font-size: 20px; font-weight: 700; color: var(--text-100); }
+.pf-hero-role { font-size: 13px; color: var(--text-200); display: flex; align-items: center; gap: 6px; }
+.pf-role-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pf-role-dot.admin { background: #f56c6c; box-shadow: 0 0 6px rgba(245,108,108,0.5); }
+.pf-role-dot.user { background: #409eff; }
+.pf-hero-sub { font-size: 12px; color: var(--text-200); opacity: 0.7; }
 
-@media (max-width: 700px) { .pf-grid { max-width: 100%; } .pf-info-card { grid-column: span 1; } .settings-tabs { flex-wrap: wrap; } }
+.pf-detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.pf-detail-item { padding: 12px 14px; border-radius: 8px; background: var(--bg-100); display: flex; flex-direction: column; gap: 4px; }
+.pf-detail-label { font-size: 11px; color: var(--text-200); text-transform: uppercase; letter-spacing: 0.5px; }
+.pf-detail-val { font-size: 13px; font-weight: 600; color: var(--text-100); }
+.pf-uid { cursor: pointer; font-family: 'Courier New', monospace; position: relative; user-select: all; }
+.pf-uid:hover { color: var(--gold); }
+.pf-copied { font-size: 10px; color: #67c23a; margin-left: 6px; font-family: inherit; }
+
+/* 个人中心按钮 */
+.pf-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--bg-300); background: var(--bg-100); color: var(--text-100); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.pf-btn:hover { border-color: var(--gold); color: var(--gold-dark); background: var(--bg-200); transform: translateY(-1px); }
+.pf-btn-primary { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+.pf-btn-primary:hover { background: var(--gold-dark); border-color: var(--gold-dark); color: #fff; }
+
+@media (max-width: 700px) {
+  .pf-layout { grid-template-columns: 1fr; max-width: 100%; }
+  .pf-card-main, .pf-card-info { grid-column: span 1; }
+  .pf-detail-grid { grid-template-columns: 1fr 1fr; }
+  .settings-tabs { flex-wrap: wrap; }
+}
 </style>
