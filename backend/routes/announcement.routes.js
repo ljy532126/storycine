@@ -54,11 +54,10 @@ router.post('/', adminRequired, async (req, res, next) => {
       enableMarkdown: !!enableMarkdown,
       createdBy: req.user.username || req.user._id,
     });
-    // Socket 推送
+    // Socket 推送给所有在线用户（前端根据 target 自行过滤）
     const io = req.app.get('io');
     if (io && ann.isActive) {
-      const event = ann.target === 'all' ? 'announcement:new' : 'announcement:admin';
-      io.emit(event, { _id: ann._id, title: ann.title, type: ann.type, createdAt: ann.createdAt });
+      io.emit('announcement:new', { _id: ann._id, title: ann.title, type: ann.type, target: ann.target, createdAt: ann.createdAt });
     }
     res.status(201).json({ message: '公告发布成功', data: ann });
   } catch (e) { next(e); }

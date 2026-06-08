@@ -500,12 +500,13 @@ watch(() => route.path, (p) => { if (p === '/error-logs') errorUnreadCount.value
 onMounted(async () => {
   await refreshUser();
   fetchAnnouncements();
-  // 管理员：连接 Socket 监听新错误 + 新公告
+
+  // 连接 Socket 监听实时推送（新公告 + 新错误）
+  const { on: sOn, connect: sConnect } = useSocket();
+  sConnect();
+  sOn('announcement:new', () => { fetchAnnouncements(); });
   if (userRole.value === 'admin') {
-    const { on: sOn, connect: sConnect } = useSocket();
-    sConnect();
     sOn('error-log:new', () => { errorUnreadCount.value++; });
-    sOn('announcement:new', () => { fetchAnnouncements(); });
     try {
       const res = await fetch('/api/v1/error-logs/stats/summary', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
@@ -514,14 +515,22 @@ onMounted(async () => {
       if (json.data?.unresolved) errorUnreadCount.value = json.data.unresolved;
     } catch { /* ignore */ }
   }
-  // 普通用户也监听公告推送
-  if (userRole.value && userRole.value !== 'admin') {
-    const { connect: sConnect2 } = useSocket();
-    sConnect2();
-  }
   document.addEventListener('keydown', onKeydown);
   nextTick(() => { if (searchInput.value) searchInput.value.focus(); });
 });
+
+// 每 30 秒静默轮询公告（Socket 的兜底，极低开销）
+let _annPollTimer = null;
+watch(() => route.path, (p) => {
+  if (!['Landing','Login','Register'].includes(route.name)) {
+    if (!_annPollTimer) {
+      _annPollTimer = setInterval(() => { fetchAnnouncements(); }, 30000);
+    }
+  } else {
+    clearInterval(_annPollTimer);
+    _annPollTimer = null;
+  }
+}, { immediate: true });
 </script>
 
 <style>
