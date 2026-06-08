@@ -225,9 +225,11 @@
           <el-icon><FolderOpened /></el-icon>
           <code>{{ backupPath }}</code>
           <el-button size="small" link @click="copyPath">复制路径</el-button>
-          <el-button size="small" @click="checkMount" :loading="checkingMount" :type="mountStatus ? (mountStatus === 'ok' ? 'success' : 'danger') : 'info'" plain style="margin-left:auto">
-            <el-icon><component :is="mountIcon" /></el-icon> {{ mountStatusText }}
-          </el-button>
+          <button class="bk-mount-btn" :class="'mount-' + (mountStatus || 'idle')" @click="checkMount" :disabled="checkingMount">
+            <span class="bk-mount-dot"></span>
+            <span v-if="checkingMount">检测中...</span>
+            <span v-else>{{ mountStatusText }}</span>
+          </button>
         </div>
         <el-collapse style="margin-top:10px;border:none;background:transparent">
           <el-collapse-item title="Docker 挂载教程（点击展开）" style="background:var(--bg-100);border-radius:8px;padding:0 12px">
@@ -295,7 +297,7 @@ docker cp ./my-backup.json.gz storycine-app:/app/backups/</pre>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
-import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload, CircleCheck, CircleClose, Warning, Loading } from '@element-plus/icons-vue';
+import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload } from '@element-plus/icons-vue';
 
 const users = ref([]);
 const loading = ref(false);
@@ -348,31 +350,27 @@ const backupPath = ref('backend/backups/');
 const checkingMount = ref(false);
 const mountStatus = ref('');
 const mountStatusText = ref('检测挂载');
-const mountIcon = ref('Warning');
 
 function fmtSize(s) { return s > 1048576 ? (s / 1048576).toFixed(1) + ' MB' : s > 1024 ? (s / 1024).toFixed(1) + ' KB' : s + ' B'; }
 async function copyPath() { try { await navigator.clipboard.writeText(backupPath.value); ElMessage.success('已复制'); } catch {} }
 
 async function checkMount() {
   checkingMount.value = true;
+  mountStatus.value = 'idle';
   mountStatusText.value = '检测中...';
-  mountIcon.value = 'Loading';
   try {
     const res = await fetch('/api/v1/backup/check-mount', { headers: { Authorization: 'Bearer ' + token() } });
     const data = await res.json();
     if (data.data?.ok) {
       mountStatus.value = 'ok';
       mountStatusText.value = '挂载正常';
-      mountIcon.value = 'CircleCheck';
     } else {
       mountStatus.value = 'fail';
       mountStatusText.value = data.data?.message || '检测失败';
-      mountIcon.value = 'CircleClose';
     }
   } catch {
     mountStatus.value = 'fail';
-    mountStatusText.value = '检测请求失败';
-    mountIcon.value = 'CircleClose';
+    mountStatusText.value = '请求失败';
   }
   finally { checkingMount.value = false; }
 }
@@ -761,7 +759,56 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
 .bk-btn-icon:hover { border-color: var(--gold) !important; color: var(--gold-dark) !important; }
 .bk-btn-del:hover { border-color: #c44545 !important; color: #c44545 !important; }
 
-/* 挂载教程 */
+/* 挂载检测按钮 */
+.bk-mount-btn {
+  display: flex; align-items: center; gap: 8px; margin-left: auto;
+  padding: 5px 14px; font-size: 12px; font-family: inherit;
+  border-radius: 20px; cursor: pointer; transition: all 0.25s; border: none;
+  font-weight: 600; white-space: nowrap;
+}
+.bk-mount-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+/* 未检测 */
+.bk-mount-btn.mount-idle {
+  background: var(--bg-300); color: var(--text-200);
+}
+.bk-mount-btn.mount-idle .bk-mount-dot { background: #aaa; }
+/* 检测中 */
+.bk-mount-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+.bk-mount-btn.mount-idle:disabled { background: var(--bg-300); }
+.bk-mount-btn.mount-idle:disabled .bk-mount-dot {
+  animation: mount-pulse 0.8s infinite;
+}
+/* 正常 */
+.bk-mount-btn.mount-ok {
+  background: rgba(103,194,58,0.1); color: #67c23a;
+}
+.bk-mount-btn.mount-ok .bk-mount-dot {
+  background: #67c23a;
+  box-shadow: 0 0 8px rgba(103,194,58,0.6);
+  animation: mount-breathe 2s ease-in-out infinite;
+}
+/* 异常 */
+.bk-mount-btn.mount-fail {
+  background: rgba(245,108,108,0.1); color: #f56c6c;
+}
+.bk-mount-btn.mount-fail .bk-mount-dot {
+  background: #f56c6c;
+  box-shadow: 0 0 8px rgba(245,108,108,0.5);
+}
+@keyframes mount-breathe {
+  0%, 100% { box-shadow: 0 0 4px rgba(103,194,58,0.4); }
+  50% { box-shadow: 0 0 14px rgba(103,194,58,0.8); }
+}
+@keyframes mount-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes mount-breathe-fail {
+  0%, 100% { box-shadow: 0 0 4px rgba(245,108,108,0.4); }
+  50% { box-shadow: 0 0 14px rgba(245,108,108,0.7); }
+}
 .bk-guide { font-size: 12px; color: var(--text-200); line-height: 1.7; padding: 4px 0 8px; }
 .bk-guide h5 { font-size: 13px; font-weight: 700; color: var(--text-100); margin: 14px 0 6px; }
 .bk-guide h5:first-child { margin-top: 4px; }
