@@ -64,30 +64,48 @@
         </el-form>
       </el-card>
 
-      <!-- 第二行：进度(生成时) -->
-      <el-card v-if="scriptStore.generating" shadow="never" style="margin-top:12px">
-        <template #header><span class="card-title">{{ flowType === 'continue' ? 'AI 续写进行中 📖' : 'AI 正在为你写剧本 ✍️' }}</span></template>
-        <div class="custom-steps">
-          <div
-            v-for="s in currentStepLabels" :key="s.step"
-            :class="['cstep', {
-              'cstep-done': s.step < currentStep,
-              'cstep-active': s.step === currentStep,
-              'cstep-wait': s.step > currentStep
-            }]"
-          >
-            <div class="cstep-dot">
-              <span v-if="s.step < currentStep" class="cstep-check">✓</span>
-              <span v-else-if="s.step === currentStep" class="cstep-spinner"></span>
-              <span v-else class="cstep-num">{{ s.step }}</span>
-            </div>
-            <div class="cstep-content">
-              <div class="cstep-title">{{ s.title }}</div>
-              <div class="cstep-desc">{{ progressMessages[s.step] || '等待中...' }}</div>
+      <!-- 第二行：进度卡片（生成中时展示） -->
+      <el-card v-if="scriptStore.generating" shadow="never" class="gen-progress-card">
+        <div class="gp-head">
+          <div class="gp-head-left">
+            <span class="gp-head-icon">
+              <MagicWand theme="outline" size="20" fill="var(--gold)" />
+            </span>
+            <div>
+              <span class="gp-title">{{ flowType === 'continue' ? 'AI 续写进行中' : 'AI 正在创作剧本' }}</span>
+              <span class="gp-sub">七步协作，为你写一个精彩故事</span>
             </div>
           </div>
+          <div class="gp-head-right">
+            <span class="gp-timer"><Time theme="outline" size="14" fill="currentColor" /> 预计 {{ estTime }}</span>
+            <el-progress :percentage="stepPercentage" :stroke-width="6" style="width:120px" />
+          </div>
         </div>
-        <el-progress :percentage="stepPercentage" :stroke-width="14" style="margin-top:12px" />
+
+        <!-- 横向步骤条 -->
+        <div class="gp-steps-row">
+          <div
+            v-for="(s, i) in currentStepLabels" :key="s.step"
+            :class="['gp-step', { done: s.step < currentStep, active: s.step === currentStep, wait: s.step > currentStep }]"
+          >
+            <div class="gp-step-dot">
+              <span v-if="s.step < currentStep">✓</span>
+              <span v-else-if="s.step === currentStep" class="gp-spin"></span>
+              <span v-else>{{ s.step }}</span>
+            </div>
+            <span class="gp-step-label">{{ s.title }}</span>
+            <div v-if="i < currentStepLabels.length - 1" class="gp-step-line"></div>
+          </div>
+        </div>
+
+        <!-- 日志区（嵌入卡片内） -->
+        <div class="gp-log" ref="logBody">
+          <div v-if="logLines.length === 0" class="gp-log-empty">等待创作任务...</div>
+          <div v-for="(line, i) in logLines" :key="i" :class="['gp-log-line', 'log-' + line.level]">
+            <span class="gp-log-time">{{ line.time }}</span>
+            <span class="gp-log-msg">{{ line.msg }}</span>
+          </div>
+        </div>
       </el-card>
 
       <!-- 第三行：创作记录（响应式卡片列表） -->
@@ -183,31 +201,6 @@
         <p>或点击顶部「导入剧本」粘贴已有剧本</p>
       </div>
 
-      <!-- 悬浮日志 -->
-      <div
-        class="log-float-toggle" v-if="currentProjectId"
-        :style="{ left: logPos.x + 'px', top: logPos.y + 'px' }"
-        @mousedown="startDrag"
-        @click.stop="toggleLog"
-        :title="logCollapsed ? '展开日志' : '收起日志'"
-      >
-        📋<span v-if="logLines.length > 0" class="log-float-badge">{{ logLines.length }}</span>
-      </div>
-      <div class="log-float-panel" :class="{ 'log-hidden': logCollapsed }" v-if="currentProjectId"
-        :style="logPanelStyle">
-        <div class="log-header" @click="logCollapsed = !logCollapsed">
-          运行日志
-          <span v-if="logLines.length > 0" class="log-badge">{{ logLines.length }}</span>
-          <span style="margin-left:auto;cursor:pointer;font-size:14px">×</span>
-        </div>
-        <div class="log-body" ref="logBody">
-          <div v-if="logLines.length === 0" class="log-empty">等待创作任务...</div>
-          <div v-for="(line, i) in logLines" :key="i" :class="['log-line', 'log-' + line.level]">
-            <span class="log-time">{{ line.time }}</span>
-            <span class="log-msg">{{ line.msg }}</span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- 空状态 -->
@@ -334,7 +327,7 @@ import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useSocket } from '../components/useSocket';
 import api, { scriptAPI } from '../api';
-import { FolderUpload, MagicWand, Film, Edit, Delete, Download, ImportAndExport } from '@icon-park/vue-next';
+import { FolderUpload, MagicWand, Film, Edit, Delete, Download, ImportAndExport, Time } from '@icon-park/vue-next';
 
 const router = useRouter();
 const projectStore = useProjectStore();
@@ -347,9 +340,7 @@ const importTitle = ref('');
 const importMode = ref('format'); // 'format' | 'story'
 const showImportDialog = ref(false);
 const showStorylineDialog = ref(false);
-const logCollapsed = ref(true);
 const showInnerThought = ref(true);
-const logPos = reactive({ x: 0, y: 0 });
 const selectedScripts = ref([]);
 
 const scriptTableRef = ref(null);
@@ -386,33 +377,6 @@ const mobileDetailVisible = ref(false);
 const mobileDetailScript = ref(null);
 const screenWidth = ref(window.innerWidth);
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
-
-const logPanelStyle = computed(() => ({
-  left: Math.min(logPos.x, window.innerWidth - 500) + 'px',
-  bottom: (window.innerHeight - logPos.y + 12) + 'px',
-}));
-
-function initLogPos() {
-  logPos.x = window.innerWidth - 80;
-  logPos.y = window.innerHeight - 120;
-}
-let dragging = false, dragStartX = 0, dragStartY = 0, origX = 0, origY = 0;
-function startDrag(e) {
-  dragging = true; dragStartX = e.clientX; dragStartY = e.clientY; origX = logPos.x; origY = logPos.y;
-  document.addEventListener('mousemove', onDrag); document.addEventListener('mouseup', stopDrag);
-}
-function onDrag(e) {
-  if (!dragging) return;
-  logPos.x = Math.max(0, Math.min(window.innerWidth - 48, origX + e.clientX - dragStartX));
-  logPos.y = Math.max(0, Math.min(window.innerHeight - 48, origY + e.clientY - dragStartY));
-}
-function stopDrag() {
-  dragging = false;
-  document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag);
-}
-function toggleLog() {
-  if (!dragging) logCollapsed.value = !logCollapsed.value;
-}
 const generationResult = ref(null);
 const scripts = ref([]);
 const logBody = ref(null);
@@ -466,6 +430,16 @@ const stepPercentage = computed(() => {
   return Math.round((idx + 1) / labels.length * 100);
 });
 
+// 预估剩余时间（秒）
+const estTime = computed(() => {
+  const remain = currentStepLabels.value.length - currentStep.value;
+  if (remain <= 0) return '即将完成';
+  const perStep = flowType.value === 'continue' ? 15 : 25;
+  const secs = remain * perStep;
+  if (secs < 60) return `${secs}秒`;
+  return `${Math.ceil(secs / 60)}分钟`;
+});
+
 function addLog(msg, level = 'info') {
   const now = new Date();
   const time = now.toLocaleTimeString('zh-CN', { hour12: false });
@@ -505,8 +479,6 @@ function addCustomOption(key, value) {
 }
 
 onMounted(async () => {
-  initLogPos();
-  window.addEventListener('resize', initLogPos);
   window.__triggerGenerate = handleGenerate;
   await projectStore.fetchProjects();
   const restored = await projectStore.restoreLastProject();
@@ -902,39 +874,46 @@ function applyQuickTemplate(t) {
 .qt-chip:hover{border-color:var(--gold);background:var(--gold-light);transform:translateY(-1px)}
 .tag-form .el-form-item { margin-right: 16px; margin-bottom: 4px; }
 
-/* 悬浮日志 */
-.log-float-toggle {
-  position: fixed; z-index: 1000;
-  width: 44px; height: 44px; border-radius: 50%; background: var(--gold); color: var(--navy);
-  display: flex; align-items: center; justify-content: center; cursor: grab;
-  font-size: 18px; box-shadow: 0 2px 16px rgba(201,168,76,0.5);
-  user-select: none; border: 2px solid var(--gold-dark);
-}
-.log-float-toggle:active { cursor: grabbing; }
-.log-float-badge { position: absolute; top: -4px; right: -4px; background: #C44545; color: #fff; border-radius: 10px; padding: 0 5px; font-size: 10px; line-height: 16px; min-width: 16px; text-align: center; }
-.log-float-panel {
-  position: fixed; z-index: 999;
-  width: 480px; height: 160px; background: var(--bg-200); border-radius: 10px;
-  border: 2px solid var(--gold); box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  display: flex; flex-direction: column; overflow: hidden;
-  transition: opacity 0.25s, transform 0.25s;
-}
-.log-hidden { opacity: 0; transform: translateY(20px); pointer-events: none; }
-.log-header { padding: 6px 14px; font-size: 11px; font-weight: 700; color: var(--text-100); background: var(--bg-100); border-bottom: 1px solid var(--gold); flex-shrink: 0; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; letter-spacing: 1px; }
-.log-header:hover { color: var(--gold-dark); }
-.log-badge { background: var(--gold); color: var(--navy); border-radius: 10px; padding: 0 6px; font-size: 10px; font-weight: 700; }
-.log-body { flex: 1; overflow-y: auto; padding: 6px 14px; font-family: 'DM Sans', monospace; font-size: 11px; line-height: 1.7; }
-.log-empty { color: var(--text-200); text-align: center; padding: 20px 0; font-size: 13px; }
-.log-line { display: flex; gap: 10px; }
-.log-time { color: var(--text-200); flex-shrink: 0; font-size: 10px; }
-.log-info .log-msg { color: var(--text-200); }
-.log-success .log-msg { color: var(--gold-dark); font-weight: 600; }
-.log-warning .log-msg { color: var(--accent-100); }
-.log-error .log-msg { color: #C44545; }
+/* ===== 横向进度卡 ===== */
+.gen-progress-card { margin-top: 12px; background: linear-gradient(135deg, var(--bg-200) 0%, rgba(201,168,76,0.03) 100%) !important; border: 1px solid var(--bg-300) !important; }
+.gen-progress-card :deep(.el-card__body) { padding: 18px 20px 12px; }
+
+.gp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.gp-head-left { display: flex; align-items: center; gap: 12px; }
+.gp-head-icon { width: 42px; height: 42px; border-radius: 10px; background: rgba(201,168,76,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.gp-title { font-size: 15px; font-weight: 700; color: var(--text-100); display: block; }
+.gp-sub { font-size: 11px; color: var(--text-200); display: block; margin-top: 1px; }
+.gp-head-right { display: flex; align-items: center; gap: 14px; }
+.gp-timer { font-size: 12px; color: var(--text-200); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+/* 横向步骤条 */
+.gp-steps-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; position: relative; padding: 0 8px; }
+.gp-step { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; text-align: center; }
+.gp-step-dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; position: relative; z-index: 2; transition: all 0.4s; }
+.gp-step.wait .gp-step-dot { background: var(--bg-300); color: var(--text-200); }
+.gp-step.active .gp-step-dot { background: var(--gold); color: var(--navy); box-shadow: 0 0 16px rgba(201,168,76,0.4); }
+.gp-step.done .gp-step-dot { background: #67c23a; color: #fff; }
+.gp-step-label { font-size: 10px; color: var(--text-200); margin-top: 6px; white-space: nowrap; font-weight: 500; transition: color 0.3s; }
+.gp-step.active .gp-step-label { color: var(--gold-dark); font-weight: 700; }
+.gp-step.done .gp-step-label { color: #67c23a; }
+.gp-step-line { position: absolute; top: 15px; left: calc(50% + 16px); width: calc(100% - 32px); height: 2px; background: var(--bg-300); z-index: 1; transition: background 0.5s; }
+.gp-step.done .gp-step-line { background: #67c23a; }
+.gp-spin { width: 12px; height: 12px; border: 2px solid var(--navy); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 内嵌日志 */
+.gp-log { max-height: 170px; overflow-y: auto; margin-top: 4px; border-top: 1px solid var(--bg-300); padding-top: 10px; font-family: monospace; font-size: 11px; line-height: 1.8; }
+.gp-log-empty { color: var(--text-200); text-align: center; padding: 10px 0; font-size: 12px; }
+.gp-log-line { display: flex; gap: 10px; padding: 1px 0; }
+.gp-log-time { color: var(--text-200); flex-shrink: 0; font-size: 10px; width: 65px; }
+.gp-log-msg { flex: 1; }
+.log-info .gp-log-msg { color: var(--text-200); }
+.log-success .gp-log-msg { color: #67c23a; font-weight: 600; }
+.log-warning .gp-log-msg { color: #e6a23c; }
+.log-error .gp-log-msg { color: #c44545; font-weight: 600; }
 
 .welcome-placeholder { text-align: center; padding: 80px 40px; }
 .welcome-placeholder.full { flex: 1; padding: 120px 40px; }
-.welcome-placeholder .welcome-icon { font-size: 72px; margin-bottom: 20px; }
 .welcome-placeholder h3 { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text-100); margin-bottom: 12px; }
 .welcome-placeholder p { font-size: 14px; line-height: 1.8; color: var(--text-200); }
 
@@ -943,27 +922,7 @@ function applyQuickTemplate(t) {
 .char-card strong { color: var(--text-100); font-family: 'Playfair Display', serif; }
 .char-card p { color: var(--text-200); margin-top: 4px; font-size: 13px; }
 
-/* 自定义步骤条 */
-.custom-steps { display: flex; flex-direction: column; gap: 2px; }
-.cstep { display: flex; gap: 14px; padding: 10px 0; align-items: flex-start; }
-.cstep-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 12px; font-weight: bold; transition: all 0.35s; }
-.cstep-wait .cstep-dot { background: var(--bg-300); color: var(--text-200); }
-.cstep-active .cstep-dot { background: var(--gold); color: var(--navy); }
-.cstep-done .cstep-dot { background: var(--gold-dark); color: #fff; }
-.cstep-content { flex: 1; min-width: 0; }
-.cstep-title { font-size: 14px; line-height: 1.6; font-weight: 600; }
-.cstep-wait .cstep-title { color: var(--text-200); }
-.cstep-active .cstep-title { color: var(--text-100); }
-.cstep-done .cstep-title { color: var(--text-100); }
-.cstep-desc { font-size: 12px; margin-top: 2px; }
-.cstep-wait .cstep-desc { color: var(--text-200); }
-.cstep-active .cstep-desc { color: var(--gold-dark); }
-.cstep-done .cstep-desc { color: var(--text-200); }
-.cstep-check { font-size: 13px; }
-.cstep-spinner { width: 12px; height: 12px; border: 2px solid var(--navy); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* 故事线 */
+/* ---- 故事线 ---- */
 .storyline-wrap { display: flex; flex-direction: column; max-height: 60vh; overflow: hidden; }
 .storyline-summary-box { background: var(--navy); padding: 16px 18px; border-radius: 10px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; border: 1px solid var(--gold); }
 .sl-label { font-weight: 700; color: var(--gold); font-size: 13px; letter-spacing: 1px; }
@@ -1018,11 +977,6 @@ function applyQuickTemplate(t) {
   .script-card-list { gap: 8px; }
   .sc-card { padding: 12px; }
   .sc-actions .el-button { min-height: 40px; font-size: 0.875rem; }
-
-  /* 日志面板 */
-  .log-float-panel { width: calc(100vw - 16px) !important; left: 8px !important; }
-  .log-float-toggle { left: auto !important; right: 12px !important; bottom: 80px !important; }
-
   .welcome-placeholder { padding: 40px 20px; }
   .welcome-placeholder.full { padding: 60px 20px; }
 
