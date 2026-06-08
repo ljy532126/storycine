@@ -39,6 +39,10 @@
             <span class="tts-ep-badge">{{ ep.episodeNumber }}</span>
             <span>第{{ ep.episodeNumber }}集</span>
             <span class="tts-ep-count">{{ ep.audios.length }} 条</span>
+            <button class="tts-ep-dl" @click="downloadEpisode(ep)" title="一键下载本集全部配音">
+              <DownloadTwo theme="outline" size="14" fill="currentColor" />
+              下载本集
+            </button>
           </div>
 
           <div class="tts-grid">
@@ -69,8 +73,8 @@
               <!-- 播放区 -->
               <div class="tts-card-play" @click.stop>
                 <button class="tts-play-btn" @click="togglePlay(a)">
-                  <Right v-if="playingId !== a._id" theme="filled" size="16" fill="#fff" />
-                  <PauseOne v-else theme="filled" size="16" fill="#fff" />
+                  <PlayOne v-if="playingId !== a._id" theme="filled" size="18" fill="currentColor" />
+                  <PauseOne v-else theme="filled" size="18" fill="currentColor" />
                 </button>
                 <div class="tts-wave">
                   <span v-for="n in 20" :key="n" class="tts-wave-bar" :class="{ active: playingId === a._id }" :style="{ animationDelay: (n * 0.06) + 's', height: (12 + Math.abs(Math.sin(n * 0.7) * 16 + Math.cos(n * 1.3) * 8)) + 'px' }" />
@@ -111,7 +115,7 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Refresh, Delete, FolderDownload, Voice, Film, Right, PauseOne, CheckOne } from '@icon-park/vue-next';
+import { Refresh, Delete, FolderDownload, Voice, Film, PlayOne, PauseOne, CheckOne, DownloadTwo } from '@icon-park/vue-next';
 import { Download } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
 import { ttsAPI } from '../api';
@@ -152,7 +156,7 @@ function getProjectName(id) {
 }
 
 function toggleSelect(id, e) {
-  if (e.target.closest('audio') || e.target.closest('button') || e.target.closest('.el-button')) return;
+  if (e.target.closest('audio') || e.target.closest('button') || e.target.closest('.el-button') || e.target.closest('.tts-ep-dl')) return;
   const idx = selectedIds.value.indexOf(id);
   if (idx > -1) selectedIds.value.splice(idx, 1);
   else selectedIds.value.push(id);
@@ -194,6 +198,18 @@ async function batchDownload() {
     link.href = url; link.download = `tts-batch-${Date.now()}.zip`; link.click();
     window.URL.revokeObjectURL(url);
   } catch { ElMessage.error('下载失败'); }
+}
+
+function downloadEpisode(ep) {
+  ep.audios.forEach((a, i) => {
+    setTimeout(() => {
+      const link = document.createElement('a');
+      link.href = a.audioUrl;
+      link.download = `${i + 1}-shot${a.shotNumber}_${a.characterName || 'voice'}.mp3`;
+      link.click();
+    }, i * 300);
+  });
+  ElMessage.success(`开始下载 ${ep.audios.length} 条配音`);
 }
 
 onMounted(async () => {
@@ -241,6 +257,14 @@ onMounted(async () => {
   background: var(--gold); color: var(--navy); font-weight: 700; font-size: 11px;
 }
 .tts-ep-count { font-size: 11px; color: var(--text-200); font-weight: 400; margin-left: auto; }
+.tts-ep-dl {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 12px; font-size: 11px; font-family: inherit; font-weight: 600;
+  border: 1px solid var(--bg-300); border-radius: 6px;
+  background: var(--bg-100); color: var(--text-200); cursor: pointer;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tts-ep-dl:hover { border-color: var(--gold); color: var(--gold-dark); background: rgba(201,168,76,0.05); }
 
 /* 卡片网格 */
 .tts-grid { display: flex; flex-direction: column; gap: 8px; }
@@ -294,15 +318,13 @@ onMounted(async () => {
 /* 播放 */
 .tts-card-play { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .tts-play-btn {
-  width: 38px; height: 38px; border-radius: 50%; border: none;
-  background: var(--navy); color: var(--gold); cursor: pointer;
+  width: 42px; height: 42px; border-radius: 50%; border: none;
+  background: var(--bg-100); color: var(--gold-dark); cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   transition: all 0.2s;
 }
-.tts-play-btn:hover { background: var(--gold); }
-.tts-play-btn:hover svg { fill: var(--navy) !important; }
-.tts-playing .tts-play-btn { background: var(--gold); }
-.tts-playing .tts-play-btn svg { fill: var(--navy) !important; }
+.tts-play-btn:hover { background: var(--gold); color: #fff; }
+.tts-card.tts-playing .tts-play-btn { background: var(--gold); color: #fff; box-shadow: 0 0 16px rgba(201,168,76,0.35); }
 
 /* 波形 */
 .tts-wave { display: flex; align-items: center; gap: 2px; height: 32px; }
