@@ -78,14 +78,11 @@
             </div>
           </template>
           <img v-else :src="item.url" loading="lazy" @error="onImgError($event)" />
-          <div class="ml-card-overlay" v-if="item.isVideo">
-            <span class="ml-video-badge"><Right theme="filled" size="22" fill="#fff" /></span>
-          </div>
-          <span class="ml-storage-badge" :class="isCloudUrl(item.url) ? 'cloud' : 'local'">
+          <div class="ml-storage-badge" :class="isCloudUrl(item.url) ? 'cloud' : 'local'">
             <Cloudy v-if="isCloudUrl(item.url)" theme="outline" size="12" fill="#fff" />
             <FolderDownload v-else theme="outline" size="12" fill="#fff" />
             {{ isCloudUrl(item.url) ? '云端' : '本地' }}
-          </span>
+          </div>
         </div>
         <div class="ml-card-body">
           <span class="ml-card-name">{{ item.name || '未命名' }}</span>
@@ -161,7 +158,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import {
   FolderOpen, People, Pic, Tool, Film, PlayTwo, PictureOne,
-  Right, Cloudy, FolderDownload, AllApplication, Check,
+  Cloudy, FolderDownload, AllApplication, Check,
 } from '@icon-park/vue-next';
 import { Download, Delete, Select, Close } from '@element-plus/icons-vue';
 
@@ -345,10 +342,6 @@ async function deleteItem(item) {
   text-transform: uppercase; letter-spacing: 2px;
 }
 .ml-card-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.ml-video-badge {
-  width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,0.55);
-  display: flex; align-items: center; justify-content: center;
-}
 
 .ml-storage-badge {
   position: absolute; bottom: 6px; left: 6px; z-index: 2;
