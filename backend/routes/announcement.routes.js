@@ -15,9 +15,8 @@ router.get('/active', async (req, res, next) => {
       .limit(20)
       .select('-createdBy')
       .lean();
-    // 计算未读数量（基于 createdAt > 上次查看时间，简单实现）
-    const unreadCount = announcements.length;
-    res.json({ data: announcements, unreadCount });
+    announcements.forEach(a => { if (!a.readBy) a.readBy = []; });
+    res.json({ data: announcements, unreadCount: announcements.length });
   } catch (e) { next(e); }
 });
 
@@ -35,6 +34,8 @@ router.get('/', adminRequired, async (req, res, next) => {
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit))
       .lean();
+    // 补全老数据，确保 readBy 字段存在
+    list.forEach(a => { if (!a.readBy) a.readBy = []; });
     res.json({ data: list, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) });
   } catch (e) { next(e); }
 });
@@ -87,6 +88,7 @@ router.post('/:id/read', authRequired, async (req, res, next) => {
   try {
     const ann = await Announcement.findById(req.params.id);
     if (!ann) return res.status(404).json({ message: '公告不存在' });
+    if (!ann.readBy) ann.readBy = [];
     const alreadyRead = ann.readBy.some(r => String(r.userId) === String(req.user._id));
     if (!alreadyRead) {
       ann.readBy.push({ userId: req.user._id, username: req.user.username, readAt: new Date() });
@@ -101,12 +103,13 @@ router.get('/:id/stats', adminRequired, async (req, res, next) => {
   try {
     const ann = await Announcement.findById(req.params.id, 'readBy title createdAt').lean();
     if (!ann) return res.status(404).json({ message: '公告不存在' });
+    const readers = (ann.readBy || []).map(r => ({ username: r.username, readAt: r.readAt }));
     res.json({
       data: {
         title: ann.title,
         createdAt: ann.createdAt,
-        totalReads: ann.readBy.length,
-        readers: ann.readBy.map(r => ({ username: r.username, readAt: r.readAt })),
+        totalReads: readers.length,
+        readers,
       },
     });
   } catch (e) { next(e); }
