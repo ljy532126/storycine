@@ -1,78 +1,118 @@
 <template>
-  <div class="mag-page">
-    <div class="breadcrumb"><router-link to="/" class="bc-link">导演台</router-link><span class="bc-sep"> &gt; </span><span class="bc-current">配音素材库</span></div>
+  <div class="tts-root">
+    <div class="breadcrumb">
+      <router-link to="/" class="bc-link">导演台</router-link>
+      <span class="bc-sep"> &gt; </span>
+      <span class="bc-current">配音素材库</span>
+    </div>
 
-    <div class="mag-masthead">
-      <div class="mag-issue-line"><span class="mag-issue-tag">TTS LIBRARY</span><span class="mag-issue-date">{{ new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' }) }}</span></div>
-      <div class="mag-title-row">
-        <div class="mag-title-col"><h1 class="mag-title">配音素材</h1></div>
+    <!-- 顶部工具栏 -->
+    <div class="tts-bar">
+      <div class="tts-bar-left">
+        <el-select v-model="filterProjectId" placeholder="片场筛选" clearable style="width:200px" size="default" @change="fetchData">
+          <el-option v-for="p in projectStore.projects" :key="p._id" :label="p.name" :value="p._id" />
+        </el-select>
+        <el-button @click="fetchData"><Refresh size="14" fill="currentColor"/> 刷新</el-button>
+        <span class="tts-count" v-if="totalCount > 0">共 {{ totalCount }} 条配音</span>
+      </div>
+      <div class="tts-bar-right" v-if="selectedIds.length > 0">
+        <span class="tts-sel-count">已选 {{ selectedIds.length }} 条</span>
+        <el-button type="primary" size="small" @click="batchDownload"><FolderDownload size="14" fill="currentColor"/> 打包下载</el-button>
+        <el-button type="danger" size="small" plain @click="batchDelete"><Delete size="14" fill="currentColor"/> 批量删除</el-button>
       </div>
     </div>
 
-    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
-      <el-select v-model="filterProjectId" placeholder="片场筛选" clearable style="width:220px" size="small" @change="fetchData">
-        <el-option v-for="p in projectStore.projects" :key="p._id" :label="p.name" :value="p._id" />
-      </el-select>
-      <el-button size="small" @click="fetchData"><Refresh size="14" fill="currentColor"/> 刷新</el-button>
-      <el-button v-if="selectedIds.length > 0" size="small" type="primary" @click="batchDownload"><FolderDownload size="14" fill="currentColor"/> 打包下载 ({{ selectedIds.length }})</el-button>
-      <el-button v-if="selectedIds.length > 0" size="small" type="danger" @click="batchDelete"><Delete size="14" fill="currentColor"/> 批量删除 ({{ selectedIds.length }})</el-button>
+    <div v-if="loading" class="tts-loading">
+      <el-icon class="tts-spin" size="24"><Refresh /></el-icon>
+      <span>加载配音数据...</span>
     </div>
 
-    <div v-if="loading" style="text-align:center;padding:60px;color:var(--text-200)">加载中...</div>
-
     <template v-else-if="tree.length > 0">
-      <div v-for="project in tree" :key="project.projectId" style="margin-bottom:32px">
-        <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--text-100);margin-bottom:12px;border-bottom:1px solid var(--gold);padding-bottom:6px">
-          <Film size="16" fill="var(--gold)"/> {{ getProjectName(project.projectId) }}
-        </h3>
-        <div v-for="ep in project.episodes" :key="ep.scriptId" style="margin-bottom:16px">
-          <h4 style="font-size:13px;color:var(--gold-dark);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--gold);color:var(--navy);font-weight:700;font-size:11px">{{ ep.episodeNumber }}</span>
-            第{{ ep.episodeNumber }}集
-          </h4>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:10px">
-            <div v-for="a in ep.audios" :key="a._id" class="tts-item" :class="{ selected: selectedIds.includes(a._id) }" @click="toggleSelect(a._id, $event)">
-              <div class="tts-left">
-                <span class="tts-shot-num">#{{ a.shotNumber }}</span>
-                <div class="tts-avatar">{{ (a.characterName || '?')[0] }}</div>
+      <div v-for="project in tree" :key="project.projectId" class="tts-project">
+        <div class="tts-project-head">
+          <Film size="16" fill="var(--gold)"/>
+          <span>{{ getProjectName(project.projectId) }}</span>
+        </div>
+
+        <div v-for="ep in project.episodes" :key="ep.scriptId" class="tts-episode">
+          <div class="tts-ep-head">
+            <span class="tts-ep-badge">{{ ep.episodeNumber }}</span>
+            <span>第{{ ep.episodeNumber }}集</span>
+            <span class="tts-ep-count">{{ ep.audios.length }} 条</span>
+          </div>
+
+          <div class="tts-grid">
+            <div
+              v-for="a in ep.audios" :key="a._id"
+              :class="['tts-card', { 'tts-playing': playingId === a._id, 'tts-selected': selectedIds.includes(a._id) }]"
+              @click="toggleSelect(a._id, $event)"
+            >
+              <!-- 选中标记 -->
+              <div v-if="selectedIds.includes(a._id)" class="tts-card-check">
+                <CheckOne theme="filled" size="18" fill="#fff" />
               </div>
-              <div class="tts-center">
-                <span class="tts-char">{{ a.characterName || '配音' }}</span>
-                <span class="tts-text">{{ a.text.substring(0, 40) }}{{ a.text.length > 40 ? '...' : '' }}</span>
-                <div class="tts-player-row">
-                  <button class="tts-play-btn" @click.stop="togglePlay(a)">
-                    <Right v-if="playingId !== a._id" theme="filled" size="18" fill="#fff" />
-                    <PauseOne v-else theme="filled" size="18" fill="#fff" />
-                  </button>
-                  <div class="tts-wave-bar" @click.stop>
-                    <span v-for="n in 12" :key="n" class="tts-wave-seg" :class="{ active: playingId === a._id && n <= 12 }"></span>
-                  </div>
+
+              <!-- 角色头像 -->
+              <div class="tts-card-avatar">
+                <span>{{ (a.characterName || 'VO')[0] }}</span>
+              </div>
+
+              <!-- 信息 -->
+              <div class="tts-card-info">
+                <div class="tts-card-top">
+                  <span class="tts-card-char">{{ a.characterName || '配音' }}</span>
+                  <span class="tts-card-shot">镜号 #{{ a.shotNumber }}</span>
                 </div>
-                <audio :ref="el => { if (el) audioRefs[a._id] = el }" :src="a.audioUrl" preload="none" @ended="onAudioEnd(a._id)" />
+                <p class="tts-card-text">{{ a.text }}</p>
               </div>
-              <div class="tts-actions">
-                <el-button size="small" circle @click.stop="downloadSingle(a)" title="下载"><Download size="14" fill="currentColor"/></el-button>
-                <el-button size="small" circle type="danger" @click.stop="confirmDelete(a._id)" title="删除"><Delete size="14" fill="currentColor"/></el-button>
+
+              <!-- 播放区 -->
+              <div class="tts-card-play" @click.stop>
+                <button class="tts-play-btn" @click="togglePlay(a)">
+                  <Right v-if="playingId !== a._id" theme="filled" size="16" fill="#fff" />
+                  <PauseOne v-else theme="filled" size="16" fill="#fff" />
+                </button>
+                <div class="tts-wave">
+                  <span v-for="n in 20" :key="n" class="tts-wave-bar" :class="{ active: playingId === a._id }" :style="{ animationDelay: (n * 0.06) + 's', height: (12 + Math.abs(Math.sin(n * 0.7) * 16 + Math.cos(n * 1.3) * 8)) + 'px' }" />
+                </div>
               </div>
+
+              <!-- 悬停操作 -->
+              <div class="tts-card-actions">
+                <el-button size="small" circle @click.stop="downloadSingle(a)" title="下载">
+                  <el-icon><Download /></el-icon>
+                </el-button>
+                <el-button size="small" circle type="danger" plain @click.stop="confirmDelete(a._id)" title="删除">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
+
+              <audio :ref="el => { if (el) audioRefs[a._id] = el }" :src="a.audioUrl" preload="none" @ended="onAudioEnd(a._id)" @play="onAudioPlay(a._id)" @pause="onAudioPause(a._id)" />
             </div>
           </div>
         </div>
       </div>
     </template>
 
-    <div v-else class="mag-empty">
-      <div class="mag-empty-num">No. 00</div>
-      <Voice size="48" fill="var(--primary-300)"/>
+    <!-- 空状态 -->
+    <div class="tts-empty" v-else>
+      <div class="tts-empty-icon">
+        <Voice theme="outline" size="64" fill="#d4c5c0" />
+      </div>
       <h2>还没有配音素材</h2>
-      <p>去镜头板为分镜台词合成语音吧~</p>
+      <p>去镜头板为分镜台词合成语音，生成的配音会自动出现在这里</p>
+      <router-link to="/workspace?ws=storyboard" class="tts-empty-link">
+        前往镜头板
+      </router-link>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted, reactive } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Refresh, Delete, Download, FolderDownload, Voice, Film, Right, PauseOne } from '@icon-park/vue-next';
+import { Refresh, Delete, FolderDownload, Voice, Film, Right, PauseOne, CheckOne } from '@icon-park/vue-next';
+import { Download } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
 import { ttsAPI } from '../api';
 
@@ -84,31 +124,35 @@ const selectedIds = ref([]);
 const playingId = ref(null);
 const audioRefs = reactive({});
 
+const totalCount = computed(() => {
+  let c = 0;
+  tree.value.forEach(p => p.episodes.forEach(e => c += e.audios.length));
+  return c;
+});
+
 function togglePlay(a) {
   const el = audioRefs[a._id];
   if (!el) return;
   if (playingId.value === a._id) {
     el.pause();
-    playingId.value = null;
   } else {
     if (playingId.value) {
       const prev = audioRefs[playingId.value];
-      if (prev) prev.pause();
+      if (prev) { prev.pause(); prev.currentTime = 0; }
     }
     el.play();
-    playingId.value = a._id;
   }
 }
-function onAudioEnd(id) {
-  if (playingId.value === id) playingId.value = null;
-}
+function onAudioPlay(id) { playingId.value = id; }
+function onAudioPause(id) { if (playingId.value === id) playingId.value = null; }
+function onAudioEnd(id) { if (playingId.value === id) playingId.value = null; }
 
 function getProjectName(id) {
   return projectStore.projects.find(p => p._id === id)?.name || '未知片场';
 }
 
 function toggleSelect(id, e) {
-  if (e.target.closest('audio') || e.target.closest('button')) return;
+  if (e.target.closest('audio') || e.target.closest('button') || e.target.closest('.el-button')) return;
   const idx = selectedIds.value.indexOf(id);
   if (idx > -1) selectedIds.value.splice(idx, 1);
   else selectedIds.value.push(id);
@@ -147,9 +191,7 @@ async function batchDownload() {
     const res = await ttsAPI.batchDownload(selectedIds.value);
     const url = window.URL.createObjectURL(new Blob([res]));
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `tts-batch-${Date.now()}.zip`;
-    link.click();
+    link.href = url; link.download = `tts-batch-${Date.now()}.zip`; link.click();
     window.URL.revokeObjectURL(url);
   } catch { ElMessage.error('下载失败'); }
 }
@@ -161,58 +203,149 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Noto+Serif+SC:wght@400;600;700;900&display=swap');
+.tts-root { padding: 0; max-width: 1100px; margin: 0 auto; }
 
-.mag-page { padding: 0; font-family: 'Noto Serif SC', serif; max-width: 1100px; margin: 0 auto; }
-.breadcrumb { display: flex; align-items: center; padding: 0 0 16px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; }
+/* 工具栏 */
+.tts-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.tts-bar-left { display: flex; align-items: center; gap: 10px; }
+.tts-bar-right { display: flex; align-items: center; gap: 8px; }
+.tts-count { font-size: 12px; color: var(--text-200); }
+.tts-sel-count { font-size: 12px; color: var(--gold-dark); font-weight: 600; }
+
+.tts-loading { text-align: center; padding: 80px 20px; color: var(--text-200); display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 14px; }
+.tts-spin { animation: tts-spin 1s linear infinite; }
+@keyframes tts-spin { to { transform: rotate(360deg); } }
+
+/* 项目标题 */
+.tts-project { margin-bottom: 28px; }
+.tts-project-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: var(--text-100);
+  margin-bottom: 14px; padding-bottom: 8px;
+  border-bottom: 2px solid rgba(201,168,76,0.2);
+}
+
+/* 集标题 */
+.tts-episode { margin-bottom: 16px; }
+.tts-ep-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--gold-dark); font-weight: 600;
+  margin-bottom: 10px; padding-left: 2px;
+}
+.tts-ep-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px;
+  background: var(--gold); color: var(--navy); font-weight: 700; font-size: 11px;
+}
+.tts-ep-count { font-size: 11px; color: var(--text-200); font-weight: 400; margin-left: auto; }
+
+/* 卡片网格 */
+.tts-grid { display: flex; flex-direction: column; gap: 8px; }
+
+/* 卡片 */
+.tts-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; background: var(--bg-200);
+  border: 1px solid var(--bg-300); border-radius: 12px;
+  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.tts-card:hover { border-color: var(--gold); box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+.tts-card.tts-playing {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(201,168,76,0.04) 0%, var(--bg-200) 100%);
+}
+.tts-card.tts-playing::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--gold); border-radius: 0 3px 3px 0;
+}
+.tts-card.tts-selected {
+  border-color: var(--gold); background: rgba(201,168,76,0.04);
+}
+
+/* 选中勾 */
+.tts-card-check {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--gold); display: flex; align-items: center; justify-content: center;
+}
+
+/* 头像 */
+.tts-card-avatar {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--navy), #2d2d4a);
+  color: var(--gold); display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+}
+
+/* 信息 */
+.tts-card-info { flex: 1; min-width: 0; }
+.tts-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.tts-card-char { font-size: 14px; font-weight: 700; color: var(--text-100); }
+.tts-card-shot { font-size: 11px; color: var(--gold-dark); background: rgba(201,168,76,0.1); padding: 1px 8px; border-radius: 4px; font-weight: 600; }
+.tts-card-text {
+  font-size: 12px; color: var(--text-200); margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 480px; line-height: 1.5;
+}
+
+/* 播放 */
+.tts-card-play { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.tts-play-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: none;
+  background: var(--navy); color: var(--gold); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.tts-play-btn:hover { background: var(--gold); }
+.tts-play-btn:hover svg { fill: var(--navy) !important; }
+.tts-playing .tts-play-btn { background: var(--gold); }
+.tts-playing .tts-play-btn svg { fill: var(--navy) !important; }
+
+/* 波形 */
+.tts-wave { display: flex; align-items: center; gap: 2px; height: 32px; }
+.tts-wave-bar {
+  width: 3px; border-radius: 2px; background: var(--bg-300); min-height: 6px;
+  transition: background 0.2s;
+}
+.tts-playing .tts-wave-bar { background: var(--bg-300); }
+.tts-playing .tts-wave-bar.active { background: var(--gold); animation: tts-bounce 0.8s ease-in-out infinite alternate; }
+@keyframes tts-bounce {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1); }
+}
+
+/* 操作按钮 */
+.tts-card-actions { display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+.tts-card:hover .tts-card-actions { opacity: 1; }
+
+/* 空状态 */
+.tts-empty {
+  text-align: center; padding: 100px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.tts-empty-icon { opacity: 0.3; margin-bottom: 8px; }
+.tts-empty h2 { font-size: 18px; font-weight: 700; color: var(--text-100); margin: 0; }
+.tts-empty p { font-size: 13px; color: var(--text-200); margin: 0; }
+.tts-empty-link {
+  margin-top: 8px; padding: 10px 24px; background: var(--gold); color: var(--navy);
+  border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none;
+  transition: all 0.2s;
+}
+.tts-empty-link:hover { opacity: 0.85; }
+
+/* 面包屑 */
+.breadcrumb { padding: 4px 0 12px; font-size: 12px; }
 .bc-link { color: var(--text-200); text-decoration: none; font-weight: 500; }
 .bc-link:hover { color: var(--gold-dark); }
-.bc-sep { color: var(--gold); margin: 0 8px; font-size: 9px; user-select: none; }
-.bc-current { color: var(--text-100); font-weight: 700; border-bottom: 2px solid var(--gold); padding-bottom: 3px; }
-.mag-masthead { margin-bottom: 32px; border-bottom: 2px solid var(--gold); padding-bottom: 24px; }
-.mag-issue-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.mag-issue-tag { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 700; letter-spacing: 4px; color: var(--gold-dark); }
-.mag-issue-date { font-size: 12px; color: var(--text-200); letter-spacing: 2px; }
-.mag-title { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 900; color: var(--text-100); margin: 0; }
-.tts-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; background: var(--bg-200);
-  border: 1px solid var(--bg-300); border-radius: 10px; cursor: pointer; transition: all 0.2s;
+.bc-sep { font-size: 11px; color: var(--text-200); margin: 0 6px; }
+.bc-current { font-size: 11px; color: var(--gold-dark); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+
+@media (max-width: 768px) {
+  .tts-card-text { max-width: 200px; }
+  .tts-card-actions { opacity: 1; }
+  .tts-bar { flex-direction: column; align-items: stretch; }
 }
-.tts-item:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-.tts-item.selected { border-color: var(--gold); background: var(--accent-200); }
-.tts-left { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.tts-shot-num { font-size: 11px; color: var(--gold-dark); width: 24px; font-weight: 600; }
-.tts-avatar {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--navy); color: var(--gold);
-  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;
-}
-.tts-center { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.tts-char { font-size: 13px; font-weight: 700; color: var(--text-100); }
-.tts-text { font-size: 11px; color: var(--text-200); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; }
-.tts-player-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.tts-play-btn {
-  width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--gold);
-  background: var(--navy); color: var(--gold); font-size: 14px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  transition: all 0.15s;
-}
-.tts-play-btn:hover { background: var(--gold); color: var(--navy); }
-.tts-wave-bar { display: flex; align-items: flex-end; gap: 3px; height: 28px; flex: 1; pointer-events: none; }
-.tts-wave-seg {
-  width: 4px; border-radius: 2px; background: var(--bg-300); transition: all 0.3s;
-  height: 8px;
-}
-.tts-wave-seg:nth-child(1) { height: 12px; } .tts-wave-seg:nth-child(2) { height: 18px; }
-.tts-wave-seg:nth-child(3) { height: 24px; } .tts-wave-seg:nth-child(4) { height: 16px; }
-.tts-wave-seg:nth-child(5) { height: 22px; } .tts-wave-seg:nth-child(6) { height: 14px; }
-.tts-wave-seg:nth-child(7) { height: 20px; } .tts-wave-seg:nth-child(8) { height: 10px; }
-.tts-wave-seg:nth-child(9) { height: 16px; } .tts-wave-seg:nth-child(10) { height: 8px; }
-.tts-wave-seg:nth-child(11) { height: 12px; } .tts-wave-seg:nth-child(12) { height: 6px; }
-.tts-wave-seg.active { background: var(--gold); }
-.tts-actions { display: flex; gap: 4px; flex-shrink: 0; }
-.mag-empty { text-align: center; padding: 80px 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.mag-empty-num { font-family: 'Playfair Display', serif; font-size: 14px; color: var(--primary-300); letter-spacing: 4px; }
-.mag-empty h2 { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text-100); margin: 0; }
-.mag-empty p { font-size: 14px; color: var(--text-200); margin: 0; }
 </style>
