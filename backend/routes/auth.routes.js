@@ -150,10 +150,10 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (!user || !valid) {
       if (user) {
-        user.loginAttempts = (user.loginAttempts || 0) + 1;
-        if (user.loginAttempts >= 5) user.lockedUntil = new Date(Date.now() + 30 * 60000);
-        await user.save();
-        await logLogin(username, ip, ua, false, `wrong pw (${user.loginAttempts}/5)`, user._id);
+        const loginAttempts = (user.loginAttempts || 0) + 1;
+        const lockedUntil = loginAttempts >= 5 ? new Date(Date.now() + 30 * 60000) : null;
+        await User.updateOne({ _id: user._id }, { $set: { loginAttempts, lockedUntil } });
+        await logLogin(username, ip, ua, false, `wrong pw (${loginAttempts}/5)`, user._id);
       } else {
         await logLogin(username, ip, ua, false, 'user not found');
       }
@@ -161,11 +161,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     // 登录成功
-    user.loginAttempts = 0;
-    user.lockedUntil = null;
-    user.lastLoginAt = new Date();
-    user.lastLoginIp = ip;
-    await user.save();
+    await User.updateOne({ _id: user._id }, { $set: { loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastLoginIp: ip } });
 
     await logLogin(username, ip, ua, true, '登录成功', user._id);
     const token = generateToken(user);

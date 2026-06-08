@@ -178,16 +178,33 @@ router.post('/import', requireAdmin, async (req, res) => {
           } catch { /* collection doesn't exist yet */ }
         }
 
-        // ── 插入备份数据 ──
-        for (const [col, docs] of Object.entries(backup.collections)) {
+        // ── 插入备份数据（修复 _id 类型：JSON 序列化会丢失 ObjectId）──
+        const OBJECT_ID_RE = /^[a-fA-F0-9]{24}$/;
+        const ID_FIELDS = ['_id', 'userId', 'projectId', 'linkId', 'ownerId', 'scriptId', 'compositionId', 'storyboardId'];
+        function fixObjectIds(doc) {
+          for (const key of ID_FIELDS) {
+            if (typeof doc[key] === 'string' && OBJECT_ID_RE.test(doc[key])) {
+              doc[key] = new mongoose.Types.ObjectId(doc[key]);
+            }
+          }
+          return doc;
+        }
+
+        let totalInserted = 0, totalErrors = 0;
+        const COLLECTION_ORDER = ['users', 'settings'];
+        const restCols = COLLECTIONS.filter(c => !COLLECTION_ORDER.includes(c));
+        const orderedCols = [...COLLECTION_ORDER, ...restCols];
+
+        for (const col of orderedCols) {
+          const docs = backup.collections[col];
           if (!Array.isArray(docs) || docs.length === 0) { stats.skipped++; continue; }
           try {
-            // 保留原始 _id，确保关联关系不丢失
-            await mongoose.connection.db.collection(col).insertMany(docs, { ordered: false });
-            stats.inserted += docs.length;
+            const fixed = docs.map(fixObjectIds);
+            await mongoose.connection.db.collection(col).insertMany(fixed, { ordered: false });
+            totalInserted += fixed.length;
           } catch (e) {
-            if (e.insertedDocs) stats.inserted += e.insertedDocs.length;
-            if (e.writeErrors) stats.errors += e.writeErrors.length;
+            if (e.insertedDocs) totalInserted += e.insertedDocs.length;
+            if (e.writeErrors) totalErrors += e.writeErrors.length;
             console.warn(`[backup] 集合 ${col} 部分插入失败:`, e.message?.substring(0, 100));
           }
         }
@@ -195,9 +212,9 @@ router.post('/import', requireAdmin, async (req, res) => {
         res.json({
           code: 0,
           message: `数据恢复完成`,
-          data: { ...stats, rollbackFile: rollbackName },
+          data: { cleared: stats.cleared, inserted: totalInserted, errors: totalErrors, skipped: stats.skipped, rollbackFile: rollbackName },
         });
-        console.log(`[backup] 导入: ${stats.cleared}清 + ${stats.inserted}导 (回滚: ${rollbackName})`);
+        console.log(`[backup] 导入: ${stats.cleared}清 + ${totalInserted}导 (回滚: ${rollbackName})`);
       } catch (e) {
         res.status(400).json({ code: 400, message: '解析失败: ' + e.message });
       }
