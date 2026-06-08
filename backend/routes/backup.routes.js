@@ -289,6 +289,46 @@ router.get('/download/:filename', requireAdmin, async (req, res) => {
   }
 });
 
+// ===== 挂载自检 =====
+router.get('/check-mount', requireAdmin, async (req, res) => {
+  try {
+    const testFile = path.join(BACKUP_DIR, '.mount-test');
+    const testId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+    // 写入测试
+    fs.writeFileSync(testFile, testId, 'utf-8');
+    // 读取验证
+    const readBack = fs.readFileSync(testFile, 'utf-8');
+    // 清理
+    fs.unlinkSync(testFile);
+
+    const ok = readBack === testId;
+    const stat = fs.statSync(BACKUP_DIR);
+
+    res.json({
+      code: 0,
+      data: {
+        ok,
+        path: BACKUP_DIR,
+        writable: ok,
+        exists: true,
+        message: ok ? '备份目录读写正常，挂载状态良好' : '写入验证失败，请检查磁盘权限',
+      },
+    });
+  } catch (e) {
+    res.json({
+      code: 0,
+      data: {
+        ok: false,
+        path: BACKUP_DIR,
+        writable: false,
+        exists: fs.existsSync(BACKUP_DIR),
+        message: '备份目录不可写: ' + (e.message || '未知错误'),
+      },
+    });
+  }
+});
+
 // ===== 自动备份配置 =====
 router.put('/auto/config', requireAdmin, async (req, res) => {
   try {

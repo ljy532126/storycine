@@ -225,6 +225,9 @@
           <el-icon><FolderOpened /></el-icon>
           <code>{{ backupPath }}</code>
           <el-button size="small" link @click="copyPath">复制路径</el-button>
+          <el-button size="small" @click="checkMount" :loading="checkingMount" :type="mountStatus ? (mountStatus === 'ok' ? 'success' : 'danger') : 'info'" plain style="margin-left:auto">
+            <el-icon><component :is="mountIcon" /></el-icon> {{ mountStatusText }}
+          </el-button>
         </div>
         <el-collapse style="margin-top:10px;border:none;background:transparent">
           <el-collapse-item title="Docker 挂载教程（点击展开）" style="background:var(--bg-100);border-radius:8px;padding:0 12px">
@@ -292,7 +295,7 @@ docker cp ./my-backup.json.gz storycine-app:/app/backups/</pre>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
-import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload } from '@element-plus/icons-vue';
+import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload, CircleCheck, CircleClose, Warning, Loading } from '@element-plus/icons-vue';
 
 const users = ref([]);
 const loading = ref(false);
@@ -342,9 +345,37 @@ const importing = ref(false);
 const importFile = ref(null);
 const importResult = ref('');
 const backupPath = ref('backend/backups/');
+const checkingMount = ref(false);
+const mountStatus = ref('');
+const mountStatusText = ref('检测挂载');
+const mountIcon = ref('Warning');
 
 function fmtSize(s) { return s > 1048576 ? (s / 1048576).toFixed(1) + ' MB' : s > 1024 ? (s / 1024).toFixed(1) + ' KB' : s + ' B'; }
 async function copyPath() { try { await navigator.clipboard.writeText(backupPath.value); ElMessage.success('已复制'); } catch {} }
+
+async function checkMount() {
+  checkingMount.value = true;
+  mountStatusText.value = '检测中...';
+  mountIcon.value = 'Loading';
+  try {
+    const res = await fetch('/api/v1/backup/check-mount', { headers: { Authorization: 'Bearer ' + token() } });
+    const data = await res.json();
+    if (data.data?.ok) {
+      mountStatus.value = 'ok';
+      mountStatusText.value = '挂载正常';
+      mountIcon.value = 'CircleCheck';
+    } else {
+      mountStatus.value = 'fail';
+      mountStatusText.value = data.data?.message || '检测失败';
+      mountIcon.value = 'CircleClose';
+    }
+  } catch {
+    mountStatus.value = 'fail';
+    mountStatusText.value = '检测请求失败';
+    mountIcon.value = 'CircleClose';
+  }
+  finally { checkingMount.value = false; }
+}
 
 async function fetchBackupList() {
   try {
