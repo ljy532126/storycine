@@ -37,7 +37,10 @@ const steps = [
   { key: 'composition', label: '剪辑室' },
 ];
 
-const STORAGE_KEY = 'ws_active_step';
+const STORAGE_KEY = 'ws_active_step_' + (() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'default'; } catch { return 'default'; }
+})();
+
 const savedStep = localStorage.getItem(STORAGE_KEY);
 const validKeys = steps.map(s => s.key);
 const defaultKey = validKeys.includes(savedStep) ? savedStep : 'script-generate';
