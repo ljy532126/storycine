@@ -180,25 +180,33 @@
       </template>
     </el-dialog>
     <!-- 备份管理弹窗 -->
-    <el-dialog v-model="backupVisible" title="数据库备份管理" width="640px" destroy-on-close @opened="fetchBackupList">
+    <el-dialog v-model="backupVisible" title="数据库备份管理" width="580px" destroy-on-close @opened="fetchBackupList">
       <!-- 操作区 -->
       <div class="bk-section">
-        <h4 class="bk-sec-title">手动操作</h4>
-        <div class="bk-actions">
-          <el-button type="primary" @click="doExport" :loading="exporting" size="default">
-            <el-icon><Download /></el-icon> 导出完整备份
-          </el-button>
-          <el-upload :auto-upload="false" :show-file-list="false" accept=".gz,.json" @change="onImportFile" style="display:inline-block">
-            <el-button type="danger" :loading="importing" size="default" plain>
-              <el-icon><Upload /></el-icon> 导入备份恢复数据
-            </el-button>
-          </el-upload>
+        <div class="bk-action-cards">
+          <div class="bk-action-card bk-ac-export" @click="doExport">
+            <div class="bk-ac-icon"><el-icon><Download /></el-icon></div>
+            <div class="bk-ac-body">
+              <span class="bk-ac-title">{{ exporting ? '导出中...' : '导出备份' }}</span>
+              <span class="bk-ac-desc">下载完整的数据库快照</span>
+            </div>
+            <el-icon v-if="exporting" class="bk-ac-spin"><Loading /></el-icon>
+          </div>
+          <div class="bk-action-card bk-ac-import" @click="triggerImport">
+            <div class="bk-ac-icon"><el-icon><Upload /></el-icon></div>
+            <div class="bk-ac-body">
+              <span class="bk-ac-title">{{ importing ? '恢复中...' : '导入恢复' }}</span>
+              <span class="bk-ac-desc">{{ importFile ? importFile.name : '选择备份文件恢复数据' }}</span>
+            </div>
+            <el-icon v-if="importing" class="bk-ac-spin"><Loading /></el-icon>
+          </div>
+          <el-upload ref="importUpload" :auto-upload="false" :show-file-list="false" accept=".gz,.json" @change="onImportFile" style="display:none" />
         </div>
-        <div v-if="importFile" style="margin-top:8px;font-size:12px;color:var(--text-200);display:flex;align-items:center;gap:8px">
-          <span>已选择: <strong>{{ importFile.name }}</strong> ({{ fmtSize(importFile.size) }})</span>
-          <el-button size="small" link @click="importFile = null; importResult = ''">取消</el-button>
+        <div v-if="importFile" class="bk-import-bar">
+          <span>已选择 <strong>{{ importFile.name }}</strong> ({{ fmtSize(importFile.size) }}) — 再次点击「导入恢复」确认</span>
+          <el-button size="small" link @click="importFile = null; importResult = ''">✕</el-button>
         </div>
-        <div v-if="importResult" :style="{ marginTop: '8px', fontSize: '13px', color: importResult.includes('成功') ? '#67c23a' : '#f56c6c', fontWeight: 600 }">{{ importResult }}</div>
+        <div v-if="importResult" class="bk-result" :class="importResult.includes('成功') ? 'bk-result-ok' : 'bk-result-fail'">{{ importResult }}</div>
       </div>
 
       <!-- 自动备份 -->
@@ -297,7 +305,7 @@ docker cp ./my-backup.json.gz storycine-app:/app/backups/</pre>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
-import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload } from '@element-plus/icons-vue';
+import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload, Loading } from '@element-plus/icons-vue';
 
 const users = ref([]);
 const loading = ref(false);
@@ -345,6 +353,7 @@ const autoCfg = reactive({ enabled: false, intervalHours: 24, maxBackups: 7 });
 const exporting = ref(false);
 const importing = ref(false);
 const importFile = ref(null);
+const importUpload = ref(null);
 const importResult = ref('');
 const backupPath = ref('backend/backups/');
 const checkingMount = ref(false);
@@ -408,10 +417,23 @@ function onImportFile(uploadFile) {
   importFile.value = uploadFile.raw;
   importResult.value = '';
   if (!importFile.value) return;
+  // 选择文件后，弹确认框
   ElMessageBox.confirm(
-    `确认用 "${importFile.value.name}" 恢复数据库？\n\n⚠️ 当前所有数据将被清除并替换为备份中的数据。\n\n💡 安全提示：导入前会自动备份当前数据到历史列表中（文件名含 BEFORE-RESTORE），如有问题可从历史备份中恢复。`,
+    `确认用 "${importFile.value.name}" 恢复数据库？\n\n⚠️ 当前所有数据将被清除并替换为备份中的数据。\n\n💡 导入前会自动备份当前数据（历史列表可见 BEFORE-RESTORE 文件）。`,
     '确认恢复数据库', { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
   ).then(() => doImport()).catch(() => { importFile.value = null; });
+}
+
+function triggerImport() {
+  if (importFile.value) {
+    // 已选中文件，直接确认导入
+    ElMessageBox.confirm(
+      `确认用 "${importFile.value.name}" 恢复数据库？\n\n⚠️ 当前所有数据将被清除并替换为备份中的数据。导入前会自动备份当前数据。`,
+      '确认恢复数据库', { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+    ).then(() => doImport()).catch(() => {});
+  } else {
+    importUpload.value?.$el?.querySelector('input[type="file"]')?.click();
+  }
 }
 
 async function doImport() {
@@ -743,14 +765,45 @@ code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold
 }
 
 /* ===== 备份管理 ===== */
-.bk-section { margin-bottom: 18px; }
-.bk-sec-title { font-size: 13px; font-weight: 700; color: var(--text-100); margin: 0 0 10px 0; padding-bottom: 8px; border-bottom: 2px solid rgba(201,168,76,0.15); }
-.bk-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bk-section { margin-bottom: 20px; }
+.bk-sec-title { font-size: 12px; font-weight: 700; color: var(--text-200); margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--bg-300); text-transform: uppercase; letter-spacing: 1px; }
+
+.bk-action-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bk-action-card {
+  display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+  border-radius: 12px; cursor: pointer; transition: all 0.2s;
+  border: 1px solid var(--bg-300); background: var(--bg-100);
+}
+.bk-action-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+.bk-ac-icon {
+  width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.bk-ac-export .bk-ac-icon { background: rgba(64,158,255,0.08); color: #409eff; }
+.bk-ac-export:hover { border-color: #409eff; }
+.bk-ac-import .bk-ac-icon { background: rgba(230,162,60,0.08); color: #e6a23c; }
+.bk-ac-import:hover { border-color: #e6a23c; }
+.bk-ac-body { display: flex; flex-direction: column; gap: 2px; }
+.bk-ac-title { font-size: 13px; font-weight: 700; color: var(--text-100); }
+.bk-ac-desc { font-size: 11px; color: var(--text-200); }
+.bk-ac-spin { animation: bk-spin 1s linear infinite; color: var(--text-200); margin-left: auto; }
+@keyframes bk-spin { to { transform: rotate(360deg); } }
+
+.bk-import-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 10px; padding: 10px 14px; border-radius: 8px;
+  background: rgba(230,162,60,0.06); border: 1px solid rgba(230,162,60,0.15);
+  font-size: 12px; color: var(--text-200);
+}
+.bk-import-bar strong { color: var(--text-100); font-weight: 600; }
+.bk-result { margin-top: 10px; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+.bk-result-ok { background: rgba(103,194,58,0.06); color: #67c23a; }
+.bk-result-fail { background: rgba(245,108,108,0.06); color: #f56c6c; }
+
 .bk-auto-row { display: flex; align-items: center; }
 .bk-path-hint { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg-100); border-radius: 8px; font-size: 12px; }
 .bk-path-hint code { font-family: 'Courier New', monospace; font-size: 12px; color: var(--gold-dark); background: rgba(201,168,76,0.08); padding: 3px 8px; border-radius: 4px; }
-.bk-path-note { font-size: 11px; color: var(--text-200); margin: 8px 0 0 0; line-height: 1.6; }
-.bk-file-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.bk-file-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .bk-file-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: var(--bg-100); font-size: 12px; }
 .bk-file-row:hover { background: var(--bg-300); }
 .bk-file-name { flex: 1; color: var(--text-100); font-family: monospace; font-size: 11px; }
