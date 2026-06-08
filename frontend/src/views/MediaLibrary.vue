@@ -148,8 +148,16 @@
         </div>
 
         <!-- 主内容区 -->
-        <div class="ml-lb-stage">
-          <div class="ml-lb-frame" :class="{ 'portrait': isPreviewPortrait }">
+        <div
+          class="ml-lb-stage"
+          @wheel.prevent="onWheel"
+          @mousedown="onDragStart"
+          @mousemove="onDragMove"
+          @mouseup="onDragEnd"
+          @mouseleave="onDragEnd"
+          @dblclick="resetZoom"
+        >
+          <div class="ml-lb-frame" :class="{ 'portrait': isPreviewPortrait }" :style="frameStyle">
             <video v-if="previewItem?.isVideo" :src="previewItem.url" controls autoplay class="ml-lb-media" />
             <img v-else :src="previewItem?.url" class="ml-lb-media" @load="onPreviewLoad" />
           </div>
@@ -184,6 +192,48 @@ const previewVisible = ref(false);
 const previewItem = ref(null);
 const isPreviewPortrait = ref(false);
 const previewRatio = ref('');
+
+// ===== 缩放/拖拽 =====
+const zoom = ref(1);
+const panX = ref(0);
+const panY = ref(0);
+const lbDragging = ref(false);
+let lbStartX = 0, lbStartY = 0, lbPanX = 0, lbPanY = 0;
+
+const frameStyle = computed(() => ({
+  transform: `scale(${zoom.value}) translate(${panX.value / zoom.value}px, ${panY.value / zoom.value}px)`,
+  cursor: zoom.value > 1 ? (lbDragging.value ? 'grabbing' : 'grab') : 'default',
+  transition: lbDragging.value ? 'none' : 'transform 0.2s ease-out',
+}));
+
+function onWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.15 : 0.15;
+  const newZoom = Math.min(5, Math.max(0.3, zoom.value + delta));
+  zoom.value = newZoom;
+  if (newZoom <= 1) { panX.value = 0; panY.value = 0; }
+}
+
+function onDragStart(e) {
+  if (zoom.value <= 1 || e.button !== 0) return;
+  lbDragging.value = true;
+  lbStartX = e.clientX; lbStartY = e.clientY;
+  lbPanX = panX.value; lbPanY = panY.value;
+}
+
+function onDragMove(e) {
+  if (!lbDragging.value) return;
+  panX.value = lbPanX + (e.clientX - lbStartX);
+  panY.value = lbPanY + (e.clientY - lbStartY);
+}
+
+function onDragEnd() { lbDragging.value = false; }
+
+function resetZoom() {
+  zoom.value = 1;
+  panX.value = 0;
+  panY.value = 0;
+}
 const selectedItems = ref([]);
 const multiSelect = ref(false);
 const downloading = ref(false);
@@ -279,6 +329,7 @@ function openPreview(item) {
   previewItem.value = item;
   isPreviewPortrait.value = false;
   previewRatio.value = '';
+  zoom.value = 1; panX.value = 0; panY.value = 0;
   previewVisible.value = true;
 }
 function onPreviewLoad(e) {
@@ -430,7 +481,7 @@ async function deleteItem(item) {
 /* 主舞台 */
 .ml-lb-stage {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 20px; min-height: 0; overflow: auto;
+  padding: 20px; min-height: 0; overflow: hidden;
 }
 .ml-lb-frame {
   display: flex; align-items: center; justify-content: center;
@@ -438,7 +489,9 @@ async function deleteItem(item) {
   border-radius: 8px; overflow: hidden;
   box-shadow: 0 0 80px rgba(0,0,0,0.5);
   background: #0a0a0a;
+  transform-origin: center center;
 }
+.ml-lb-frame.portrait { max-width: min(50vw, 500px); }
 .ml-lb-frame.portrait { max-width: min(50vw, 500px); }
 .ml-lb-media {
   display: block; max-width: 100%; max-height: calc(100vh - 150px);
