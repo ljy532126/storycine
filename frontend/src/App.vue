@@ -561,11 +561,12 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 #app-container { height: 100vh; background: var(--bg-100); }
 #app-container { height: 100vh; }
 .app-sidebar {
-  background: var(--navy); min-height: 100vh; overflow-y: auto; overflow-x: hidden;
+  background: var(--navy); height: 100vh; overflow: hidden;
   border-right: 2px solid var(--gold); transition: width 0.4s cubic-bezier(0.22,0.61,0.36,1);
   display: flex; flex-direction: column;
+  position: sticky; top: 0;
 }
-.el-menu { border-right: none !important; flex: 1; background: var(--navy) !important; padding: 8px 0 !important; }
+.el-menu { border-right: none !important; flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--navy) !important; padding: 8px 0 !important; }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
 
 /* 展开态菜单项 */
