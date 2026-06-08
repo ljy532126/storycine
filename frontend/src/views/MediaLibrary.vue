@@ -68,10 +68,18 @@
         :ref="el => { if (el) cardRefs[idx] = el }"
         class="ml-card" :class="{ 'ml-selected': selectedItems.includes(item) }"
         @click="multiSelect ? toggleSelect(item, !selectedItems.includes(item)) : openPreview(item)">
-        <div class="ml-card-img">
-          <img :src="item.url" loading="lazy" />
-          <div class="ml-card-overlay">
-            <span v-if="item.isVideo" class="ml-video-badge"><Right theme="filled" size="22" fill="#fff" /></span>
+        <div class="ml-card-img" :class="{ 'is-video': item.isVideo }">
+          <template v-if="item.isVideo">
+            <div class="ml-video-placeholder">
+              <div class="ml-video-ph-icon">
+                <PlayTwo theme="filled" size="28" fill="#fff" />
+              </div>
+              <span class="ml-video-ph-label">视频素材</span>
+            </div>
+          </template>
+          <img v-else :src="item.url" loading="lazy" @error="onImgError($event)" />
+          <div class="ml-card-overlay" v-if="item.isVideo">
+            <span class="ml-video-badge"><Right theme="filled" size="22" fill="#fff" /></span>
           </div>
           <span class="ml-storage-badge" :class="isCloudUrl(item.url) ? 'cloud' : 'local'">
             <Cloudy v-if="isCloudUrl(item.url)" theme="outline" size="12" fill="#fff" />
@@ -230,6 +238,9 @@ const filteredItems = computed(() => {
 
 function setFilter(type) { filterType.value = type; }
 function isCloudUrl(url) { return url && (url.startsWith('https://') || url.startsWith('http://')); }
+function onImgError(e) {
+  e.target.style.display = 'none';
+}
 function tagType(t) {
   const m = { '角色': 'success', '场景': '', '道具': 'warning', '故事板': 'info', '视频': 'danger', '封面': 'danger' };
   return m[t] || 'info';
@@ -311,8 +322,28 @@ async function deleteItem(item) {
 .ml-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
 
 .ml-card-img { width: 100%; padding-top: 100%; position: relative; overflow: hidden; background: var(--bg-100); }
+.ml-card-img.is-video { background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4a 40%, #1a1a2e 100%); }
 .ml-card-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
 .ml-card:hover .ml-card-img img { transform: scale(1.05); }
+
+/* 视频占位卡片 */
+.ml-video-placeholder {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
+.ml-video-ph-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(201,168,76,0.15); border: 2px solid rgba(201,168,76,0.3);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s;
+}
+.ml-card:hover .ml-video-ph-icon {
+  background: rgba(201,168,76,0.25); border-color: var(--gold);
+  transform: scale(1.1); box-shadow: 0 0 20px rgba(201,168,76,0.2);
+}
+.ml-video-ph-label {
+  font-size: 10px; font-weight: 600; color: rgba(201,168,76,0.5);
+  text-transform: uppercase; letter-spacing: 2px;
+}
 .ml-card-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .ml-video-badge {
   width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,0.55);
