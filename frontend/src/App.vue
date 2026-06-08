@@ -291,28 +291,33 @@ async function fetchAnnouncements() {
     if (json.data) {
       announcements.value = json.data;
       _lastAnnFetch = Date.now();
-      // 统计"今天未被关闭的"
       const dismissed = getDismissedToday();
       const fresh = json.data.filter(a => !dismissed.has(a._id));
       unreadAnnounceCount.value = fresh.length;
-      // 有新公告时：3秒后铃铛抖动 + 提示文字
-      if (fresh.length > 0 && !['Landing','Login','Register'].includes(route.name)) {
-        clearTimeout(_bellHintTimer);
-        _bellHintTimer = setTimeout(() => {
-          bellShaking.value = true;
-          bellHintVisible.value = true;
-          setTimeout(() => { bellShaking.value = false; }, 1200);
-          setTimeout(() => { bellHintVisible.value = false; }, 8000);
-        }, 3000);
-        // 弹窗
-        clearTimeout(_annPopupTimer);
-        _annPopupTimer = setTimeout(() => {
-          const first = fresh[0];
-          if (first && !isDismissedToday(first._id) && first.title) {
-            annPopupData.value = first;
-            annPopupVisible.value = true;
-          }
-        }, 800);
+
+      // 有新公告 → 开轮询 + 3秒后铃铛提示
+      if (fresh.length > 0) {
+        startAnnPoll(); // 确保轮询开着
+        if (!['Landing','Login','Register'].includes(route.name)) {
+          clearTimeout(_bellHintTimer);
+          _bellHintTimer = setTimeout(() => {
+            bellShaking.value = true;
+            bellHintVisible.value = true;
+            setTimeout(() => { bellShaking.value = false; }, 1200);
+            setTimeout(() => { bellHintVisible.value = false; }, 8000);
+          }, 3000);
+          clearTimeout(_annPopupTimer);
+          _annPopupTimer = setTimeout(() => {
+            const first = fresh[0];
+            if (first && !isDismissedToday(first._id) && first.title) {
+              annPopupData.value = first;
+              annPopupVisible.value = true;
+            }
+          }, 800);
+        }
+      } else {
+        // 全部已读 → 停止轮询，省性能
+        stopAnnPoll();
       }
     }
   } catch { /* ignore */ }
@@ -334,6 +339,7 @@ function markAnnouncementsRead() {
   localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
   unreadAnnounceCount.value = 0;
   bellHintVisible.value = false;
+  stopAnnPoll(); // 全部已读，停止轮询
   // 上报已读到服务端
   allIds.forEach(id => {
     fetch(`/api/v1/announcements/${id}/read`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => {});
@@ -519,18 +525,20 @@ onMounted(async () => {
   nextTick(() => { if (searchInput.value) searchInput.value.focus(); });
 });
 
-// 每 30 秒静默轮询公告（Socket 的兜底，极低开销）
+// 离开后台页面时停止轮询
+watch(() => route.name, (n) => {
+  if (['Landing','Login','Register', null].includes(n)) stopAnnPoll();
+});
+
+// 智能轮询：只在有未读公告时开，读完就停
 let _annPollTimer = null;
-watch(() => route.path, (p) => {
-  if (!['Landing','Login','Register'].includes(route.name)) {
-    if (!_annPollTimer) {
-      _annPollTimer = setInterval(() => { fetchAnnouncements(); }, 30000);
-    }
-  } else {
-    clearInterval(_annPollTimer);
-    _annPollTimer = null;
-  }
-}, { immediate: true });
+function startAnnPoll() {
+  if (_annPollTimer) return; // 已经在跑
+  _annPollTimer = setInterval(() => { fetchAnnouncements(); }, 30000);
+}
+function stopAnnPoll() {
+  if (_annPollTimer) { clearInterval(_annPollTimer); _annPollTimer = null; }
+}
 </script>
 
 <style>
