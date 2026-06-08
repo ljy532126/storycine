@@ -320,7 +320,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, nextTick, watch, markRaw } from 'vue';
+import { ref, reactive, computed, onMounted, onActivated, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
@@ -497,7 +497,6 @@ onMounted(async () => {
         // 后端有正在运行的生成任务，恢复前端状态
         scriptStore.generating = true;
         scriptStore.genProjectId = pid;
-        logCollapsed.value = false;
         addLog('检测到后台有正在进行的创作任务，已恢复监听...', 'info');
         reconnectGenListeners(pid, true);
       }
@@ -517,7 +516,7 @@ function reconnectGenListeners(pid, fromRefresh) {
     currentStep.value = data.step; nextTick(() => { currentStep.value = data.step; });
     progressMessages[data.step] = data.message;
     addLog(data.message, data.level || 'info');
-    if (shown) logCollapsed.value = false;
+    if (shown) {}
   });
   socket.onScriptGenerationComplete((data) => {
     scriptStore.progressStep = 7;
@@ -526,7 +525,6 @@ function reconnectGenListeners(pid, fromRefresh) {
     generationResult.value = data.data;
     scriptStore.setGenerationComplete();
     loadScripts(currentProjectId.value);
-    setTimeout(() => { logCollapsed.value = true; }, 1500);
     ElMessage.success('创作完成！剧本已保存 🎉');
     window.__addNotification?.('创作完成', 'success', '✅');
   });
@@ -619,7 +617,6 @@ async function handleGenerate() {
   scriptStore.clearGenState();
   flowType.value = 'generate';
   scriptStore.flowType = 'generate';
-  logCollapsed.value = false;
   generationResult.value = null;
   currentStep.value = 0;
   Object.keys(progressMessages).forEach(k => delete progressMessages[k]);
@@ -648,7 +645,6 @@ async function handleGenerate() {
     api.post(`/projects/${currentProjectId.value}/generate-cover`)
       .then(d => console.log('[封面] 海报生成结果:', d.data?.coverImage ? '成功 ' + d.data.coverImage.substring(0, 50) + '...' : '失败', d))
       .catch(e => console.error('[封面] 海报生成请求失败:', e));
-    setTimeout(() => { logCollapsed.value = true; }, 1500);
     ElMessage.success('创作完成！剧本已保存 🎉');
   });
 
@@ -671,7 +667,6 @@ async function handleGenerate() {
 async function handleContinue() {
   flowType.value = 'continue';
   scriptStore.flowType = 'continue';
-  logCollapsed.value = false; // 续写时展开
   currentStep.value = 0;
   Object.keys(progressMessages).forEach(k => delete progressMessages[k]);
   socket.offAll();
@@ -683,7 +678,6 @@ async function handleContinue() {
     addLog('续写完成', 'success');
     scriptStore.setGenerationComplete();
     loadScripts(currentProjectId.value);
-    setTimeout(() => { logCollapsed.value = true; }, 1500);
     ElMessage.success('续写完成！下一集已就绪 📖');
   });
   socket.onScriptGenerationProgress((data) => {
