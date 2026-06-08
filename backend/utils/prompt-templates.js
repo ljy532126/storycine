@@ -10,7 +10,6 @@ function buildStyleInfo(state) {
     aspectRatio: vc.aspectRatio || '9:16',
     visualStyle: vc.visualStyle || '',
     subStyle: vc.subStyle || '',
-    creationMode: vc.creationMode || 'image_to_video',
     quality: ds.qualityKeywords || '8K',
     artStyle: ds.artStyleCommands || '',
     atmosphere: ds.atmosphereLighting || '',

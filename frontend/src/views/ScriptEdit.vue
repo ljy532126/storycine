@@ -108,7 +108,6 @@
         </div>
         <div class="right-panel-body" v-show="!rightCollapsed">
         <div class="setting-group"><label>画面比例 📐</label><el-radio-group v-model="videoConfig.aspectRatio" size="small" @change="onVideoConfigChange"><el-radio-button value="16:9">16:9</el-radio-button><el-radio-button value="9:16">9:16</el-radio-button><el-radio-button value="4:3">4:3</el-radio-button><el-radio-button value="3:4">3:4</el-radio-button></el-radio-group></div>
-        <div class="setting-group"><label>创作模式 🎞️</label><el-radio-group v-model="videoConfig.creationMode" size="small" @change="onVideoConfigChange"><el-radio-button value="image_to_video">生图转视频</el-radio-button><el-radio-button value="reference_video">参考生视频</el-radio-button></el-radio-group></div>
         <div class="setting-group"><label>风格参考 🎨 <span style="font-size:10px;color:var(--text-200);font-weight:400">（选后自动配置导演设定）</span></label><el-radio-group v-model="videoConfig.visualStyle" size="small" @change="onStyleChange"><el-radio-button value="写实">写实</el-radio-button><el-radio-button value="动漫">动漫</el-radio-button></el-radio-group></div>
         <div class="setting-group" v-if="videoConfig.visualStyle"><label>风格细分 ✨</label><div class="sub-style-grid"><div v-for="s in currentSubStyles" :key="s" :class="['sub-style-item',{active:videoConfig.subStyle===s}]" @click="selectSubStyle(s)">{{ s }}</div></div></div>
         <div class="setting-group">
@@ -208,7 +207,7 @@ const cameraMoves=['推','拉','摇','移','跟','静止','升','降','晃动'];
 const charactersStr=ref([]);const autoStoryboarding=ref(false);const syncing=ref(false);
 const allAssets=ref([]);const showStoryboardDiff=ref(false);const diffShots=ref([]);const diffChanges=ref(0);const diffBackup=ref(null);const flowDoneAI=ref(false);const flowDoneExtract=ref(false);const flowDoneSync=ref(false);
 
-const videoConfig=reactive({aspectRatio:'9:16',creationMode:'image_to_video',visualStyle:'写实',subStyle:''});
+const videoConfig=reactive({aspectRatio:'9:16',visualStyle:'写实',subStyle:''});
 const directorForm=reactive({qualityKeywords:'8K, 超写实, 电影级摄影, 高细节, HDR',atmosphereLighting:'',artStyleCommands:''});
 const realisticSubStyles=['古风写实','古风明艳','古风唐朝','古风宋朝','古风明朝','古风清朝','真人写实','都市情感','玄幻修仙','历史战争','现代末日','悬疑恐怖','赛博朋克','未来科幻','纪实摄影','民国风格','乡土风格','职场商战','家庭伦理','医疗救援','80年代','律政法庭','北欧极简'];
 const animeSubStyles=['二次元','国风动漫','日系动漫','水墨风','赛博朋克'];
@@ -274,7 +273,7 @@ watch(() => route.path, (p) => {
 
 async function onProjectChange(val){
   currentScriptId.value='';currentScript.value=null;if(!val)return;
-  try{const project=await projectStore.fetchProject(val);if(project.videoConfig){videoConfig.aspectRatio=project.videoConfig.aspectRatio||'9:16';videoConfig.creationMode=project.videoConfig.creationMode||'image_to_video';videoConfig.visualStyle=project.videoConfig.visualStyle||'写实';videoConfig.subStyle=project.videoConfig.subStyle||''}
+  try{const project=await projectStore.fetchProject(val);if(project.videoConfig){videoConfig.aspectRatio=project.videoConfig.aspectRatio||'9:16';videoConfig.visualStyle=project.videoConfig.visualStyle||'写实';videoConfig.subStyle=project.videoConfig.subStyle||''}
     if(project.directorSettings){directorForm.qualityKeywords=project.directorSettings.qualityKeywords||directorForm.qualityKeywords;directorForm.atmosphereLighting=project.directorSettings.atmosphereLighting||'';directorForm.artStyleCommands=project.directorSettings.artStyleCommands||''}}catch(e){}
   scriptStore.fetchScripts(val).then(()=>{scripts.value=[...scriptStore.scripts];if(scripts.value.length>0)switchEpisode(scripts.value[0]._id)});
   loadAllAssets(val);
