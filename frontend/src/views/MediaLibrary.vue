@@ -8,29 +8,57 @@
 
     <!-- 项目 Pills -->
     <div class="ml-projects" v-if="projectStore.projects.length > 0">
-      <span :class="['ml-pill', { active: currentProjectId === p._id }]" v-for="p in projectStore.projects" :key="p._id" @click="currentProjectId = p._id; loadMedia()">{{ p.name }}</span>
+      <span
+        :class="['ml-pill', { active: currentProjectId === p._id }]"
+        v-for="p in projectStore.projects" :key="p._id"
+        @click="currentProjectId = p._id; loadMedia()"
+      >
+        <FolderOpen theme="outline" size="15" fill="currentColor" style="vertical-align:-3px;margin-right:4px" />
+        {{ p.name }}
+      </span>
     </div>
 
-    <!-- 分类 Tab -->
-    <div class="ml-tabs" v-if="currentProjectId">
-      <span style="font-size:13px;font-weight:600;color:var(--text-100);padding:6px 8px 6px 0;flex-shrink:0">筛选：</span>
-      <span :class="['ml-tab', { active: filterType === '' }]" @click="setFilter('')">全部</span>
-      <span :class="['ml-tab', { active: filterType === '角色' }]" @click="setFilter('角色')">👤 角色</span>
-      <span :class="['ml-tab', { active: filterType === '场景' }]" @click="setFilter('场景')">🏞️ 场景</span>
-      <span :class="['ml-tab', { active: filterType === '道具' }]" @click="setFilter('道具')">🔧 道具</span>
-      <span :class="['ml-tab', { active: filterType === '故事板' }]" @click="setFilter('故事板')">🎬 故事板</span>
-      <span :class="['ml-tab', { active: filterType === '视频' }]" @click="setFilter('视频')">🎥 视频</span>
-      <span :class="['ml-tab', { active: filterType === '封面' }]" @click="setFilter('封面')">🎨 封面</span>
-      <span class="ml-count" v-if="items.length > 0" style="margin-left:auto">
-        共 {{ items.length }} 个
-        <el-button size="small" :type="multiSelect ? 'warning' : ''" @click="multiSelect = !multiSelect; if(!multiSelect) selectedItems = []">
-          {{ multiSelect ? '退出多选' : '多选' }}
+    <!-- 分类 Tab + 工具栏 -->
+    <div class="ml-bar" v-if="currentProjectId">
+      <div class="ml-filters">
+        <span
+          :class="['ml-tab', { active: filterType === '' }]"
+          @click="setFilter('')"
+        >
+          <AllApplication theme="outline" size="14" fill="currentColor" />
+          全部
+        </span>
+        <span :class="['ml-tab', { active: filterType === '角色' }]" @click="setFilter('角色')">
+          <People theme="outline" size="14" fill="currentColor" /> 角色
+        </span>
+        <span :class="['ml-tab', { active: filterType === '场景' }]" @click="setFilter('场景')">
+          <Pic theme="outline" size="14" fill="currentColor" /> 场景
+        </span>
+        <span :class="['ml-tab', { active: filterType === '道具' }]" @click="setFilter('道具')">
+          <Tool theme="outline" size="14" fill="currentColor" /> 道具
+        </span>
+        <span :class="['ml-tab', { active: filterType === '故事板' }]" @click="setFilter('故事板')">
+          <Film theme="outline" size="14" fill="currentColor" /> 故事板
+        </span>
+        <span :class="['ml-tab', { active: filterType === '视频' }]" @click="setFilter('视频')">
+          <PlayTwo theme="outline" size="14" fill="currentColor" /> 视频
+        </span>
+        <span :class="['ml-tab', { active: filterType === '封面' }]" @click="setFilter('封面')">
+          <PictureOne theme="outline" size="14" fill="currentColor" /> 封面
+        </span>
+      </div>
+      <div class="ml-tools" v-if="items.length > 0">
+        <span class="ml-count">共 {{ filteredItems.length }} / {{ items.length }} 个</span>
+        <el-button size="small" :type="multiSelect ? 'warning' : ''" plain @click="multiSelect = !multiSelect; if(!multiSelect) selectedItems = []">
+          <el-icon><Select /></el-icon> {{ multiSelect ? '取消多选' : '多选' }}
         </el-button>
-        <el-button v-if="selectedItems.length > 0" size="small" type="primary" style="margin-left:4px" @click="batchDownload" :loading="downloading">
-          打包下载 ({{ selectedItems.length }})
+        <el-button v-if="selectedItems.length > 0" size="small" type="primary" @click="batchDownload" :loading="downloading">
+          <el-icon><Download /></el-icon> 打包 ({{ selectedItems.length }})
         </el-button>
-        <el-button v-if="selectedItems.length > 0" size="small" @click="selectedItems = []" style="margin-left:4px">取消选择</el-button>
-      </span>
+        <el-button v-if="selectedItems.length > 0" size="small" @click="selectedItems = []">
+          <el-icon><Close /></el-icon>
+        </el-button>
+      </div>
     </div>
 
     <!-- 图片网格 -->
@@ -40,54 +68,78 @@
         :ref="el => { if (el) cardRefs[idx] = el }"
         class="ml-card" :class="{ 'ml-selected': selectedItems.includes(item) }"
         @click="multiSelect ? toggleSelect(item, !selectedItems.includes(item)) : openPreview(item)">
-        <div class="ml-sel-overlay" v-if="multiSelect && selectedItems.includes(item)">
-          <span class="ml-sel-check">✓</span>
-        </div>
-        <div class="ml-img-wrap">
+        <div class="ml-card-img">
           <img :src="item.url" loading="lazy" />
-          <span v-if="item.isVideo" class="ml-video-badge">▶</span>
-          <span class="ml-storage-badge" :class="isCloudUrl(item.url) ? 'cloud' : 'local'">{{ isCloudUrl(item.url) ? '☁️ 云端' : '💾 本地' }}</span>
+          <div class="ml-card-overlay">
+            <span v-if="item.isVideo" class="ml-video-badge"><Right theme="filled" size="22" fill="#fff" /></span>
+          </div>
+          <span class="ml-storage-badge" :class="isCloudUrl(item.url) ? 'cloud' : 'local'">
+            <Cloudy v-if="isCloudUrl(item.url)" theme="outline" size="12" fill="#fff" />
+            <FolderDownload v-else theme="outline" size="12" fill="#fff" />
+            {{ isCloudUrl(item.url) ? '云端' : '本地' }}
+          </span>
         </div>
-        <div class="ml-info">
-          <span class="ml-name">{{ item.name }}</span>
-          <div class="ml-meta">
-            <el-tag size="small" :type="tagType(item.type)">{{ item.type }}</el-tag>
-            <span class="ml-sub">{{ item.subType }}</span>
+        <div class="ml-card-body">
+          <span class="ml-card-name">{{ item.name || '未命名' }}</span>
+          <div class="ml-card-meta">
+            <el-tag size="small" :type="tagType(item.type)" effect="plain">{{ item.type }}</el-tag>
+            <span class="ml-card-sub">{{ item.subType }}</span>
           </div>
         </div>
-        <el-button class="ml-del-btn" size="small" type="danger" circle @click.stop="deleteItem(item)">×</el-button>
+        <div class="ml-card-actions">
+          <el-button size="small" circle @click.stop="downloadItem(item)" title="下载"><el-icon><Download /></el-icon></el-button>
+          <el-button size="small" circle type="danger" @click.stop="deleteItem(item)" title="删除"><el-icon><Delete /></el-icon></el-button>
+        </div>
+        <div v-if="multiSelect && selectedItems.includes(item)" class="ml-sel-overlay">
+          <span class="ml-sel-check"><Check theme="outline" size="20" fill="#fff" /></span>
+        </div>
       </div>
     </div>
 
     <!-- 空状态 -->
     <div class="ml-empty" v-if="!currentProjectId">
+      <div class="ml-empty-icon">
+        <FolderOpen theme="outline" size="56" fill="#d4c5c0" />
+      </div>
       <p>请先选择一个片场</p>
+      <span class="ml-empty-sub">在顶部片场列表中选择一个项目查看其素材</span>
     </div>
     <div class="ml-empty" v-else-if="items.length === 0">
-      <span style="font-size:48px">🖼️</span>
-      <p>资源库还是空的~ 去角色小店或故事板生成图片吧</p>
+      <div class="ml-empty-icon">
+        <PictureOne theme="outline" size="56" fill="#d4c5c0" />
+      </div>
+      <p>资源库还是空的</p>
+      <span class="ml-empty-sub">去角色小店、故事板或生成图片后会出现在这里</span>
     </div>
 
     <!-- 预览弹窗 -->
-    <el-dialog v-model="previewVisible" :title="previewItem?.name || '预览'" width="85%" top="1vh" destroy-on-close class="ml-viewer-dialog">
-      <div class="ml-viewer-body">
+    <el-dialog v-model="previewVisible" :title="previewItem?.name || '预览'" width="85%" top="1vh" destroy-on-close>
+      <div class="ml-viewer">
         <div class="ml-viewer-main">
-          <video v-if="previewItem?.isVideo" :src="previewItem.url" controls style="max-width:100%;max-height:75vh;border-radius:8px"></video>
-          <img v-else :src="previewItem?.url" style="max-width:100%;max-height:75vh;object-fit:contain;border-radius:8px" />
+          <video v-if="previewItem?.isVideo" :src="previewItem.url" controls class="ml-viewer-media" />
+          <img v-else :src="previewItem?.url" class="ml-viewer-media" />
         </div>
-        <div class="ml-viewer-sidebar">
+        <div class="ml-viewer-side">
           <div class="ml-viewer-info">
-            <span class="ml-viewer-name">{{ previewItem?.name }}</span>
-            <div style="display:flex;gap:6px;margin-top:8px">
-              <el-tag size="small">{{ previewItem?.type }}</el-tag>
+            <span class="ml-viewer-title">{{ previewItem?.name }}</span>
+            <div class="ml-viewer-tags">
+              <el-tag size="small" :type="tagType(previewItem?.type)">{{ previewItem?.type }}</el-tag>
               <el-tag size="small" type="info">{{ previewItem?.subType }}</el-tag>
+              <el-tag size="small" :type="isCloudUrl(previewItem?.url) ? 'success' : ''">
+                <Cloudy v-if="isCloudUrl(previewItem?.url)" theme="outline" size="12" fill="currentColor" style="vertical-align:-2px" />
+                <FolderDownload v-else theme="outline" size="12" fill="currentColor" style="vertical-align:-2px" />
+                {{ isCloudUrl(previewItem?.url) ? '云端' : '本地' }}
+              </el-tag>
             </div>
             <div class="ml-viewer-url" :title="previewItem?.url">{{ previewItem?.url }}</div>
           </div>
-          <div class="ml-viewer-actions">
-            <el-button @click="downloadItem(previewItem)" style="width:100%">📥 下载</el-button>
-            <el-button type="danger" @click="deleteItem(previewItem); previewVisible = false" style="width:100%">🗑️ 删除</el-button>
-            <el-button @click="previewVisible = false" style="width:100%">关闭</el-button>
+          <div class="ml-viewer-btns">
+            <el-button size="default" @click="downloadItem(previewItem)" style="width:100%">
+              <el-icon><Download /></el-icon> 下载
+            </el-button>
+            <el-button size="default" type="danger" plain @click="deleteItem(previewItem); previewVisible = false" style="width:100%">
+              <el-icon><Delete /></el-icon> 删除
+            </el-button>
           </div>
         </div>
       </div>
@@ -99,6 +151,11 @@
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
+import {
+  FolderOpen, People, Pic, Tool, Film, PlayTwo, PictureOne,
+  Right, Cloudy, FolderDownload, AllApplication, Check,
+} from '@icon-park/vue-next';
+import { Download, Delete, Select, Close } from '@element-plus/icons-vue';
 
 const projectStore = useProjectStore();
 const currentProjectId = ref('');
@@ -111,7 +168,7 @@ const multiSelect = ref(false);
 const downloading = ref(false);
 const gridRef = ref(null);
 const cardRefs = ref({});
-// 拖选
+
 const dragging = ref(false);
 let dragStartX = 0, dragStartY = 0;
 let dragSelected = new Set();
@@ -130,24 +187,26 @@ function onGridMouseMove(e) {
     const el = cardRefs.value[idx];
     if (!el) return;
     const cr = el.getBoundingClientRect();
-    const overlaps = !(cr.right < rect.left || cr.left > rect.right || cr.bottom < rect.top || cr.top > rect.bottom);
-    if (overlaps) newSelected.add(item.url); else if (!e.shiftKey) newSelected.delete(item.url);
+    if (!(cr.right < rect.left || cr.left > rect.right || cr.bottom < rect.top || cr.top > rect.bottom))
+      newSelected.add(item.url);
+    else if (!e.shiftKey) newSelected.delete(item.url);
   });
   selectedItems.value = filteredItems.value.filter(i => newSelected.has(i.url));
 }
 function onGridMouseUp() { dragging.value = false; }
 
-function toggleSelect(item, val) { if (val) { if (!selectedItems.value.find(i => i.url === item.url)) selectedItems.value.push(item); } else { selectedItems.value = selectedItems.value.filter(i => i.url !== item.url); } }
+function toggleSelect(item, val) {
+  if (val) { if (!selectedItems.value.find(i => i.url === item.url)) selectedItems.value.push(item); }
+  else selectedItems.value = selectedItems.value.filter(i => i.url !== item.url);
+}
 
 async function batchDownload() {
   if (selectedItems.value.length === 0) return;
   downloading.value = true;
   try {
-    const urls = selectedItems.value.map(i => i.url);
-    const names = selectedItems.value.map(i => (i.name || 'file') + (i.isVideo ? '.mp4' : '.png'));
     const res = await fetch('/api/v1/media-library/batch-download', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-      body: JSON.stringify({ urls, names }),
+      body: JSON.stringify({ urls: selectedItems.value.map(i => i.url), names: selectedItems.value.map(i => (i.name || 'file') + (i.isVideo ? '.mp4' : '.png')) }),
     });
     if (res.ok) {
       const blob = await res.blob();
@@ -159,7 +218,7 @@ async function batchDownload() {
       const d = await res.json();
       ElMessage.error(d.message || '下载失败');
     }
-  } catch (e) { ElMessage.error('下载失败'); }
+  } catch { ElMessage.error('下载失败'); }
   finally { downloading.value = false; }
 }
 
@@ -186,25 +245,17 @@ async function loadMedia() {
   if (!currentProjectId.value) return;
   try {
     const token = localStorage.getItem('token') || '';
-    const res = await fetch(`/api/v1/media-library?projectId=${currentProjectId.value}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    const res = await fetch(`/api/v1/media-library?projectId=${currentProjectId.value}`, { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await res.json();
     items.value = data.data?.items || [];
-  } catch (e) { items.value = []; }
+  } catch { items.value = []; }
 }
 
-function openPreview(item) {
-  previewItem.value = item;
-  previewVisible.value = true;
-}
+function openPreview(item) { previewItem.value = item; previewVisible.value = true; }
 
 function downloadItem(item) {
   const a = document.createElement('a');
-  a.href = item.url;
-  a.download = item.name + (item.isVideo ? '.mp4' : '.png');
-  a.target = '_blank';
-  a.click();
+  a.href = item.url; a.download = item.name + (item.isVideo ? '.mp4' : '.png'); a.target = '_blank'; a.click();
 }
 
 async function deleteItem(item) {
@@ -216,59 +267,106 @@ async function deleteItem(item) {
     });
     items.value = items.value.filter(i => i !== item);
     ElMessage.success('已删除');
-  } catch (e) { ElMessage.error('删除失败'); }
+  } catch { ElMessage.error('删除失败'); }
 }
 </script>
 
 <style scoped>
 .ml-root { padding: 0; }
-.ml-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+
 .ml-projects { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
-.ml-pill { font-size: 14px; padding: 8px 20px; border-radius: 20px; cursor: pointer; background: var(--bg-200); border: 1px solid var(--bg-300); color: var(--text-200); font-weight: 500; transition: all 0.15s; user-select: none; }
+.ml-pill {
+  font-size: 13px; padding: 7px 18px; border-radius: 20px; cursor: pointer;
+  background: var(--bg-200); border: 1px solid var(--bg-300);
+  color: var(--text-200); font-weight: 500; transition: all 0.18s; user-select: none;
+  display: flex; align-items: center;
+}
 .ml-pill:hover { border-color: var(--gold); color: var(--text-100); }
 .ml-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
-.ml-count { font-size: 13px; color: var(--text-200); }
-.ml-tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
-.ml-tab { font-size: 13px; padding: 6px 16px; cursor: pointer; color: var(--text-200); border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; }
-.ml-tab:hover { color: var(--text-100); }
-.ml-tab.active { color: var(--text-100); font-weight: 700; border-bottom-color: var(--gold); }
-.ml-storage-badge { position: absolute; bottom: 4px; left: 4px; font-size: 10px; padding: 1px 6px; border-radius: 4px; color: #fff; z-index: 2; }
-.ml-storage-badge.cloud { background: rgba(103,194,58,0.8); }
-.ml-storage-badge.local { background: rgba(139,115,85,0.8); }
 
-.ml-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+/* ===== 工具栏 ===== */
+.ml-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 18px; flex-wrap: wrap;
+}
+.ml-filters { display: flex; gap: 2px; background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 10px; padding: 4px; }
+.ml-tab {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; padding: 7px 14px; border-radius: 7px;
+  cursor: pointer; color: var(--text-200); font-weight: 500;
+  transition: all 0.15s; user-select: none; white-space: nowrap;
+}
+.ml-tab:hover { color: var(--text-100); background: var(--bg-100); }
+.ml-tab.active { background: var(--navy); color: var(--gold); font-weight: 700; }
+.ml-tools { display: flex; align-items: center; gap: 8px; }
+.ml-count { font-size: 12px; color: var(--text-200); white-space: nowrap; }
+
+/* ===== 卡片网格 ===== */
+.ml-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
 .ml-card {
-  background: var(--bg-200); border-radius: 10px; overflow: hidden;
+  background: var(--bg-200); border-radius: 12px; overflow: hidden;
   border: 1px solid var(--bg-300); cursor: pointer; position: relative;
-  transition: all 0.2s;
+  transition: all 0.2s; display: flex; flex-direction: column;
 }
-.ml-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-.ml-img-wrap { width: 100%; padding-top: 100%; position: relative; overflow: hidden; background: var(--bg-100); }
-.ml-img-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.ml-video-badge {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  font-size: 32px; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.5);
-  width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-}
-.ml-info { padding: 10px 12px 12px; }
-.ml-name { font-size: 13px; font-weight: 600; color: var(--text-100); display: block; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ml-meta { display: flex; align-items: center; gap: 6px; }
-.ml-sub { font-size: 11px; color: var(--text-200); }
-.ml-sel-overlay { position: absolute; inset: 0; z-index: 2; background: rgba(201,168,76,0.2); display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.ml-sel-check { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; color: var(--navy); font-size: 16px; font-weight: 700; line-height: 1; }
-.ml-selected { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.3); }
-.ml-del-btn { position: absolute; top: 6px; right: 6px; z-index: 2; opacity: 0; transition: opacity 0.15s; }
-.ml-card:hover .ml-del-btn { opacity: 1; }
+.ml-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
 
-/* 查看器 */
-.ml-viewer-body { display: flex; gap: 20px; min-height: 400px; }
-.ml-viewer-main { flex: 1; display: flex; align-items: center; justify-content: center; background: #111; border-radius: 10px; padding: 20px; min-width: 0; }
-.ml-viewer-sidebar { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+.ml-card-img { width: 100%; padding-top: 100%; position: relative; overflow: hidden; background: var(--bg-100); }
+.ml-card-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+.ml-card:hover .ml-card-img img { transform: scale(1.05); }
+.ml-card-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.ml-video-badge {
+  width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ml-storage-badge {
+  position: absolute; bottom: 6px; left: 6px; z-index: 2;
+  font-size: 10px; padding: 2px 7px; border-radius: 4px; color: #fff;
+  display: flex; align-items: center; gap: 3px; font-weight: 600;
+}
+.ml-storage-badge.cloud { background: rgba(103,194,58,0.85); }
+.ml-storage-badge.local { background: rgba(139,115,85,0.85); }
+
+.ml-card-body { padding: 10px 12px 8px; }
+.ml-card-name { font-size: 12px; font-weight: 600; color: var(--text-100); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 6px; }
+.ml-card-meta { display: flex; align-items: center; gap: 6px; }
+.ml-card-sub { font-size: 10px; color: var(--text-200); }
+.ml-card-actions {
+  display: flex; gap: 4px; padding: 0 12px 10px; opacity: 0; transition: opacity 0.15s;
+}
+.ml-card:hover .ml-card-actions { opacity: 1; }
+
+.ml-sel-overlay { position: absolute; inset: 0; z-index: 5; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; pointer-events: none; border-radius: 12px; }
+.ml-sel-check { width: 40px; height: 40px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; }
+.ml-selected { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.25); }
+
+/* ===== 空状态 ===== */
+.ml-empty { text-align: center; padding: 100px 20px; }
+.ml-empty-icon { margin-bottom: 16px; opacity: 0.4; }
+.ml-empty p { font-size: 15px; color: var(--text-100); font-weight: 600; margin: 0 0 4px; }
+.ml-empty-sub { font-size: 12px; color: var(--text-200); }
+
+/* ===== 预览弹窗 ===== */
+.ml-viewer { display: flex; gap: 20px; min-height: 420px; }
+.ml-viewer-main { flex: 1; display: flex; align-items: center; justify-content: center; background: #0d0d0d; border-radius: 12px; padding: 24px; min-width: 0; }
+.ml-viewer-media { max-width: 100%; max-height: 72vh; object-fit: contain; border-radius: 6px; }
+.ml-viewer-side { width: 210px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
 .ml-viewer-info { flex: 1; }
-.ml-viewer-name { font-size: 16px; font-weight: 700; color: var(--text-100); }
-.ml-viewer-url { margin-top: 12px; font-size: 10px; color: var(--text-200); word-break: break-all; opacity: 0.6; cursor: default; }
-.ml-viewer-actions { display: flex; flex-direction: column; gap: 6px; }
-@media (max-width: 700px) { .ml-viewer-body { flex-direction: column; } .ml-viewer-sidebar { width:100%; } }
-.ml-empty { text-align: center; padding: 80px 20px; color: var(--text-200); }
-.ml-empty p { font-size: 14px; }
+.ml-viewer-title { font-size: 16px; font-weight: 700; color: var(--text-100); display: block; margin-bottom: 10px; }
+.ml-viewer-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.ml-viewer-url { font-size: 10px; color: var(--text-200); word-break: break-all; opacity: 0.5; line-height: 1.5; }
+.ml-viewer-btns { display: flex; flex-direction: column; gap: 8px; }
+
+@media (max-width: 700px) {
+  .ml-viewer { flex-direction: column; }
+  .ml-viewer-side { width: 100%; }
+  .ml-bar { flex-direction: column; align-items: stretch; }
+}
+
+/* 兼容旧 breadcrumb */
+.breadcrumb { padding: 4px 0 8px; flex-shrink: 0; }
+.bc-link { color: var(--text-200); text-decoration: none; font-weight: 500; }
+.bc-link:hover { color: var(--gold-dark); }
+.bc-sep { font-size: 11px; color: var(--text-200); margin: 0 6px; }
+.bc-current { font-size: 11px; color: var(--gold-dark); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
 </style>

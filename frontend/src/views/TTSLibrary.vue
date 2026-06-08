@@ -40,7 +40,10 @@
                 <span class="tts-char">{{ a.characterName || '配音' }}</span>
                 <span class="tts-text">{{ a.text.substring(0, 40) }}{{ a.text.length > 40 ? '...' : '' }}</span>
                 <div class="tts-player-row">
-                  <button class="tts-play-btn" @click.stop="togglePlay(a)">{{ playingId === a._id ? '⏸' : '▶' }}</button>
+                  <button class="tts-play-btn" @click.stop="togglePlay(a)">
+                    <Right v-if="playingId !== a._id" theme="filled" size="18" fill="#fff" />
+                    <PauseOne v-else theme="filled" size="18" fill="#fff" />
+                  </button>
                   <div class="tts-wave-bar" @click.stop>
                     <span v-for="n in 12" :key="n" class="tts-wave-seg" :class="{ active: playingId === a._id && n <= 12 }"></span>
                   </div>
@@ -69,7 +72,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Refresh, Delete, Download, FolderDownload, Voice, Film } from '@icon-park/vue-next';
+import { Refresh, Delete, Download, FolderDownload, Voice, Film, Right, PauseOne } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { ttsAPI } from '../api';
 
