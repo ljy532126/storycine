@@ -400,6 +400,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
+import { Refresh } from '@element-plus/icons-vue';
 import { configAPI } from '../api';
 
 const settingsTab = ref('llm');
@@ -557,8 +558,8 @@ async function fetchTTSVoices() {
         byGender[g].push({ label: `${v.name} (${v.id.split('_').slice(0,3).join('_')})`, value: v.id });
       });
       Object.entries(byGender).forEach(([gender, voices]) => {
-        const emoji = { '女': '👩', '男': '👨' }[gender] || '🎤';
-        opts.push({ label: `──────── ${emoji} ${gender}声 ────────`, value: '', disabled: true });
+        const icon = { '女': '👩', '男': '👨' }[gender] || '🎤';
+        opts.push({ label: `──────── ${icon} ${gender}声 ────────`, value: '__group_' + gender, disabled: true });
         opts.push(...voices);
       });
       ttsVoiceOptions.value = opts;
