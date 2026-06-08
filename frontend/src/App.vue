@@ -310,13 +310,16 @@ function onBellToggle(v) {
 }
 
 function markAnnouncementsRead() {
-  // 标记为已读（计数归零）
   const allIds = announcements.value.map(a => a._id);
   if (allIds.length === 0) return;
   const dismissed = getDismissedToday();
   allIds.forEach(id => dismissed.add(id));
   localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
   unreadAnnounceCount.value = 0;
+  // 上报已读到服务端
+  allIds.forEach(id => {
+    fetch(`/api/v1/announcements/${id}/read`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => {});
+  });
 }
 
 function dismissAnnPopup() {
@@ -324,7 +327,7 @@ function dismissAnnPopup() {
     const dismissed = getDismissedToday();
     dismissed.add(annPopupData.value._id);
     localStorage.setItem('ad_dismissed_ann', JSON.stringify([...dismissed]));
-    // 检查是否有下一条未读
+    fetch(`/api/v1/announcements/${annPopupData.value._id}/read`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => {});
     const next = announcements.value.find(a => !isDismissedToday(a._id));
     if (next) {
       annPopupData.value = next;

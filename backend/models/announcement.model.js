@@ -11,6 +11,11 @@ const announcementSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },       // 是否发布
   enableMarkdown: { type: Boolean, default: false }, // 启用 Markdown 渲染
   createdBy: { type: String, default: '' },
+  readBy: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    username: { type: String, default: '' },
+    readAt: { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 announcementSchema.index({ isActive: 1, createdAt: -1 });
