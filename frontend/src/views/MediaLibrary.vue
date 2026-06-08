@@ -135,9 +135,15 @@
             </div>
           </div>
           <div class="ml-lb-top-right">
-            <el-button circle @click="downloadItem(previewItem)" title="下载"><el-icon size="18"><Download /></el-icon></el-button>
-            <el-button circle type="danger" plain @click="deleteItem(previewItem); previewVisible = false" title="删除"><el-icon size="18"><Delete /></el-icon></el-button>
-            <el-button circle @click="previewVisible = false" title="关闭"><el-icon size="20"><Close /></el-icon></el-button>
+            <button class="ml-lb-btn" @click="downloadItem(previewItem)" title="下载">
+              <DownloadTwo theme="outline" size="20" fill="#999" />
+            </button>
+            <button class="ml-lb-btn" @click="deleteItem(previewItem); previewVisible = false" title="删除">
+              <DeleteTwo theme="outline" size="20" fill="#999" />
+            </button>
+            <button class="ml-lb-btn" @click="previewVisible = false" title="关闭">
+              <CloseOne theme="outline" size="20" fill="#999" />
+            </button>
           </div>
         </div>
 
@@ -166,6 +172,7 @@ import { useProjectStore } from '../stores/project';
 import {
   FolderOpen, People, Pic, Tool, Film, PlayTwo, PictureOne,
   Cloudy, FolderDownload, AllApplication, Check,
+  DownloadTwo, DeleteTwo, CloseOne,
 } from '@icon-park/vue-next';
 import { Download, Delete, Select, Close } from '@element-plus/icons-vue';
 
@@ -413,11 +420,14 @@ async function deleteItem(item) {
 .ml-lb-top-left { display: flex; align-items: center; gap: 14px; }
 .ml-lb-name { font-size: 15px; font-weight: 700; color: #e0d6c2; }
 .ml-lb-tags { display: flex; gap: 6px; }
-.ml-lb-top-right { display: flex; gap: 8px; }
-.ml-lb-top-right .el-button--circle {
-  width: 38px; height: 38px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #999;
+.ml-lb-top-right { display: flex; gap: 6px; }
+.ml-lb-btn {
+  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+  cursor: pointer; transition: all 0.2s; padding: 0;
 }
-.ml-lb-top-right .el-button--circle:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.ml-lb-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+.ml-lb-btn:hover :deep(svg) { fill: #fff !important; }
 
 /* 主舞台 */
 .ml-lb-stage {
