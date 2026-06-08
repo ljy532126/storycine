@@ -136,13 +136,13 @@
           </div>
           <div class="ml-lb-top-right">
             <button class="ml-lb-btn" @click="downloadItem(previewItem)" title="下载">
-              <DownloadTwo theme="outline" size="20" fill="#999" />
+              <DownloadTwo theme="outline" size="22" fill="#fff" />
             </button>
             <button class="ml-lb-btn" @click="deleteItem(previewItem); previewVisible = false" title="删除">
-              <DeleteTwo theme="outline" size="20" fill="#999" />
+              <DeleteTwo theme="outline" size="22" fill="#fff" />
             </button>
             <button class="ml-lb-btn" @click="previewVisible = false" title="关闭">
-              <CloseOne theme="outline" size="20" fill="#999" />
+              <CloseOne theme="outline" size="24" fill="#fff" />
             </button>
           </div>
         </div>
@@ -420,14 +420,12 @@ async function deleteItem(item) {
 .ml-lb-top-left { display: flex; align-items: center; gap: 14px; }
 .ml-lb-name { font-size: 15px; font-weight: 700; color: #e0d6c2; }
 .ml-lb-tags { display: flex; gap: 6px; }
-.ml-lb-top-right { display: flex; gap: 6px; }
+.ml-lb-top-right { display: flex; gap: 4px; }
 .ml-lb-btn {
-  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
-  cursor: pointer; transition: all 0.2s; padding: 0;
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; padding: 0; opacity: 0.7; transition: opacity 0.15s;
 }
-.ml-lb-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
-.ml-lb-btn:hover :deep(svg) { fill: #fff !important; }
+.ml-lb-btn:hover { opacity: 1; }
 
 /* 主舞台 */
 .ml-lb-stage {
