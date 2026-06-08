@@ -367,11 +367,19 @@
 
       <!-- 地图 + 柱状图 -->
       <div class="st-grid-ua-map">
-        <div class="st-card st-ua-map-card">
-          <div class="st-card-head">
-            <h2 class="st-section-title"><Data theme="outline" size="18" fill="var(--gold)" /> 全国省份IP热力分布图</h2>
+        <div class="st-ua-map-card" style="padding:0;background:transparent;border:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 8px 0">
+            <button v-if="isAdmin" class="btn-clear-logs" @click="clearVisitorLogs" :disabled="clearingLogs">
+              {{ clearingLogs ? '清除中...' : '🗑 清除访客记录' }}
+            </button>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+              <span style="font-size:11px;color:var(--text-200)">配色:</span>
+              <select v-model="mapTheme" class="theme-select">
+                <option v-for="t in themeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
+              </select>
+            </div>
           </div>
-          <div ref="uaMapChart" class="ua-chart ua-chart-map"></div>
+          <MapDrilldown :data="mapDrillData" :theme="mapTheme" />
         </div>
         <div class="st-card">
           <div class="st-card-head">
@@ -418,11 +426,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
 import * as echarts from 'echarts';
+import MapDrilldown from '../components/MapDrilldown.vue';
 const route = useRoute();
 
 // ===== 响应式数据 =====
@@ -460,9 +469,42 @@ const userRegion = reactive({
   totalIps: 0, todayIps: 0, weekIps: 0, coveredProvinces: 0,
   provinces: [], topProvince: null, overseasCount: 0, recentRecords: [],
 });
-const uaMapChart = ref(null);
+const mapDrillData = computed(() => ({ provinces: userRegion.provinces || [] }));
+const mapTheme = ref('gold');
+const themeOptions = [
+  { value: 'gold', label: '暖金渐变' },
+  { value: 'emerald', label: '翠绿渐变' },
+  { value: 'purple', label: '暮光紫韵' },
+  { value: 'sunset', label: '日落红霞' },
+  { value: 'ocean', label: '冰川蓝调' },
+  { value: 'warm', label: '经典暖棕' },
+  { value: 'cyber', label: '赛博绿紫' },
+];
 const uaBarChart = ref(null);
-let uaMapInstance = null, uaBarInstance = null;
+let uaBarInstance = null;
+
+const isAdmin = computed(() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin'; } catch { return false; }
+});
+const clearingLogs = ref(false);
+async function clearVisitorLogs() {
+  if (!confirm('确定要清除所有访客记录吗？此操作不可撤销。')) return;
+  clearingLogs.value = true;
+  try {
+    const res = await fetch('/api/v1/statistics/visitor-logs', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const json = await res.json();
+    if (json.code === 0) {
+      alert(`已清除 ${json.data.deletedCount} 条访客记录`);
+      fetchUserRegions();
+    } else {
+      alert(json.message || '清除失败');
+    }
+  } catch { alert('请求失败'); }
+  finally { clearingLogs.value = false; }
+}
 
 async function fetchUserRegions() {
   try {
@@ -472,54 +514,20 @@ async function fetchUserRegions() {
     const json = await res.json();
     if (json.data) {
       Object.assign(userRegion, json.data);
-      console.log('[用户分析] provinces=' + (json.data.provinces?.length || 0) + ' first=' + (json.data.provinces?.[0]?.name || 'none') + '=' + (json.data.provinces?.[0]?.value || 0));
-      nextTick(() => { drawUserCharts(); });
+      nextTick(() => { drawBarChart(); });
     }
   } catch { /* ignore */ }
 }
 
-async function drawUserCharts() {
-  const mapDom = uaMapChart.value;
+async function drawBarChart() {
   const barDom = uaBarChart.value;
-  if (!mapDom || !barDom) return;
-  const ready = await ensureEcharts();
-  if (!ready) return;
+  if (!barDom) return;
 
-  if (uaMapInstance) uaMapInstance.dispose();
   if (uaBarInstance) uaBarInstance.dispose();
 
   const provinces = userRegion.provinces || [];
-  if (provinces.length === 0) return; // 等后端返回数据再渲染
-  const maxVal = Math.max(...provinces.map(p => p.value), 1);
+  if (provinces.length === 0) return;
 
-  // 中国城市地图（GeoJSON 用 "合肥" 等短名，后端返回匹配）
-  uaMapInstance = echarts.init(mapDom);
-  uaMapInstance.setOption({
-    backgroundColor: 'transparent',
-    tooltip: { trigger: 'item', formatter: function(p) { return (p.name||'') + '<br/>访问IP：' + (p.value||0) + '个'; } },
-    visualMap: {
-      min: 0, max: maxVal, left: 8, bottom: 20,
-      text: ['高', '低'], calculable: true,
-      textStyle: { color: '#8B7355' },
-      inRange: { color: ['#bfdbfe', '#6b8fa3', '#8B7355', '#c9a84c', '#e6a23c'] },
-    },
-    geo: {
-      map: MAP_NAME, zoom: 1.2, center: [104.5, 36],
-      roam: true,
-      label: { show: false },
-      emphasis: {
-        label: { color: '#1A1A2E', fontSize: 11, fontWeight: 'bold', show: true },
-        itemStyle: { areaColor: '#f5e6c8' },
-      },
-    },
-    series: [{
-      name: 'IP数量', type: 'map', map: MAP_NAME, geoIndex: 0,
-      data: provinces.map(p => ({ name: p.name, value: p.value })),
-      itemStyle: { borderColor: '#d4c5c0', borderWidth: 1 },
-    }],
-  });
-
-  // TOP10 柱状图
   uaBarInstance = echarts.init(barDom);
   const top10 = [...provinces].sort((a, b) => b.value - a.value).slice(0, 10);
   uaBarInstance.setOption({
@@ -532,31 +540,7 @@ async function drawUserCharts() {
   });
 }
 
-let mapReady = false;
-let mapLoadPromise = null;
-const MAP_FILE = '/china_cities.json';
-const MAP_NAME = 'china';
-function ensureEcharts() {
-  if (mapReady) return Promise.resolve(true);
-  if (mapLoadPromise) return mapLoadPromise;
-  mapLoadPromise = fetch(MAP_FILE)
-    .then(r => r.json())
-    .then(geoJson => {
-      echarts.registerMap(MAP_NAME, geoJson);
-      mapReady = true;
-      // 地图加载完成后立即渲染（如果数据已就绪）
-      if (userRegion.provinces?.length) nextTick(() => drawUserCharts());
-      return true;
-    })
-    .catch((e) => {
-      console.error('[CityMap] 加载失败:', e);
-      return false;
-    });
-  return mapLoadPromise;
-}
-
 function onResize() {
-  if (uaMapInstance) uaMapInstance.resize();
   if (uaBarInstance) uaBarInstance.resize();
 }
 
@@ -1077,14 +1061,11 @@ onMounted(async () => {
   await refreshAll();
   window.addEventListener('resize', onResize);
   trackEvent('page_view');
-  // 预加载地图 GeoJSON
-  ensureEcharts();
 });
 
 onUnmounted(() => {
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
   window.removeEventListener('resize', onResize);
-  if (uaMapInstance) uaMapInstance.dispose();
   if (uaBarInstance) uaBarInstance.dispose();
 });
 </script>
@@ -1308,6 +1289,21 @@ onUnmounted(() => {
 .ua-table td { padding: 9px 12px; border-bottom: 1px solid var(--bg-300); color: var(--text-100); }
 .ua-table tbody tr:hover { background: var(--bg-100); }
 .ua-td-ip { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gold-dark); }
+
+.theme-select {
+  padding: 3px 8px; font-size: 11px; border: 1px solid var(--bg-300);
+  border-radius: 5px; background: var(--bg-200); color: var(--text-100);
+  cursor: pointer; outline: none; font-family: inherit;
+}
+.theme-select:focus { border-color: var(--gold); }
+
+.btn-clear-logs {
+  padding: 4px 12px; font-size: 11px; border: 1px solid rgba(196,69,69,0.3);
+  border-radius: 5px; background: rgba(196,69,69,0.06); color: #c44545;
+  cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.15s;
+}
+.btn-clear-logs:hover { background: rgba(196,69,69,0.12); border-color: #c44545; }
+.btn-clear-logs:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 768px) {
   .st-overview-cards { grid-template-columns: repeat(2, 1fr); }

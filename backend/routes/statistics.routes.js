@@ -8,6 +8,12 @@ const Script = require('../models/script.model');
 const Composition = require('../models/composition.model');
 const { authRequired } = require('../middleware/auth.middleware');
 router.use(authRequired);
+
+/** 简易管理员校验（authRequired 已在上方全局执行，此处仅检查角色） */
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: '需要管理员权限' });
+  next();
+}
 const Storyboard = require('../models/storyboard.model');
 const Analytics = require('../models/analytics.model');
 const LoginLog = require('../models/login-log.model');
@@ -412,6 +418,14 @@ router.get('/user-regions', async (req, res, next) => {
     }));
 
     res.json({ data: { totalIps: totalIps.length, todayIps: todayIpsArr.length, weekIps: weekIpsArr.length, coveredProvinces: cities.filter(c=>c.value>0).length, provinces: cities, topProvince: cities[0]||null, overseasCount: totalIps.filter(ip=>ip?.startsWith('8.8')||ip?.startsWith('1.1')).length, recentRecords: enriched }});
+  } catch (e) { next(e); }
+});
+
+// ===== 9. 清除访客记录（仅管理员） =====
+router.delete('/visitor-logs', requireAdmin, async (req, res, next) => {
+  try {
+    const result = await LoginLog.deleteMany({});
+    res.json({ code: 0, message: `已清除 ${result.deletedCount} 条访客记录`, data: { deletedCount: result.deletedCount } });
   } catch (e) { next(e); }
 });
 
