@@ -265,18 +265,26 @@
           <p class="st-card-sub">配置阿里云短信服务后，用户可通过手机号注册、短信登录和找回密码。留空则使用降级模式（验证码固定 888888）。</p>
           <div :class="['st-hint-card', smsCfg.enabled && smsCfg.accessKeyId ? 'st-hint-ok' : '']" style="margin-bottom:14px">
             <span v-if="!smsCfg.enabled">短信认证已关闭，登录/注册页面不显示短信入口</span>
-            <span v-else-if="!smsCfg.accessKeyId || !smsCfg._hasSecret">⚠️ 当前为降级模式：验证码固定 888888，短信不会真正发送。填写真实的 AccessKey 后自动切换为真实发送。</span>
+            <span v-else-if="!smsCfg.accessKeyId || !smsCfg._hasSecret">⚠️ 当前为降级模式：验证码固定 888888。填写真实的 AccessKey 后自动切换为真实发送。</span>
             <span v-else>✅ 短信服务已就绪，使用真实阿里云通道发送</span>
           </div>
           <div class="st-toggle-row" style="margin-bottom:14px"><div class="st-toggle-info"><span class="st-toggle-label">启用短信认证</span><span class="st-toggle-hint">开启后登录页显示「短信登录」入口，注册可绑定手机号</span></div><el-switch v-model="smsCfg.enabled" @change="saveSmsCfg(false)" /></div>
           <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="smsCfg.accessKeyId" size="small" style="width:320px" placeholder="阿里云 AccessKey ID" autocomplete="off" name="sms-ak-id" /></div>
           <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="smsCfg.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="smsCfg._hasSecret ? '已保存（留空不修改）' : '阿里云 AccessKey Secret'" autocomplete="new-password" name="sms-ak-secret" /></div>
-          <div class="st-field-row"><span class="st-field-label">短信签名</span><el-input v-model="smsCfg.signName" size="small" style="width:260px" placeholder="如 速通互联验证码" autocomplete="off" name="sms-sign" /></div>
           <div class="st-field-row">
-            <span class="st-field-label">短信模板<span class="st-field-help">选择阿里云内置模板</span></span>
-            <el-select v-model="smsCfg.templateCode" size="small" style="width:360px" filterable>
-              <el-option v-for="t in smsTemplates" :key="t.code" :label="t.code + ' — ' + t.desc" :value="t.code" />
+            <span class="st-field-label">短信签名<span class="st-field-help">预设或自定义</span></span>
+            <el-select v-model="smsCfg.signName" size="small" style="width:320px" filterable allow-create>
+              <el-option v-for="s in smsSignatures" :key="s" :label="s" :value="s" />
             </el-select>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bg-300)">
+            <span style="font-size:12px;font-weight:600;color:var(--text-100);margin-bottom:10px;display:block">各场景模板 CODE</span>
+            <div class="st-field-row" v-for="scene in smsSceneList" :key="scene.key">
+              <span class="st-field-label">{{ scene.label }}</span>
+              <el-select v-model="smsCfg.templateCodes[scene.key]" size="small" style="width:280px" filterable allow-create>
+                <el-option v-for="t in smsTemplates" :key="t.code" :label="t.code + ' — ' + t.scene ? '(' + t.scene + ') ' : '' + t.desc" :value="t.code" />
+              </el-select>
+            </div>
           </div>
           <div class="st-prov-actions">
             <el-button type="primary" size="small" @click="saveSmsCfg(true)" :loading="smsSaving">保存配置</el-button>
@@ -399,8 +407,16 @@ async function testTTS() { if (!ttsForm.apiKey) { ElMessage.warning('请先填�
 const isAdmin = computed(() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin'; } catch { return false; } });
 
 // ===== 短信配置（仅管理员） =====
-const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', _hasSecret: false, enabled: true });
+const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', templateCodes: { login: '100001', changePhone: '100002', resetPwd: '100003', bindPhone: '100004', verifyPhone: '100005' }, _hasSecret: false, enabled: true });
 const smsTemplates = ref([]);
+const smsSignatures = ref([]);
+const smsSceneList = [
+  { key: 'login', label: '登录/注册' },
+  { key: 'changePhone', label: '修改手机号' },
+  { key: 'resetPwd', label: '重置密码' },
+  { key: 'bindPhone', label: '绑定手机号' },
+  { key: 'verifyPhone', label: '验证手机号' },
+];
 const smsSaving = ref(false);
 const smsSaved = ref(false);
 const smsTesting = ref(false);
@@ -411,14 +427,15 @@ async function loadSmsCfg() {
   try {
     const r = await fetch('/api/v1/config/sms', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
     const d = await r.json();
-    if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; }
+    if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; if (!smsCfg.templateCodes || Object.keys(smsCfg.templateCodes).length === 0) smsCfg.templateCodes = { login: '100001', changePhone: '100002', resetPwd: '100003', bindPhone: '100004', verifyPhone: '100005' }; }
     if (d.templates) smsTemplates.value = d.templates;
+    if (d.signatures) smsSignatures.value = d.signatures;
   } catch {}
 }
 async function saveSmsCfg(showMsg = true) {
   smsSaving.value = true;
   try {
-    await fetch('/api/v1/config/sms', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ accessKeyId: smsCfg.accessKeyId, accessKeySecret: smsCfg.accessKeySecret, signName: smsCfg.signName, templateCode: smsCfg.templateCode, enabled: smsCfg.enabled }) });
+    await fetch('/api/v1/config/sms', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ accessKeyId: smsCfg.accessKeyId, accessKeySecret: smsCfg.accessKeySecret, signName: smsCfg.signName, templateCode: smsCfg.templateCode, templateCodes: smsCfg.templateCodes, enabled: smsCfg.enabled }) });
     if (showMsg) { smsSaved.value = true; setTimeout(() => smsSaved.value = false, 3000); ElMessage.success('短信配置已保存'); }
   } catch { ElMessage.error('保存失败'); }
   finally { smsSaving.value = false; }

@@ -153,7 +153,7 @@ let smsTimer = null;
 async function sendLoginSms() {
   smsSending.value = true;
   try {
-    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone }) });
+    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, scene: 'login' }) });
     const data = await res.json();
     if (res.ok) { ElMessage.success(data.message || '验证码已发送'); smsCountdown.value = 60; clearInterval(smsTimer); smsTimer = setInterval(() => { smsCountdown.value--; if (smsCountdown.value <= 0) clearInterval(smsTimer); }, 1000); }
     else ElMessage.error(data.message);
@@ -169,7 +169,7 @@ async function handleSmsLogin() {
     const vData = await vRes.json();
     if (!vRes.ok) { ElMessage.error(vData.message); loading.value = false; return; }
     // 短信码验证通过，查找绑定该手机的账号
-    const res = await fetch('/api/v1/auth/login-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone }) });
+    const res = await fetch('/api/v1/auth/login-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, scene: 'login' }) });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '登录失败'); loading.value = false; return; }
     localStorage.setItem('token', data.data.token);
@@ -190,7 +190,7 @@ const forgotForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: 
 async function sendForgotSms() {
   smsSending.value = true;
   try {
-    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: forgotForm.phone }) });
+    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: forgotForm.phone, scene: 'resetPwd' }) });
     const data = await res.json();
     if (res.ok) { ElMessage.success(data.message); smsCountdown.value = 60; clearInterval(smsTimer); smsTimer = setInterval(() => { smsCountdown.value--; if (smsCountdown.value <= 0) clearInterval(smsTimer); }, 1000); }
     else ElMessage.error(data.message);

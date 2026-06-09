@@ -543,15 +543,17 @@ router.get('/sms', authRequired, async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const cfg = settings.smsConfig || {};
-    const { BUILTIN_TEMPLATES } = require('../utils/sms');
+    const { BUILTIN_TEMPLATES, PRESET_SIGNATURES, SCENE_TEMPLATE_MAP } = require('../utils/sms');
     res.json({
       data: {
         ...cfg,
         _hasSecret: !!cfg.accessKeySecret,
         accessKeySecret: maskSmsSecret(cfg.accessKeySecret || ''),
         enabled: cfg.enabled !== false,
+        templateCodes: cfg.templateCodes || SCENE_TEMPLATE_MAP,
       },
       templates: BUILTIN_TEMPLATES,
+      signatures: PRESET_SIGNATURES,
     });
   } catch (e) { next(e); }
 });
@@ -561,11 +563,12 @@ router.put('/sms', authRequired, async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const cfg = { ...(settings.smsConfig || {}) };
-    const { accessKeyId, accessKeySecret, signName, templateCode, enabled } = req.body;
+    const { accessKeyId, accessKeySecret, signName, templateCode, templateCodes, enabled } = req.body;
     if (accessKeyId !== undefined) cfg.accessKeyId = accessKeyId;
     if (accessKeySecret !== undefined && accessKeySecret !== maskSmsSecret(cfg.accessKeySecret || '') && accessKeySecret.indexOf('****') === -1) cfg.accessKeySecret = accessKeySecret;
     if (signName !== undefined) cfg.signName = signName;
     if (templateCode !== undefined) cfg.templateCode = templateCode;
+    if (templateCodes !== undefined) cfg.templateCodes = templateCodes;
     if (typeof enabled === 'boolean') cfg.enabled = enabled;
     await Settings.updateSettings(req.user._id, { smsConfig: cfg });
     try { require('../utils/sms').reloadConfig(); } catch {}

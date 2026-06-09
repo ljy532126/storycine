@@ -336,12 +336,12 @@ router.put('/users/:id/reset-password', adminRequired, async (req, res) => {
 
 // ===== 短信验证码 =====
 
-// 发送短信验证码（无需登录）
+// 发送短信验证码（无需登录，scene 决定使用哪个模板）
 router.post('/sms/send', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, scene } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
-    const result = await sendSMS(phone);
+    const result = await sendSMS(phone, scene || 'login');
     if (result.ok) {
       res.json({ message: result.message, degraded: result.degraded || false });
     } else {
