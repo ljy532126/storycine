@@ -9,6 +9,10 @@
     "test": "node tests/api.test.js"
   },
   "dependencies": {
+    "@alicloud/credentials": "^2.4.4",
+    "@alicloud/dypnsapi20170525": "^2.0.0",
+    "@alicloud/openapi-client": "^0.4.15",
+    "@alicloud/tea-util": "^1.4.11",
     "@langchain/langgraph": "^0.0.25",
     "@langchain/openai": "^0.2.0",
     "@volcengine/speechsaasprod": "^1.0.1",

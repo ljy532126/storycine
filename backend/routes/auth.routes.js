@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const User = require('../models/user.model');
 const LoginLog = require('../models/login-log.model');
 const { generateToken, authRequired, adminRequired } = require('../middleware/auth.middleware');
+const { sendSMS, verifyCode: verifySmsCode } = require('../utils/sms');
 
 // 内存验证码存储（生产环境建议用 Redis）
 const captchaStore = new Map();
@@ -79,9 +80,7 @@ router.get('/captcha', captchaLimiter, (req, res) => {
 // ===== 注册 =====
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { username, password, captchaId, captchaText } = req.body;
-    const ip = getClientIp(req);
-    const ua = req.headers['user-agent'] || '';
+    const { username, password, phone, captchaId, captchaText } = req.body;
 
     // 验证码先校验（防止探测规则）
     const cap = captchaStore.get(captchaId);
@@ -97,8 +96,14 @@ router.post('/register', registerLimiter, async (req, res) => {
     const exists = await User.findOne({ username });
     if (exists) return res.status(400).json({ message: '该账号已被注册' });
 
+    // 手机号唯一性检查
+    if (phone) {
+      const phoneExists = await User.findOne({ phone });
+      if (phoneExists) return res.status(400).json({ message: '该手机号已被绑定' });
+    }
+
     const hashed = await bcrypt.hash(password, 12);
-    const user = await User.create({ username, password: hashed, lastLoginIp: ip });
+    const user = await User.create({ username, password: hashed, phone: phone || '', lastLoginIp: ip });
 
     // 注册时同步创建 settings 文档，避免后续 getSettings 竞态
     const Settings = require('../models/settings.model');
@@ -321,6 +326,84 @@ router.put('/users/:id/reset-password', adminRequired, async (req, res) => {
   user.lockedUntil = null;
   await user.save();
   res.json({ message: '密码已重置，用户需重新登录' });
+});
+
+// ===== 短信验证码 =====
+
+// 发送短信验证码（无需登录）
+router.post('/sms/send', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ message: '请输入手机号' });
+    const result = await sendSMS(phone);
+    if (result.ok) {
+      res.json({ message: result.message, degraded: result.degraded || false });
+    } else {
+      res.status(400).json({ message: result.message });
+    }
+  } catch (e) { res.status(500).json({ message: '发送失败' }); }
+});
+
+// 验证短信验证码（无需登录，不消耗验证码）
+router.post('/sms/verify', async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    const result = verifySmsCode(phone, code);
+    if (result.ok) {
+      // 验证通过但不消耗缓存，返回一个一次性 token 供后续修改密码使用
+      const smsToken = require('crypto').randomBytes(16).toString('hex');
+      const smsTokenStore = req.app.get('smsTokenStore') || new Map();
+      smsTokenStore.set(smsToken, { phone, expires: Date.now() + 10 * 60000 });
+      if (!req.app.get('smsTokenStore')) req.app.set('smsTokenStore', smsTokenStore);
+      res.json({ message: '验证通过', data: { smsToken } });
+    } else {
+      res.status(400).json({ message: result.message });
+    }
+  } catch (e) { res.status(500).json({ message: '验证失败' }); }
+});
+
+// 短信验证码找回/重置密码（无需登录）
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { phone, code, newPassword } = req.body;
+    if (!phone || !code || !newPassword) return res.status(400).json({ message: '手机号、验证码和新密码不能为空' });
+    if (newPassword.length < 8) return res.status(400).json({ message: '新密码至少8位' });
+
+    // 验证短信验证码
+    const verify = verifySmsCode(phone, code);
+    if (!verify.ok) return res.status(400).json({ message: verify.message });
+
+    // 查找绑定该手机号的用户
+    const user = await User.findOne({ phone });
+    if (!user) return res.status(404).json({ message: '该手机号未绑定任何账号' });
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.loginAttempts = 0;
+    user.lockedUntil = null;
+    await user.save();
+
+    res.json({ message: '密码已重置，请重新登录' });
+  } catch (e) { res.status(500).json({ message: '重置失败' }); }
+});
+
+// 绑定/修改手机号（需登录）
+router.put('/phone', authRequired, async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) return res.status(400).json({ message: '手机号和验证码不能为空' });
+
+    // 检查手机号是否已被其他人绑定
+    const existing = await User.findOne({ phone, _id: { $ne: req.user._id } });
+    if (existing) return res.status(400).json({ message: '该手机号已被其他账号绑定' });
+
+    const verify = verifySmsCode(phone, code);
+    if (!verify.ok) return res.status(400).json({ message: verify.message });
+
+    req.user.phone = phone;
+    await req.user.save();
+    res.json({ message: '手机号绑定成功' });
+  } catch (e) { res.status(500).json({ message: '绑定失败' }); }
 });
 
 module.exports = router;

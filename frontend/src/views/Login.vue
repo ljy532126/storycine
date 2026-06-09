@@ -40,6 +40,9 @@
         <el-button type="primary" @click="handleLogin" :loading="loading" style="width:100%">
           {{ loading ? '登录中...' : '登录' }}
         </el-button>
+        <div style="text-align:center;margin-top:12px">
+          <el-button type="info" link size="small" @click="smsVisible = true">忘记密码？短信找回</el-button>
+        </div>
       </el-form>
 
       <div class="auth-footer">
@@ -47,11 +50,50 @@
         <router-link to="/register">立即注册 →</router-link>
       </div>
     </div>
+
+    <!-- 短信找回密码弹窗 -->
+    <el-dialog v-model="smsVisible" title="短信找回密码" width="400px" destroy-on-close center>
+      <el-steps :active="smsStep" finish-status="success" align-center simple style="margin-bottom:24px">
+        <el-step title="验证身份" />
+        <el-step title="重置密码" />
+      </el-steps>
+
+      <!-- 步骤1：输入手机号 + 验证码 -->
+      <div v-if="smsStep === 0">
+        <div class="input-counter-wrap" style="margin-bottom:14px">
+          <el-input v-model="smsForm.phone" placeholder="输入绑定手机号" maxlength="11" size="large" />
+          <span v-if="smsForm.phone" class="input-counter">{{ smsForm.phone.length }}/11</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <div class="input-counter-wrap" style="flex:1">
+            <el-input v-model="smsForm.code" placeholder="短信验证码" maxlength="6" size="large" />
+            <span v-if="smsForm.code" class="input-counter">{{ smsForm.code.length }}/6</span>
+          </div>
+          <el-button @click="sendSmsCode" :loading="smsSending" :disabled="smsCountdown > 0 || !smsForm.phone" size="large" style="min-width:120px">
+            {{ smsCountdown > 0 ? smsCountdown + 's' : smsSending ? '发送中' : '获取验证码' }}
+          </el-button>
+        </div>
+        <el-button type="primary" @click="verifySmsCode" :loading="smsVerifying" :disabled="!smsForm.phone || !smsForm.code" style="width:100%" size="large">下一步</el-button>
+      </div>
+
+      <!-- 步骤2：设置新密码 -->
+      <div v-else>
+        <div class="input-counter-wrap" style="margin-bottom:14px">
+          <el-input v-model="smsForm.newPassword" type="password" show-password placeholder="新密码（至少8位）" maxlength="50" size="large" />
+          <span v-if="smsForm.newPassword" class="input-counter">{{ smsForm.newPassword.length }}/50</span>
+        </div>
+        <div class="input-counter-wrap" style="margin-bottom:14px">
+          <el-input v-model="smsForm.confirmPwd" type="password" show-password placeholder="确认新密码" maxlength="50" size="large" />
+          <span v-if="smsForm.confirmPwd" class="input-counter">{{ smsForm.confirmPwd.length }}/50</span>
+        </div>
+        <el-button type="primary" @click="resetPasswordBySms" :loading="smsResetting" :disabled="!smsForm.newPassword || smsForm.newPassword !== smsForm.confirmPwd" style="width:100%" size="large">重置密码</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
@@ -105,6 +147,54 @@ async function handleLogin() {
   } catch (e) { ElMessage.error('网络错误'); }
   finally { loading.value = false; }
 }
+
+// ===== 短信找回密码 =====
+const smsVisible = ref(false);
+const smsStep = ref(0);
+const smsSending = ref(false);
+const smsCountdown = ref(0);
+const smsVerifying = ref(false);
+const smsResetting = ref(false);
+const smsForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: '' });
+let smsTimer = null;
+
+async function sendSmsCode() {
+  if (smsCountdown.value > 0) return;
+  smsSending.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone }) });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success(data.message || '验证码已发送'); smsCountdown.value = 60; smsTimer = setInterval(() => { smsCountdown.value--; if (smsCountdown.value <= 0) clearInterval(smsTimer); }, 1000); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('发送失败'); }
+  finally { smsSending.value = false; }
+}
+
+async function verifySmsCode() {
+  smsVerifying.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, code: smsForm.code }) });
+    const data = await res.json();
+    if (res.ok) { smsStep.value = 1; ElMessage.success('验证通过'); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('验证失败'); }
+  finally { smsVerifying.value = false; }
+}
+
+async function resetPasswordBySms() {
+  if (!smsForm.newPassword || smsForm.newPassword.length < 8) { ElMessage.warning('密码至少8位'); return; }
+  if (smsForm.newPassword !== smsForm.confirmPwd) { ElMessage.warning('两次密码不一致'); return; }
+  smsResetting.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, code: smsForm.code, newPassword: smsForm.newPassword }) });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success('密码已重置，请重新登录'); smsVisible.value = false; smsStep.value = 0; smsForm.phone = ''; smsForm.code = ''; smsForm.newPassword = ''; smsForm.confirmPwd = ''; }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('重置失败'); }
+  finally { smsResetting.value = false; }
+}
+
+onUnmounted(() => { if (smsTimer) clearInterval(smsTimer); });
 </script>
 
 <style scoped>

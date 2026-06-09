@@ -28,6 +28,12 @@
             <span v-if="form.confirmPwd" class="input-counter">{{ form.confirmPwd.length }}/50</span>
           </div>
         </el-form-item>
+        <el-form-item label="手机号（选填，用于密码找回）" prop="phone">
+          <div class="input-counter-wrap">
+            <el-input v-model="form.phone" placeholder="绑定手机号" maxlength="11" />
+            <span v-if="form.phone" class="input-counter">{{ form.phone.length }}/11</span>
+          </div>
+        </el-form-item>
         <el-form-item label="验证码" prop="captchaText">
           <div class="captcha-row">
             <div class="input-counter-wrap" style="flex:1">
@@ -69,7 +75,7 @@ async function refreshCaptcha() {
   } catch {}
 }
 
-const form = reactive({ username: '', password: '', confirmPwd: '', captchaText: '', captchaId: '' });
+const form = reactive({ username: '', password: '', confirmPwd: '', phone: '', captchaText: '', captchaId: '' });
 
 const validateConfirm = (rule, value, cb) => {
   if (value !== form.password) cb(new Error('两次密码不一致'));
@@ -89,7 +95,7 @@ async function handleRegister() {
   try {
     const res = await fetch('/api/v1/auth/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: form.username, password: form.password, captchaId: form.captchaId, captchaText: form.captchaText }),
+      body: JSON.stringify({ username: form.username, password: form.password, phone: form.phone, captchaId: form.captchaId, captchaText: form.captchaText }),
     });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message); refreshCaptcha(); return; }
