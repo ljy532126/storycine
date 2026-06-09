@@ -258,6 +258,20 @@
             <el-button class="pf-btn pf-btn-primary" @click="changePwd" :loading="changingPwd"><CheckOne theme="outline" size="16" fill="currentColor" /> 更新密码</el-button>
           </el-form>
         </div>
+
+        <!-- 短信配置（仅管理员） -->
+        <div class="st-card pf-card-sms" v-if="isAdmin">
+          <h3 class="st-card-title"><MessageEmoji theme="outline" size="17" fill="var(--gold)" /> 短信服务配置</h3>
+          <p class="st-card-sub">配置阿里云短信服务后，用户可通过手机号找回密码。留空则使用降级模式（验证码固定 888888）。</p>
+          <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="smsCfg.accessKeyId" size="small" style="width:320px" placeholder="阿里云 AccessKey ID" /></div>
+          <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="smsCfg.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="smsCfg._hasSecret ? '已保存（留空不修改）' : '阿里云 AccessKey Secret'" /></div>
+          <div class="st-field-row"><span class="st-field-label">短信签名</span><el-input v-model="smsCfg.signName" size="small" style="width:260px" placeholder="如 StoryCine" /></div>
+          <div class="st-field-row"><span class="st-field-label">模板 CODE</span><el-input v-model="smsCfg.templateCode" size="small" style="width:260px" placeholder="如 SMS_123456789" /></div>
+          <div class="st-prov-actions">
+            <el-button type="primary" size="small" @click="saveSmsCfg" :loading="smsSaving">保存配置</el-button>
+            <span v-if="smsSaved" style="color:#67c23a;font-size:12px;margin-left:8px">✓ 已保存</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -267,7 +281,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Refresh } from '@element-plus/icons-vue';
-import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield, DocDetail, User, CheckOne, Lock, IdCard, EditTwo } from '@icon-park/vue-next';
+import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield, DocDetail, User, CheckOne, Lock, IdCard, EditTwo, MessageEmoji } from '@icon-park/vue-next';
 import { useRoute } from 'vue-router';
 import { configAPI } from '../api';
 
@@ -371,7 +385,16 @@ async function testTTS() { if (!ttsForm.apiKey) { ElMessage.warning('请先填�
 // ===== 管理员 =====
 const isAdmin = computed(() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin'; } catch { return false; } });
 
-watch(() => settingsTab.value, v => { if (v === 'profile') loadProfileData(); });
+// ===== 短信配置（仅管理员） =====
+const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', _hasSecret: false });
+const smsSaving = ref(false);
+const smsSaved = ref(false);
+const tokenHdr2 = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+async function loadSmsCfg() { try { const r = await fetch('/api/v1/config/sms', { headers: tokenHdr2() }); const d = await r.json(); if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; } } catch {} }
+async function saveSmsCfg() { smsSaving.value = true; try { await fetch('/api/v1/config/sms', { method: 'PUT', headers: tokenHdr2(), body: JSON.stringify({ ...smsCfg }) }); smsSaved.value = true; setTimeout(() => smsSaved.value = false, 3000); ElMessage.success('短信配置已保存'); } catch { ElMessage.error('保存失败'); } finally { smsSaving.value = false; } }
+
+watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); } });
 watch(() => route.path, p => { if (p === '/settings') refreshStatus(); });
 
 onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin.value) loadStorCfg(); } });

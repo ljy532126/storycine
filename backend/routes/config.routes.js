@@ -536,4 +536,37 @@ router.get('/llm/usage', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ===== 短信服务配置（仅管理员） =====
+
+router.get('/sms', authRequired, async (req, res, next) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: '仅管理员可操作' });
+  try {
+    const settings = await Settings.getSettings(req.user._id);
+    const cfg = settings.smsConfig || {};
+    res.json({ data: { ...cfg, _hasSecret: !!cfg.accessKeySecret, accessKeySecret: maskSmsSecret(cfg.accessKeySecret || '') } });
+  } catch (e) { next(e); }
+});
+
+router.put('/sms', authRequired, async (req, res, next) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: '仅管理员可操作' });
+  try {
+    const settings = await Settings.getSettings(req.user._id);
+    const cfg = { ...(settings.smsConfig || {}) };
+    const { accessKeyId, accessKeySecret, signName, templateCode } = req.body;
+    if (accessKeyId !== undefined) cfg.accessKeyId = accessKeyId;
+    if (accessKeySecret !== undefined && accessKeySecret !== maskSmsSecret(cfg.accessKeySecret || '') && accessKeySecret.indexOf('****') === -1) cfg.accessKeySecret = accessKeySecret;
+    if (signName !== undefined) cfg.signName = signName;
+    if (templateCode !== undefined) cfg.templateCode = templateCode;
+    await Settings.updateSettings(req.user._id, { smsConfig: cfg });
+    // 重新加载 sms 模块的凭证
+    try { require('../utils/sms').reloadConfig(); } catch {}
+    res.json({ message: '短信配置已保存', data: { ...cfg, accessKeySecret: maskSmsSecret(cfg.accessKeySecret || '') } });
+  } catch (e) { next(e); }
+});
+
+function maskSmsSecret(s) {
+  if (!s || s.length <= 8) return '';
+  return s.substring(0, 4) + '****' + s.substring(s.length - 4);
+}
+
 module.exports = router;
