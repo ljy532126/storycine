@@ -15,11 +15,11 @@ let _lastLoad = 0;
 
 /** 常用阿里云模板 */
 const BUILTIN_TEMPLATES = [
-  { code: '100001', desc: '通用验证码 — 您的验证码是：${code}' },
-  { code: '100002', desc: '登录确认 — 验证码${code}，您正在登录，${min}分钟内有效' },
-  { code: '100003', desc: '注册验证 — 验证码${code}，您正在注册，${min}分钟内有效' },
-  { code: '100004', desc: '修改密码 — 验证码${code}，您正尝试修改密码，${min}分钟内有效' },
-  { code: '100005', desc: '绑定手机 — 验证码${code}，您正在绑定手机号，${min}分钟内有效' },
+  { code: '100001', desc: '登录/注册 — 验证码${code}，${min}分钟内有效' },
+  { code: '100002', desc: '修改绑定手机号 — 验证码${code}，${min}分钟内有效' },
+  { code: '100003', desc: '重置密码 — 验证码${code}，${min}分钟内有效' },
+  { code: '100004', desc: '绑定新手机号 — 验证码${code}，${min}分钟内有效' },
+  { code: '100005', desc: '验证绑定手机号 — 验证码${code}，${min}分钟内有效' },
 ];
 
 async function loadConfig() {
