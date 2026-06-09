@@ -424,6 +424,7 @@ async function saveSmsCfg(showMsg = true) {
   finally { smsSaving.value = false; }
 }
 async function testSms() {
+  if (smsTesting.value) return; // 防重复点击
   smsTesting.value = true; smsTestStatus.value = ''; smsTestMsg.value = '测试中...';
   try {
     const r = await fetch('/api/v1/config/sms/test', {

@@ -601,6 +601,8 @@ router.post('/sms/test', authRequired, async (req, res, next) => {
     const msg = e.message || '';
     if (msg.includes('InvalidAccessKeyId') || msg.includes('Specified access key is not found')) return res.json({ ok: false, message: 'AccessKey ID 无效' });
     if (msg.includes('SignatureDoesNotMatch') || msg.includes('secret')) return res.json({ ok: false, message: 'AccessKey Secret 错误' });
+    if (msg.includes('frequency')) return res.json({ ok: true, message: 'AccessKey 验证通过（请求过于频繁，请稍后再试）' });
+    if (msg.includes('balance') || msg.includes('insufficient')) return res.json({ ok: true, message: 'AccessKey 验证通过（账户余额不足，请充值）' });
     return res.json({ ok: false, message: '连接失败: ' + msg.substring(0, 100) });
   }
 });
