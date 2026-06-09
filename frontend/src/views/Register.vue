@@ -28,7 +28,7 @@
             <span v-if="form.confirmPwd" class="input-counter">{{ form.confirmPwd.length }}/50</span>
           </div>
         </el-form-item>
-        <el-form-item label="手机号（用于短信登录和找回密码）">
+        <el-form-item v-if="smsEnabled" label="手机号（用于短信登录和找回密码）">
           <div class="input-counter-wrap">
             <el-input v-model="form.phone" placeholder="输入手机号" maxlength="11" />
             <span v-if="form.phone" class="input-counter">{{ form.phone.length }}/11</span>
@@ -55,7 +55,12 @@ import { ElMessage } from 'element-plus';
 const router = useRouter();
 const loading = ref(false);
 const formRef = ref(null);
+const smsEnabled = ref(false);
 const form = reactive({ username: '', password: '', confirmPwd: '', phone: '' });
+
+onMounted(async () => {
+  try { const r = await fetch('/api/v1/auth/sms/status'); const d = await r.json(); smsEnabled.value = d.data?.enabled || false; } catch {}
+});
 
 const rules = {
   username: [{ required: true, message: '请输入账号', trigger: 'blur' }],

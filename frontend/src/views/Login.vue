@@ -10,7 +10,7 @@
       <h2>登录</h2>
 
       <!-- 切换模式 -->
-      <div class="auth-mode-tabs">
+      <div class="auth-mode-tabs" v-if="smsEnabled">
         <span :class="{ active: loginMode === 'password' }" @click="loginMode = 'password'">密码登录</span>
         <span :class="{ active: loginMode === 'sms' }" @click="loginMode = 'sms'">短信登录</span>
       </div>
@@ -62,7 +62,7 @@
         <router-link to="/register">立即注册 →</router-link>
       </div>
       <div style="text-align:center;margin-top:8px">
-        <el-button type="info" link size="small" @click="smsVisible = true">忘记密码？短信找回</el-button>
+        <el-button v-if="smsEnabled" type="info" link size="small" @click="smsVisible = true">忘记密码？短信找回</el-button>
       </div>
     </div>
 
@@ -113,6 +113,7 @@ const loading = ref(false);
 const rememberMe = ref(false);
 const formRef = ref(null);
 const loginMode = ref('password');
+const smsEnabled = ref(false);
 const form = reactive({ username: '', password: '' });
 
 const rules = {
@@ -120,9 +121,10 @@ const rules = {
   password: [{ required: true, min: 6, message: '密码至少6位', trigger: 'blur' }],
 };
 
-onMounted(() => {
+onMounted(async () => {
   const reason = sessionStorage.getItem('logout_reason');
   if (reason) { sessionStorage.removeItem('logout_reason'); ElMessage.warning(reason); }
+  try { const r = await fetch('/api/v1/auth/sms/status'); const d = await r.json(); smsEnabled.value = d.data?.enabled || false; } catch {}
 });
 
 // 密码登录

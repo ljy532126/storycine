@@ -164,6 +164,9 @@ router.post('/login', loginLimiter, async (req, res) => {
 // ===== 短信验证码登录 =====
 router.post('/login-sms', async (req, res) => {
   try {
+    const { smsEnabled } = require('../utils/sms');
+    if (!(await smsEnabled())) return res.status(403).json({ message: '短信认证服务未开启' });
+
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
 
@@ -407,6 +410,15 @@ router.put('/phone', authRequired, async (req, res) => {
     await req.user.save();
     res.json({ message: '手机号绑定成功' });
   } catch (e) { res.status(500).json({ message: '绑定失败' }); }
+});
+
+// ===== 获取短信服务状态（公开，供前端判断是否显示短信入口） =====
+router.get('/sms/status', async (req, res) => {
+  try {
+    const { smsEnabled } = require('../utils/sms');
+    const enabled = await smsEnabled();
+    res.json({ data: { enabled } });
+  } catch { res.json({ data: { enabled: false } }); }
 });
 
 module.exports = router;
