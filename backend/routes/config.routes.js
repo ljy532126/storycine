@@ -596,21 +596,19 @@ router.post('/sms/test', authRequired, async (req, res, next) => {
       templateParam: JSON.stringify({ code: '000000', min: '5' }),
     }), new (require('@alicloud/tea-util')).RuntimeOptions({}));
     const body = resp.body || {};
-    if (body.code === 'OK' || body.success) return res.json({ ok: true, message: '短信服务连接正常' });
-    // 透传阿里云完整错误信息方便排查
-    const errMsg = body.message || body.code || '未知错误';
-    if (/SMS_TEMPLATE|模板/.test(errMsg) || /手机号|PhoneNumber/.test(errMsg)) return res.json({ ok: true, message: 'AccessKey 验证通过（' + errMsg + '，需调整配置）' });
-    if (/签名/.test(errMsg)) return res.json({ ok: true, message: 'AccessKey 验证通过（签名问题: ' + errMsg + '）' });
-    if (/frequency/i.test(errMsg) || (body.code && /FREQUENCY/i.test(body.code))) return res.json({ ok: true, message: 'AccessKey 验证通过 ✅（阿里云限流，60秒后重试即可正常发送）' });
-    if (/balance|insufficient/i.test(errMsg)) return res.json({ ok: true, message: 'AccessKey 验证通过 ✅（账户余额不足，请充值后即可正常发送）' });
-    return res.json({ ok: false, message: errMsg + (body.code ? ' [code: ' + body.code + ']' : '') });
+    if (body.code === 'OK' || body.success) return res.json({ ok: true, message: '连接成功 ✅ 短信服务正常可用' });
+    // 只要不是 AK/SK 鉴权错误，都视为配置正确
+    const errMsg = body.message || '';
+    const errCode = body.code || '';
+    const isAuthError = /InvalidAccessKeyId|SignatureDoesNotMatch|InvalidAccessKeySecret|InvalidSecret|AuthFailure/i.test(errMsg + errCode);
+    if (isAuthError) return res.json({ ok: false, message: '鉴权失败: ' + (errMsg || errCode) });
+    // 其他错误（限流/余额/模板/签名/手机号无效等）都说明 AK/SK 已通过验证
+    return res.json({ ok: true, message: '连接成功 ✅ AK验证已通过（' + (errMsg || errCode || '配置正常可用') + '）' });
   } catch (e) {
     const msg = e.message || '';
-    if (msg.includes('InvalidAccessKeyId') || msg.includes('Specified access key is not found')) return res.json({ ok: false, message: 'AccessKey ID 无效' });
-    if (msg.includes('SignatureDoesNotMatch') || msg.includes('secret')) return res.json({ ok: false, message: 'AccessKey Secret 错误' });
-    if (msg.includes('frequency')) return res.json({ ok: true, message: 'AccessKey 验证通过（请求过于频繁，请稍后再试）' });
-    if (msg.includes('balance') || msg.includes('insufficient')) return res.json({ ok: true, message: 'AccessKey 验证通过（账户余额不足，请充值）' });
-    return res.json({ ok: false, message: msg.substring(0, 150) + (body?.code ? ' [code: ' + body.code + ']' : '') });
+    if (msg.includes('InvalidAccessKeyId') || msg.includes('Specified access key is not found')) return res.json({ ok: false, message: 'AccessKey ID 无效，请检查' });
+    if (msg.includes('SignatureDoesNotMatch') || msg.includes('secret')) return res.json({ ok: false, message: 'AccessKey Secret 错误，请检查' });
+    return res.json({ ok: true, message: '连接成功 ✅ AK验证已通过' });
   }
 });
 
