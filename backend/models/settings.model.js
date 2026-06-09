@@ -43,6 +43,13 @@ const settingsSchema = new mongoose.Schema({
     configured: { type: Boolean, default: false },
   },
   aiConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
+  smsConfig: {
+    enabled: { type: Boolean, default: true },
+    accessKeyId: { type: String, default: '' },
+    accessKeySecret: { type: String, default: '' },
+    signName: { type: String, default: '' },
+    templateCode: { type: String, default: '' },
+  },
   storageConfig: {
     enabled: { type: Boolean, default: false },
     provider: { type: String, default: 'minio', enum: ['aliyun_oss', 'tencent_cos', 'minio'] },
