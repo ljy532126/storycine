@@ -257,11 +257,11 @@
               <div class="pf-edit-val">
                 <div v-if="!profileUser.phone" class="pf-phone-bind">
                   <div class="pf-phone-fields">
-                    <div class="input-counter-wrap" style="flex:1.5"><el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" /><span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span></div>
+                    <div class="input-counter-wrap" style="flex:1"><el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" /><span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span></div>
                     <div class="input-counter-wrap" style="flex:1"><el-input v-model="phoneBindForm.code" placeholder="验证码" maxlength="6" /><span v-if="phoneBindForm.code" class="input-counter">{{ phoneBindForm.code.length }}/6</span></div>
                     <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
                   </div>
-                  <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" size="small">确认绑定</el-button>
+                  <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" size="small" style="margin-top:4px">确认绑定</el-button>
                 </div>
                 <div v-else class="pf-edit-val-bound">
                   <span>{{ maskPhone(profileUser.phone) }}</span>
@@ -591,7 +591,7 @@ async function testSms() {
 }
 
 watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); fetchSmsStatus(); } });
-watch(() => route.path, p => { if (p === '/settings') { refreshStatus(); loadProfileData(); } });
+watch(() => route.path, p => { if (p === '/settings') { refreshStatus(); loadProfileData(); fetchSmsStatus(); if (typeof isAdmin !== 'undefined' && isAdmin.value) loadSmsCfg(); } });
 
 onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); fetchSmsStatus(); if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin.value) loadStorCfg(); } });
 </script>
@@ -730,7 +730,8 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
 .pf-edit-val { flex: 1; min-width: 0; }
 .pf-edit-val-bound { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-100); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-100); }
 .pf-phone-bind { display: flex; flex-direction: column; gap: 8px; }
-.pf-phone-fields { display: flex; gap: 8px; align-items: flex-start; }
+.pf-phone-field { flex: 1; min-width: 0; }
+.pf-phone-actions { display: flex; gap: 8px; align-items: center; }
 .pf-phone-bound { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-100); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-100); }
 .pf-btn-save { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--bg-300); background: var(--bg-100); color: var(--text-100); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .pf-btn-save:hover { border-color: var(--gold); color: var(--gold-dark); background: var(--bg-200); transform: translateY(-1px); }
