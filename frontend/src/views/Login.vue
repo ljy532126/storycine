@@ -39,20 +39,8 @@
 
       <!-- 短信登录 -->
       <div v-else>
-        <div class="input-counter-wrap" style="margin-bottom:16px">
-          <el-input v-model="smsForm.phone" placeholder="输入手机号" maxlength="11" size="large" />
-          <span v-if="smsForm.phone" class="input-counter">{{ smsForm.phone.length }}/11</span>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:16px">
-          <div class="input-counter-wrap" style="flex:1">
-            <el-input v-model="smsForm.code" placeholder="短信验证码" maxlength="6" size="large" />
-            <span v-if="smsForm.code" class="input-counter">{{ smsForm.code.length }}/6</span>
-          </div>
-          <el-button @click="sendLoginSms" :loading="smsSending" :disabled="smsCountdown > 0 || !smsForm.phone" size="large" style="min-width:130px">
-            {{ smsCountdown > 0 ? smsCountdown + 's' : smsSending ? '发送中' : '获取验证码' }}
-          </el-button>
-        </div>
-        <el-button type="primary" @click="handleSmsLogin" :loading="loading" :disabled="!smsForm.phone || !smsForm.code" style="width:100%" size="large">
+        <SmsCodeInput v-model:phone="smsForm.phone" v-model:code="smsForm.code" scene="login" code-width="130px" />
+        <el-button type="primary" @click="handleSmsLogin" :loading="loading" :disabled="!smsForm.phone || !smsForm.code" style="width:100%;margin-top:12px" size="large">
           {{ loading ? '登录中...' : '短信登录' }}
         </el-button>
       </div>
@@ -73,20 +61,8 @@
         <el-step title="重置密码" />
       </el-steps>
       <div v-if="smsStep === 0">
-        <div class="input-counter-wrap" style="margin-bottom:14px">
-          <el-input v-model="forgotForm.phone" placeholder="输入绑定手机号" maxlength="11" size="large" />
-          <span v-if="forgotForm.phone" class="input-counter">{{ forgotForm.phone.length }}/11</span>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:14px">
-          <div class="input-counter-wrap" style="flex:1">
-            <el-input v-model="forgotForm.code" placeholder="短信验证码" maxlength="6" size="large" />
-            <span v-if="forgotForm.code" class="input-counter">{{ forgotForm.code.length }}/6</span>
-          </div>
-          <el-button @click="sendForgotSms" :loading="smsSending" :disabled="smsCountdown > 0 || !forgotForm.phone" size="large" style="min-width:120px">
-            {{ smsCountdown > 0 ? smsCountdown + 's' : smsSending ? '发送中' : '获取验证码' }}
-          </el-button>
-        </div>
-        <el-button type="primary" @click="verifyForgotCode" :loading="smsVerifying" :disabled="!forgotForm.phone || !forgotForm.code" style="width:100%" size="large">下一步</el-button>
+        <SmsCodeInput v-model:phone="forgotForm.phone" v-model:code="forgotForm.code" scene="resetPwd" code-width="130px" />
+        <el-button type="primary" @click="verifyForgotCode" :loading="smsVerifying" :disabled="!forgotForm.phone || !forgotForm.code" style="width:100%;margin-top:12px" size="large">下一步</el-button>
       </div>
       <div v-else>
         <div class="input-counter-wrap" style="margin-bottom:14px">
@@ -104,9 +80,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import SmsCodeInput from '../components/SmsCodeInput.vue';
 
 const router = useRouter();
 const loading = ref(false);
@@ -146,30 +123,14 @@ async function handleLogin() {
 
 // 短信登录
 const smsForm = reactive({ phone: '', code: '' });
-const smsSending = ref(false);
-const smsCountdown = ref(0);
-let smsTimer = null;
-
-async function sendLoginSms() {
-  smsSending.value = true;
-  try {
-    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, scene: 'login' }) });
-    const data = await res.json();
-    if (res.ok) { ElMessage.success(data.message || '验证码已发送'); smsCountdown.value = 60; clearInterval(smsTimer); smsTimer = setInterval(() => { smsCountdown.value--; if (smsCountdown.value <= 0) clearInterval(smsTimer); }, 1000); }
-    else ElMessage.error(data.message);
-  } catch { ElMessage.error('发送失败'); }
-  finally { smsSending.value = false; }
-}
 
 async function handleSmsLogin() {
   loading.value = true;
   try {
-    // 先验证短信码
     const vRes = await fetch('/api/v1/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, code: smsForm.code }) });
     const vData = await vRes.json();
     if (!vRes.ok) { ElMessage.error(vData.message); loading.value = false; return; }
-    // 短信码验证通过，查找绑定该手机的账号
-    const res = await fetch('/api/v1/auth/login-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, scene: 'login' }) });
+    const res = await fetch('/api/v1/auth/login-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone }) });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '登录失败'); loading.value = false; return; }
     localStorage.setItem('token', data.data.token);
@@ -186,17 +147,6 @@ const smsStep = ref(0);
 const smsVerifying = ref(false);
 const smsResetting = ref(false);
 const forgotForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: '' });
-
-async function sendForgotSms() {
-  smsSending.value = true;
-  try {
-    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: forgotForm.phone, scene: 'resetPwd' }) });
-    const data = await res.json();
-    if (res.ok) { ElMessage.success(data.message); smsCountdown.value = 60; clearInterval(smsTimer); smsTimer = setInterval(() => { smsCountdown.value--; if (smsCountdown.value <= 0) clearInterval(smsTimer); }, 1000); }
-    else ElMessage.error(data.message);
-  } catch { ElMessage.error('发送失败'); }
-  finally { smsSending.value = false; }
-}
 
 async function verifyForgotCode() {
   smsVerifying.value = true;
@@ -221,8 +171,6 @@ async function resetPasswordBySms() {
   } catch { ElMessage.error('重置失败'); }
   finally { smsResetting.value = false; }
 }
-
-onUnmounted(() => { if (smsTimer) clearInterval(smsTimer); });
 </script>
 
 <style scoped>
