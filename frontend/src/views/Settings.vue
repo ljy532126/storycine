@@ -247,22 +247,24 @@
             </div>
           </div>
           <div class="st-field" v-if="smsEnabled">
-            <label class="st-field-label">手机号</label>
-            <div style="display:flex;gap:8px;align-items:center" v-if="!profileUser.phone">
-              <div class="input-counter-wrap" style="flex:1">
-                <el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" />
-                <span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span>
+            <label class="st-field-label">绑定手机号<span class="st-field-help" v-if="!profileUser.phone">需要短信验证</span></label>
+            <div v-if="!profileUser.phone">
+              <div class="pf-phone-row">
+                <div class="input-counter-wrap" style="width:180px">
+                  <el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" />
+                  <span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span>
+                </div>
+                <div class="input-counter-wrap" style="width:140px">
+                  <el-input v-model="phoneBindForm.code" placeholder="验证码" maxlength="6" />
+                  <span v-if="phoneBindForm.code" class="input-counter">{{ phoneBindForm.code.length }}/6</span>
+                </div>
+                <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone" style="min-width:110px">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
               </div>
-              <div class="input-counter-wrap" style="flex:1">
-                <el-input v-model="phoneBindForm.code" placeholder="验证码" maxlength="6" />
-                <span v-if="phoneBindForm.code" class="input-counter">{{ phoneBindForm.code.length }}/6</span>
-              </div>
-              <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone" size="default" style="min-width:110px">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
-              <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" size="default">绑定</el-button>
+              <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" style="margin-top:8px">确认绑定</el-button>
             </div>
-            <div v-else style="display:flex;align-items:center;gap:8px">
-              <el-input :model-value="profileUser.phone" disabled style="flex:1" />
-              <el-tag type="success" size="default">已绑定</el-tag>
+            <div v-else class="pf-phone-bound">
+              <span>{{ maskPhone(profileUser.phone) }}</span>
+              <el-tag type="success" size="small">已绑定</el-tag>
             </div>
           </div>
           <el-button class="pf-btn" @click="saveProfile" :loading="savingProfile"><CheckOne theme="outline" size="16" fill="currentColor" /> 保存资料</el-button>
@@ -693,6 +695,10 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
 .pf-btn:hover { border-color: var(--gold); color: var(--gold-dark); background: var(--bg-200); transform: translateY(-1px); }
 .pf-btn-primary { background: var(--gold); border-color: var(--gold); color: var(--navy); }
 .pf-btn-primary:hover { background: var(--gold-dark); border-color: var(--gold-dark); color: #fff; }
+
+/* 手机绑定区域 */
+.pf-phone-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
+.pf-phone-bound { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-100); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-100); }
 
 @media (max-width: 700px) {
   .pf-layout { grid-template-columns: 1fr; max-width: 100%; }
