@@ -229,7 +229,7 @@
           <h3 class="st-card-title"><IdCard theme="outline" size="17" fill="var(--gold)" /> 账号详情</h3>
           <div class="pf-detail-grid">
             <div class="pf-detail-item"><span class="pf-detail-label">用户 ID</span><span class="pf-detail-val pf-uid" @click="copyUid">{{ profileUser.uid || '-' }}<span v-if="copiedUid" class="pf-copied">✓ 已复制</span></span></div>
-            <div class="pf-detail-item"><span class="pf-detail-label">绑定手机</span><span class="pf-detail-val">{{ profileUser.phone || '未绑定' }}</span></div>
+            <div class="pf-detail-item"><span class="pf-detail-label">绑定手机</span><span class="pf-detail-val">{{ maskPhone(profileUser.phone) }}<span v-if="profileUser.phone" style="margin-left:6px;cursor:pointer;font-size:11px;color:var(--gold);user-select:none;font-weight:400" @click="showFullPhone = !showFullPhone">{{ showFullPhone ? '隐藏' : '👁' }}</span><span v-if="showFullPhone && profileUser.phone" style="font-size:10px;color:var(--gold);margin-left:6px;font-weight:600">{{ profileUser.phone }}</span></span></div>
             <div class="pf-detail-item"><span class="pf-detail-label">注册时间</span><span class="pf-detail-val">{{ fmt(profileUser.createdAt) }}</span></div>
             <div class="pf-detail-item"><span class="pf-detail-label">最后登录 IP</span><span class="pf-detail-val">{{ profileUser.lastLoginIp || '-' }}</span></div>
           </div>
@@ -338,7 +338,9 @@ async function loadChangelog() { try { const res = await fetch('/changelog.json'
 // ===== 个人中心 =====
 const profileUser = reactive({ username: '', nickname: '', avatar: '', uid: '', role: '', phone: '', createdAt: '', lastLoginAt: '', lastLoginIp: '' });
 const profileForm = reactive({ nickname: '', avatar: '' });
-const savingProfile = ref(false); const changingPwd = ref(false); const copiedUid = ref(false); const fileInput = ref(null); const pwdForm = ref(null);
+const savingProfile = ref(false); const changingPwd = ref(false); const copiedUid = ref(false); const showFullPhone = ref(false); const fileInput = ref(null); const pwdForm = ref(null);
+
+function maskPhone(p) { if (!p) return '未绑定'; return p.substring(0, 3) + '****' + p.substring(7); }
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPwd: '' });
 const pwdRules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],

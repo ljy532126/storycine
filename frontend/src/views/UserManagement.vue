@@ -67,6 +67,11 @@
             </template>
             <span v-if="u.lastLoginIp" class="um-sep">·</span>
             <span v-if="u.lastLoginIp">IP: <code>{{ u.lastLoginIp }}</code></span>
+            <span v-if="u.phone" class="um-sep">·</span>
+            <span v-if="u.phone" style="font-size:12px;color:var(--text-200)">
+              📱 {{ showPhoneIds.has(u._id) ? u.phone : maskPhone(u.phone) }}
+              <span style="cursor:pointer;color:var(--gold);margin-left:4px;user-select:none" @click.stop="toggleShowPhone(u._id)" :title="showPhoneIds.has(u._id) ? '隐藏' : '查看完整号码'">{{ showPhoneIds.has(u._id) ? '🙈' : '👁' }}</span>
+            </span>
             <span v-if="u.loginAttempts > 0" class="um-warn">登录失败 {{ u.loginAttempts }} 次</span>
           </div>
         </div>
@@ -108,6 +113,13 @@
         </div>
         <el-descriptions :column="1" border size="small" style="margin-top:20px">
           <el-descriptions-item label="UID">{{ detailUser.uid }} <el-button size="small" link type="primary" @click="copyUID(detailUser.uid)">{{ copiedUID === detailUser.uid ? '✓ 已复制' : '复制' }}</el-button></el-descriptions-item>
+          <el-descriptions-item label="手机号">
+            <span v-if="detailUser.phone">
+              {{ showPhoneIds.has(detailUser._id) ? detailUser.phone : maskPhone(detailUser.phone) }}
+              <el-button size="small" link @click="toggleShowPhone(detailUser._id)">{{ showPhoneIds.has(detailUser._id) ? '隐藏' : '查看完整号码' }}</el-button>
+            </span>
+            <span v-else style="color:var(--text-200)">未绑定</span>
+          </el-descriptions-item>
           <el-descriptions-item label="状态"><el-tag :type="statusTagType(detailUser.status)" size="small">{{ statusMap[detailUser.status] }}</el-tag></el-descriptions-item>
           <el-descriptions-item label="注册时间">{{ fmt(detailUser.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="最后登录">{{ fmt(detailUser.lastLoginAt) }}</el-descriptions-item>
@@ -372,6 +384,10 @@ const statCards = computed(() => [
 const detailVisible = ref(false);
 const detailUser = ref(null);
 const copiedUID = ref('');
+const showPhoneIds = reactive(new Set());
+
+function maskPhone(p) { if (!p) return ''; return p.substring(0, 3) + '****' + p.substring(7); }
+function toggleShowPhone(id) { if (showPhoneIds.has(id)) showPhoneIds.delete(id); else showPhoneIds.add(id); }
 
 const logVisible = ref(false);
 const logUser = ref('');
