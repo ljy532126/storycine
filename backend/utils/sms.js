@@ -40,14 +40,12 @@ async function loadConfig() {
 
 async function getConfig() {
   const db = await loadConfig();
-  const fromEnv = db?.accessKeyId && db?.accessKeySecret;
   return {
     accessKeyId: db?.accessKeyId || process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || '',
     accessKeySecret: db?.accessKeySecret || process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || '',
     signName: db?.signName || process.env.SMS_SIGN_NAME || '',
     templateCode: db?.templateCode || process.env.SMS_TEMPLATE_CODE || '',
-    enabled: db?.enabled !== false && !!fromEnv,
-    fromEnv,
+    enabled: db?.enabled !== false,
   };
 }
 
@@ -59,8 +57,8 @@ async function isDegraded() {
 }
 
 async function smsEnabled() {
-  const db = await loadConfig();
-  return db?.enabled !== false;
+  const cfg = await loadConfig();
+  return cfg?.enabled !== false;
 }
 
 function generateCode() { return String(Math.floor(100000 + Math.random() * 900000)); }

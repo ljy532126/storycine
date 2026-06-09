@@ -263,10 +263,15 @@
         <div class="st-card pf-card-sms" v-if="isAdmin">
           <h3 class="st-card-title"><MessageEmoji theme="outline" size="17" fill="var(--gold)" /> 短信服务配置</h3>
           <p class="st-card-sub">配置阿里云短信服务后，用户可通过手机号注册、短信登录和找回密码。留空则使用降级模式（验证码固定 888888）。</p>
+          <div :class="['st-hint-card', smsCfg.enabled && smsCfg.accessKeyId ? 'st-hint-ok' : '']" style="margin-bottom:14px">
+            <span v-if="!smsCfg.enabled">短信认证已关闭，登录/注册页面不显示短信入口</span>
+            <span v-else-if="!smsCfg.accessKeyId || !smsCfg._hasSecret">⚠️ 当前为降级模式：验证码固定 888888，短信不会真正发送。填写真实的 AccessKey 后自动切换为真实发送。</span>
+            <span v-else>✅ 短信服务已就绪，使用真实阿里云通道发送</span>
+          </div>
           <div class="st-toggle-row" style="margin-bottom:14px"><div class="st-toggle-info"><span class="st-toggle-label">启用短信认证</span><span class="st-toggle-hint">开启后登录页显示「短信登录」入口，注册可绑定手机号</span></div><el-switch v-model="smsCfg.enabled" @change="saveSmsCfg(false)" /></div>
-          <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="smsCfg.accessKeyId" size="small" style="width:320px" placeholder="阿里云 AccessKey ID" /></div>
-          <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="smsCfg.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="smsCfg._hasSecret ? '已保存（留空不修改）' : '阿里云 AccessKey Secret'" /></div>
-          <div class="st-field-row"><span class="st-field-label">短信签名</span><el-input v-model="smsCfg.signName" size="small" style="width:260px" placeholder="如 StoryCine" /></div>
+          <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="smsCfg.accessKeyId" size="small" style="width:320px" placeholder="阿里云 AccessKey ID" autocomplete="off" name="sms-ak-id" /></div>
+          <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="smsCfg.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="smsCfg._hasSecret ? '已保存（留空不修改）' : '阿里云 AccessKey Secret'" autocomplete="new-password" name="sms-ak-secret" /></div>
+          <div class="st-field-row"><span class="st-field-label">短信签名</span><el-input v-model="smsCfg.signName" size="small" style="width:260px" placeholder="如 速通互联验证码" autocomplete="off" name="sms-sign" /></div>
           <div class="st-field-row">
             <span class="st-field-label">短信模板<span class="st-field-help">选择阿里云内置模板</span></span>
             <el-select v-model="smsCfg.templateCode" size="small" style="width:360px" filterable>
