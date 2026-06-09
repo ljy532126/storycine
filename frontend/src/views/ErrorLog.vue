@@ -332,4 +332,12 @@ onUnmounted(() => { clearInterval(refreshTimer); });
   .err-bar-right { justify-content: flex-end; }
   .err-detail-meta { flex-direction: column; }
 }
+
+/* 按钮颜色修正 */
+.err-bar .el-button--primary.is-plain { color: #409eff !important; background: rgba(64,158,255,0.08) !important; border-color: rgba(64,158,255,0.3) !important; }
+.err-bar .el-button--primary.is-plain:hover { color: #fff !important; background: #409eff !important; }
+.err-bar .el-button--danger.is-plain { color: #c44545 !important; background: rgba(196,69,69,0.06) !important; border-color: rgba(196,69,69,0.25) !important; }
+.err-bar .el-button--danger.is-plain:hover { color: #fff !important; background: #c44545 !important; }
+.err-bar .el-button--default { background: var(--bg-200) !important; border-color: var(--bg-300) !important; color: var(--text-100) !important; }
+.err-bar .el-button--default:hover { border-color: var(--gold) !important; color: var(--gold-dark) !important; background: var(--bg-100) !important; }
 </style>
