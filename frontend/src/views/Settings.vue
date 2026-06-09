@@ -260,7 +260,7 @@
                 </div>
                 <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone" style="min-width:110px">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
               </div>
-              <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" style="margin-top:8px">确认绑定</el-button>
+              <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code">确认绑定</el-button>
             </div>
             <div v-else class="pf-phone-bound">
               <span>{{ maskPhone(profileUser.phone) }}</span>
