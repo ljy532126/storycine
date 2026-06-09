@@ -54,7 +54,7 @@
           <div class="um-card-row1">
             <span class="um-uname">{{ u.nickname || u.username }}</span>
             <span class="um-uid" @click.stop="copyUID(u.uid)" :title="copiedUID === u.uid ? '已复制' : '点击复制UID'">{{ u.uid }}</span>
-            <el-tag :type="u.role === 'admin' ? 'danger' : ''" size="small" effect="plain">{{ u.role === 'admin' ? '管理员' : '用户' }}</el-tag>
+            <el-tag :type="u.role === 'admin' ? 'danger' : 'info'" size="small" effect="plain">{{ u.role === 'admin' ? '管理员' : '用户' }}</el-tag>
             <el-tag :type="statusTagType(u.status)" size="small" effect="dark">{{ statusMap[u.status] }}</el-tag>
           </div>
           <div class="um-card-row2">
