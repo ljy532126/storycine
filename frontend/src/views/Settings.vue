@@ -262,13 +262,19 @@
         <!-- 短信配置（仅管理员） -->
         <div class="st-card pf-card-sms" v-if="isAdmin">
           <h3 class="st-card-title"><MessageEmoji theme="outline" size="17" fill="var(--gold)" /> 短信服务配置</h3>
-          <p class="st-card-sub">配置阿里云短信服务后，用户可通过手机号找回密码。留空则使用降级模式（验证码固定 888888）。</p>
+          <p class="st-card-sub">配置阿里云短信服务后，用户可通过手机号注册、短信登录和找回密码。留空则使用降级模式（验证码固定 888888）。</p>
+          <div class="st-toggle-row" style="margin-bottom:14px"><div class="st-toggle-info"><span class="st-toggle-label">启用短信认证</span><span class="st-toggle-hint">开启后登录页显示「短信登录」入口，注册可绑定手机号</span></div><el-switch v-model="smsCfg.enabled" @change="saveSmsCfg(false)" /></div>
           <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="smsCfg.accessKeyId" size="small" style="width:320px" placeholder="阿里云 AccessKey ID" /></div>
           <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="smsCfg.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="smsCfg._hasSecret ? '已保存（留空不修改）' : '阿里云 AccessKey Secret'" /></div>
           <div class="st-field-row"><span class="st-field-label">短信签名</span><el-input v-model="smsCfg.signName" size="small" style="width:260px" placeholder="如 StoryCine" /></div>
-          <div class="st-field-row"><span class="st-field-label">模板 CODE</span><el-input v-model="smsCfg.templateCode" size="small" style="width:260px" placeholder="如 SMS_123456789" /></div>
+          <div class="st-field-row">
+            <span class="st-field-label">短信模板<span class="st-field-help">选择阿里云内置模板</span></span>
+            <el-select v-model="smsCfg.templateCode" size="small" style="width:360px" filterable>
+              <el-option v-for="t in smsTemplates" :key="t.code" :label="t.code + ' — ' + t.desc" :value="t.code" />
+            </el-select>
+          </div>
           <div class="st-prov-actions">
-            <el-button type="primary" size="small" @click="saveSmsCfg" :loading="smsSaving">保存配置</el-button>
+            <el-button type="primary" size="small" @click="saveSmsCfg(true)" :loading="smsSaving">保存配置</el-button>
             <span v-if="smsSaved" style="color:#67c23a;font-size:12px;margin-left:8px">✓ 已保存</span>
           </div>
         </div>
@@ -386,13 +392,27 @@ async function testTTS() { if (!ttsForm.apiKey) { ElMessage.warning('请先填�
 const isAdmin = computed(() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin'; } catch { return false; } });
 
 // ===== 短信配置（仅管理员） =====
-const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', _hasSecret: false });
+const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', _hasSecret: false, enabled: true });
+const smsTemplates = ref([]);
 const smsSaving = ref(false);
 const smsSaved = ref(false);
-const tokenHdr2 = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` });
 
-async function loadSmsCfg() { try { const r = await fetch('/api/v1/config/sms', { headers: tokenHdr2() }); const d = await r.json(); if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; } } catch {} }
-async function saveSmsCfg() { smsSaving.value = true; try { await fetch('/api/v1/config/sms', { method: 'PUT', headers: tokenHdr2(), body: JSON.stringify({ ...smsCfg }) }); smsSaved.value = true; setTimeout(() => smsSaved.value = false, 3000); ElMessage.success('短信配置已保存'); } catch { ElMessage.error('保存失败'); } finally { smsSaving.value = false; } }
+async function loadSmsCfg() {
+  try {
+    const r = await fetch('/api/v1/config/sms', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const d = await r.json();
+    if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; }
+    if (d.templates) smsTemplates.value = d.templates;
+  } catch {}
+}
+async function saveSmsCfg(showMsg = true) {
+  smsSaving.value = true;
+  try {
+    await fetch('/api/v1/config/sms', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ accessKeyId: smsCfg.accessKeyId, accessKeySecret: smsCfg.accessKeySecret, signName: smsCfg.signName, templateCode: smsCfg.templateCode, enabled: smsCfg.enabled }) });
+    if (showMsg) { smsSaved.value = true; setTimeout(() => smsSaved.value = false, 3000); ElMessage.success('短信配置已保存'); }
+  } catch { ElMessage.error('保存失败'); }
+  finally { smsSaving.value = false; }
+}
 
 watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); } });
 watch(() => route.path, p => { if (p === '/settings') refreshStatus(); });

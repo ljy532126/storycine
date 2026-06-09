@@ -543,7 +543,16 @@ router.get('/sms', authRequired, async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const cfg = settings.smsConfig || {};
-    res.json({ data: { ...cfg, _hasSecret: !!cfg.accessKeySecret, accessKeySecret: maskSmsSecret(cfg.accessKeySecret || '') } });
+    const { BUILTIN_TEMPLATES } = require('../utils/sms');
+    res.json({
+      data: {
+        ...cfg,
+        _hasSecret: !!cfg.accessKeySecret,
+        accessKeySecret: maskSmsSecret(cfg.accessKeySecret || ''),
+        enabled: cfg.enabled !== false,
+      },
+      templates: BUILTIN_TEMPLATES,
+    });
   } catch (e) { next(e); }
 });
 
@@ -552,13 +561,13 @@ router.put('/sms', authRequired, async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const cfg = { ...(settings.smsConfig || {}) };
-    const { accessKeyId, accessKeySecret, signName, templateCode } = req.body;
+    const { accessKeyId, accessKeySecret, signName, templateCode, enabled } = req.body;
     if (accessKeyId !== undefined) cfg.accessKeyId = accessKeyId;
     if (accessKeySecret !== undefined && accessKeySecret !== maskSmsSecret(cfg.accessKeySecret || '') && accessKeySecret.indexOf('****') === -1) cfg.accessKeySecret = accessKeySecret;
     if (signName !== undefined) cfg.signName = signName;
     if (templateCode !== undefined) cfg.templateCode = templateCode;
+    if (typeof enabled === 'boolean') cfg.enabled = enabled;
     await Settings.updateSettings(req.user._id, { smsConfig: cfg });
-    // 重新加载 sms 模块的凭证
     try { require('../utils/sms').reloadConfig(); } catch {}
     res.json({ message: '短信配置已保存', data: { ...cfg, accessKeySecret: maskSmsSecret(cfg.accessKeySecret || '') } });
   } catch (e) { next(e); }

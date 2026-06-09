@@ -80,13 +80,9 @@ router.get('/captcha', captchaLimiter, (req, res) => {
 // ===== 注册 =====
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { username, password, phone, captchaId, captchaText } = req.body;
-
-    // 验证码先校验（防止探测规则）
-    const cap = captchaStore.get(captchaId);
-    if (!cap || cap.expires < Date.now()) return res.status(400).json({ message: '验证码已过期，请刷新' });
-    if (cap.text !== (captchaText || '').toLowerCase()) return res.status(400).json({ message: '验证码错误' });
-    captchaStore.delete(captchaId);
+    const { username, password, phone } = req.body;
+    const ip = getClientIp(req);
+    const ua = req.headers['user-agent'] || '';
 
     // 校验用户名密码
     if (username.length < 3 || username.length > 30) return res.status(400).json({ message: '账号长度3-30个字符' });
@@ -117,27 +113,16 @@ router.post('/register', registerLimiter, async (req, res) => {
   }
 });
 
-// ===== 登录 =====
+// ===== 登录（密码） =====
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { username, password, captchaId, captchaText } = req.body;
+    const { username, password } = req.body;
     const ip = getClientIp(req);
     const ua = req.headers['user-agent'] || '';
 
     if (!username || !password) return res.status(400).json({ message: '请填写账号和密码' });
 
     const user = await User.findOne({ username });
-
-    // 防定时枚举：无论用户是否存在都做 bcrypt（非空用户先过 captcha + lock 检查）
-    const needCaptcha = user && user.loginAttempts >= 2;
-    if (needCaptcha) {
-      const cap = captchaStore.get(captchaId);
-      if (!cap || cap.expires < Date.now()) return res.status(400).json({ message: '验证码已过期' });
-      if (cap.text !== (captchaText || '').toLowerCase()) return res.status(400).json({ message: '验证码错误' });
-      captchaStore.delete(captchaId);
-    }
-
-    // 锁定检查
     if (user && user.lockedUntil && user.lockedUntil > new Date()) {
       const minutes = Math.ceil((user.lockedUntil - new Date()) / 60000);
       await logLogin(username, ip, ua, false, `account locked, ${minutes}min left`, user._id);
@@ -174,6 +159,24 @@ router.post('/login', loginLimiter, async (req, res) => {
   } catch (e) {
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
+});
+
+// ===== 短信验证码登录 =====
+router.post('/login-sms', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ message: '请输入手机号' });
+
+    const user = await User.findOne({ phone });
+    if (!user) return res.status(400).json({ message: '该手机号未注册' });
+    if (user.status === 'banned') return res.status(403).json({ message: '账号已被封禁' });
+    if (user.status === 'disabled') return res.status(403).json({ message: '账号已被禁用' });
+
+    await User.updateOne({ _id: user._id }, { $set: { loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastLoginIp: getClientIp(req) } });
+    await logLogin(user.username, getClientIp(req), req.headers['user-agent'] || '', true, '短信登录', user._id);
+    const token = generateToken(user);
+    res.json({ message: '登录成功', data: { token, user: { id: user._id, uid: user.uid, username: user.username, nickname: user.nickname || user.username, avatar: user.avatar || '', role: user.role } } });
+  } catch (e) { res.status(500).json({ message: '服务器错误，请稍后重试' }); }
 });
 
 // ===== 获取当前用户信息 =====
