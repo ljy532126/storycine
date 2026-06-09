@@ -58,6 +58,7 @@ async function tryRealSend(phone, verifyCode, scene) {
   const sign = c?.signName || process.env.SMS_SIGN_NAME || '';
   // 优先场景专属模板，其次通用模板，最后默认
   const tmplCode = (c?.templateCodes && c.templateCodes[scene]) || c?.templateCode || SCENE_TEMPLATE_MAP[scene] || '100001';
+  console.log('[SMS] 发送: phone=' + phone + ' scene=' + scene + ' template=' + tmplCode + ' templateCodes=' + JSON.stringify(c?.templateCodes || {}) + ' templateCode=' + (c?.templateCode || 'none'));
   const client = new Dypnsapi20170525.default(new OpenApi.Config({ accessKeyId: ak, accessKeySecret: sk, endpoint: 'dypnsapi.aliyuncs.com' }));
   const resp = await client.sendSmsVerifyCodeWithOptions(new Dypnsapi20170525.SendSmsVerifyCodeRequest({
     phoneNumber: phone, signName: sign, templateCode: tmplCode,

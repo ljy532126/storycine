@@ -49,6 +49,7 @@ const settingsSchema = new mongoose.Schema({
     accessKeySecret: { type: String, default: '' },
     signName: { type: String, default: '' },
     templateCode: { type: String, default: '' },
+    templateCodes: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   storageConfig: {
     enabled: { type: Boolean, default: false },
