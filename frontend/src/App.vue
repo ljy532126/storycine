@@ -568,6 +568,11 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 }
 .el-menu { border-right: none !important; flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--navy) !important; padding: 8px 0 !important; }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
+.el-menu::-webkit-scrollbar { width: 3px; }
+.el-menu::-webkit-scrollbar-track { background: transparent; }
+.el-menu::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.12); border-radius: 10px; }
+.el-menu:hover::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.35); }
+.el-menu::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.55); }
 
 /* 展开态菜单项 */
 .el-menu-item {
