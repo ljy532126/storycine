@@ -446,7 +446,12 @@ const smsTestStatus = ref('');
 const smsTestMsg = ref('测试连接');
 
 // 个人中心手机号绑定
+const smsEnabled = ref(false);
 const phoneBindForm = reactive({ phone: '', code: '' });
+
+async function fetchSmsStatus() {
+  try { const r = await fetch('/api/v1/auth/sms/status'); const d = await r.json(); smsEnabled.value = d.data?.enabled || false; } catch { smsEnabled.value = false; }
+}
 const bindSending = ref(false);
 const bindCooldown = ref(0);
 const bindSubmitting = ref(false);
@@ -508,10 +513,10 @@ async function testSms() {
   finally { smsTesting.value = false; }
 }
 
-watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); } });
+watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); fetchSmsStatus(); } });
 watch(() => route.path, p => { if (p === '/settings') refreshStatus(); });
 
-onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin.value) loadStorCfg(); } });
+onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); fetchSmsStatus(); if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin.value) loadStorCfg(); } });
 </script>
 
 <style scoped>

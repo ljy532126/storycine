@@ -155,7 +155,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     await logLogin(username, ip, ua, true, '登录成功', user._id);
     const token = generateToken(user);
-    res.json({ message: '登录成功', data: { token, user: { id: user._id, uid: user.uid, username, nickname: user.nickname || username, avatar: user.avatar || '', role: user.role } } });
+    res.json({ message: '登录成功', data: { token, user: { id: user._id, uid: user.uid, username, nickname: user.nickname || username, avatar: user.avatar || '', role: user.role, phone: user.phone || '' } } });
   } catch (e) {
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
@@ -184,7 +184,7 @@ router.post('/login-sms', async (req, res) => {
 
 // ===== 获取当前用户信息 =====
 router.get('/me', authRequired, (req, res) => {
-  res.json({ data: { id: req.user._id, uid: req.user.uid, username: req.user.username, nickname: req.user.nickname || req.user.username, avatar: req.user.avatar || '', role: req.user.role, createdAt: req.user.createdAt } });
+  res.json({ data: { id: req.user._id, uid: req.user.uid, username: req.user.username, nickname: req.user.nickname || req.user.username, avatar: req.user.avatar || '', role: req.user.role, phone: req.user.phone || '', createdAt: req.user.createdAt } });
 });
 
 // 更新个人信息
