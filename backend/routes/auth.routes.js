@@ -376,7 +376,7 @@ router.post('/forgot-password', async (req, res) => {
     if (newPassword.length < 8) return res.status(400).json({ message: '新密码至少8位' });
 
     // 验证短信验证码
-    const verify = verifySmsCode(phone, code);
+    const verify = await verifySmsCode(phone, code);
     if (!verify.ok) return res.status(400).json({ message: verify.message });
 
     // 查找绑定该手机号的用户
@@ -403,7 +403,7 @@ router.put('/phone', authRequired, async (req, res) => {
     const existing = await User.findOne({ phone, _id: { $ne: req.user._id } });
     if (existing) return res.status(400).json({ message: '该手机号已被其他账号绑定' });
 
-    const verify = verifySmsCode(phone, code);
+    const verify = await verifySmsCode(phone, code);
     if (!verify.ok) return res.status(400).json({ message: verify.message });
 
     req.user.phone = phone;
