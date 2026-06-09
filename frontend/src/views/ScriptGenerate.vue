@@ -69,8 +69,7 @@
 	              <el-option v-for="s in styleOptions" :key="s" :label="s" :value="s" />
 	            </el-select>
 	          </div>
-
-	          <div class="sg-palette-group">
+          <div class="sg-palette-group">
             <div class="sg-switch-row">
               <div class="sg-switch-info">
                 <span class="sg-switch-label"><Edit theme="outline" size="14" fill="currentColor" /> 内心独白</span>
@@ -85,13 +84,26 @@
               <FolderUpload theme="outline" size="16" fill="currentColor" /> 导入已有剧本
             </el-button>
           </div>
+	          </div>
 
-          <div class="sg-palette-actions">
-            <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre" style="width:100%">
-              <MagicWand v-if="!scriptStore.generating" theme="outline" size="18" fill="currentColor" />
-              {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集' : 'AI 开写剧本' }}
-            </el-button>
-          </div>
+	          <div class="sg-palette-actions">
+	            <el-button type="primary" size="large" @click="scripts.length > 0 ? handleContinue() : handleGenerate()" :loading="scriptStore.generating" :disabled="!tags.genre" style="width:100%">
+	              <MagicWand v-if="!scriptStore.generating" theme="outline" size="18" fill="currentColor" />
+	              {{ scriptStore.generating ? 'AI 创作中...' : scripts.length > 0 ? '续写下一集' : 'AI 开写剧本' }}
+	            </el-button>
+	        </div>
+	      </aside>
+
+	      <main class="sg-main-right">
+	        <!-- 进度卡片 -->
+	        <el-card v-if="scriptStore.generating" shadow="never" class="gen-progress-card">
+	          <div class="gp-head">
+	            <div class="gp-head-left">
+	              <span class="gp-head-icon"><MagicWand theme="outline" size="20" fill="var(--gold)" /></span>
+	              <div>
+	                <span class="gp-title">{{ flowType === 'continue' ? 'AI 续写进行中' : 'AI 正在创作剧本' }}</span>
+	                <span class="gp-sub">七步协作，为你写一个精彩故事</span>
+	              </div>
 	            </div>
 	            <div class="gp-head-right">
 	              <span class="gp-timer"><Time theme="outline" size="14" fill="currentColor" /> 预计 {{ estTime }}</span>
@@ -883,10 +895,6 @@ function applyQuickTemplate(t) {
 .sg-stag-x { cursor: pointer; opacity: 0.5; margin-left: 2px; font-weight: 700; }
 .sg-stag-x:hover { opacity: 1; }
 .sg-check-row { padding: 2px 0; }
-.sg-switch-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
-.sg-switch-info { display: flex; flex-direction: column; gap: 1px; }
-.sg-switch-label { font-size: 13px; font-weight: 600; color: var(--text-100); display: flex; align-items: center; gap: 6px; }
-.sg-switch-hint { font-size: 11px; color: var(--text-200); }
 .sg-palette-actions { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; border-top: 1px solid var(--bg-300); }
 .sg-main-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 
