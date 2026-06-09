@@ -50,6 +50,7 @@ const settingsSchema = new mongoose.Schema({
     signName: { type: String, default: '' },
     templateCode: { type: String, default: '' },
     templateCodes: { type: mongoose.Schema.Types.Mixed, default: {} },
+    dailyLimit: { type: Number, default: 10 },
   },
   storageConfig: {
     enabled: { type: Boolean, default: false },

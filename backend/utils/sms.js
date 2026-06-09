@@ -9,6 +9,10 @@ const Util = require('@alicloud/tea-util');
 const codeCache = new Map();
 const CODE_EXPIRE_MS = 5 * 60 * 1000;
 const SEND_COOLDOWN_MS = 60 * 1000;
+
+// 每日发送量统计 (key: phone, value: {count, date})
+const dailyCountCache = new Map();
+const DEFAULT_DAILY_LIMIT = 10;
 let _cachedConfig = null, _lastLoad = 0;
 
 const BUILTIN_TEMPLATES = [
@@ -76,6 +80,17 @@ async function sendSMS(phone, scene) {
   const c = codeCache.get(phone);
   if (c?.lastSent && Date.now() - c.lastSent < SEND_COOLDOWN_MS)
     return { ok: false, message: '请 ' + Math.ceil((SEND_COOLDOWN_MS - (Date.now() - c.lastSent)) / 1000) + ' 秒后再发送' };
+
+  // 每日发送量限制
+  const cfg = await loadConfig();
+  const dailyLimit = cfg?.dailyLimit || DEFAULT_DAILY_LIMIT;
+  const today = new Date().toDateString();
+  let daily = dailyCountCache.get(phone);
+  if (!daily || daily.date !== today) daily = { date: today, count: 0 };
+  if (daily.count >= dailyLimit)
+    return { ok: false, message: '今日短信发送次数已达上限 (' + dailyLimit + '条)，请明天再试' };
+  daily.count++;
+  dailyCountCache.set(phone, daily);
 
   const verifyCode = String(Math.floor(100000 + Math.random() * 900000));
   codeCache.set(phone, { code: verifyCode, expires: Date.now() + CODE_EXPIRE_MS, lastSent: Date.now() });

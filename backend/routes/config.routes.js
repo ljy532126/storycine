@@ -563,12 +563,13 @@ router.put('/sms', authRequired, async (req, res, next) => {
   try {
     const settings = await Settings.getSettings(req.user._id);
     const cfg = { ...(settings.smsConfig || {}) };
-    const { accessKeyId, accessKeySecret, signName, templateCode, templateCodes, enabled } = req.body;
+    const { accessKeyId, accessKeySecret, signName, templateCode, templateCodes, dailyLimit, enabled } = req.body;
     if (accessKeyId !== undefined) cfg.accessKeyId = accessKeyId;
     if (accessKeySecret !== undefined && accessKeySecret !== maskSmsSecret(cfg.accessKeySecret || '') && accessKeySecret.indexOf('****') === -1) cfg.accessKeySecret = accessKeySecret;
     if (signName !== undefined) cfg.signName = signName;
     if (templateCode !== undefined) cfg.templateCode = templateCode;
     if (templateCodes !== undefined) cfg.templateCodes = templateCodes;
+    if (dailyLimit !== undefined) cfg.dailyLimit = Math.max(1, Math.min(100, parseInt(dailyLimit) || 10));
     if (typeof enabled === 'boolean') cfg.enabled = enabled;
     await Settings.updateSettings(req.user._id, { smsConfig: cfg });
     try { require('../utils/sms').reloadConfig(); } catch {}

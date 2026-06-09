@@ -318,6 +318,7 @@
             <span v-else>✅ 短信服务已就绪，使用真实阿里云通道发送</span>
           </div>
           <div class="st-toggle-row" style="margin-bottom:14px"><div class="st-toggle-info"><span class="st-toggle-label">启用短信认证</span><span class="st-toggle-hint">开启后登录页显示「短信登录」入口，注册可绑定手机号</span></div><el-switch v-model="smsCfg.enabled" @change="saveSmsCfg(false)" /></div>
+          <div class="st-toggle-row" style="margin-bottom:14px"><div class="st-toggle-info"><span class="st-toggle-label">每日发送上限</span><span class="st-toggle-hint">每个手机号每天最多可接收的短信条数，防止滥用</span></div><el-input-number v-model="smsCfg.dailyLimit" :min="1" :max="100" size="small" style="width:100px" @change="saveSmsCfg(false)" /></div>
           <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="smsCfg.accessKeyId" size="small" style="width:320px" placeholder="阿里云 AccessKey ID" autocomplete="off" name="sms-ak-id" /></div>
           <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="smsCfg.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="smsCfg._hasSecret ? '已保存（留空不修改）' : '阿里云 AccessKey Secret'" autocomplete="new-password" name="sms-ak-secret" /></div>
           <div class="st-field-row">
@@ -480,7 +481,7 @@ async function testTTS() { if (!ttsForm.apiKey) { ElMessage.warning('请先填�
 const isAdmin = computed(() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role === 'admin'; } catch { return false; } });
 
 // ===== 短信配置（仅管理员） =====
-const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', templateCodes: { login: '100001', changePhone: '100002', resetPwd: '100003', bindPhone: '100004', verifyPhone: '100005' }, _hasSecret: false, enabled: true });
+const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', templateCodes: { login: '100001', changePhone: '100002', resetPwd: '100003', bindPhone: '100004', verifyPhone: '100005' }, dailyLimit: 10, _hasSecret: false, enabled: true });
 const smsTemplates = ref([]);
 const smsSignatures = ref([]);
 const smsSceneList = [
@@ -560,7 +561,7 @@ async function loadSmsCfg() {
   try {
     const r = await fetch('/api/v1/config/sms', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
     const d = await r.json();
-    if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; if (!smsCfg.templateCodes || Object.keys(smsCfg.templateCodes).length === 0) smsCfg.templateCodes = { login: '100001', changePhone: '100002', resetPwd: '100003', bindPhone: '100004', verifyPhone: '100005' }; }
+    if (d.data) { Object.assign(smsCfg, d.data); smsCfg._hasSecret = !!d.data.accessKeySecret; if (!smsCfg.templateCodes || Object.keys(smsCfg.templateCodes).length === 0) smsCfg.templateCodes = { login: '100001', changePhone: '100002', resetPwd: '100003', bindPhone: '100004', verifyPhone: '100005' }; if (!smsCfg.dailyLimit) smsCfg.dailyLimit = 10; }
     if (d.templates) smsTemplates.value = d.templates;
     if (d.signatures) smsSignatures.value = d.signatures;
   } catch {}
@@ -568,7 +569,7 @@ async function loadSmsCfg() {
 async function saveSmsCfg(showMsg = true) {
   smsSaving.value = true;
   try {
-    await fetch('/api/v1/config/sms', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ accessKeyId: smsCfg.accessKeyId, accessKeySecret: smsCfg.accessKeySecret, signName: smsCfg.signName, templateCode: smsCfg.templateCode, templateCodes: smsCfg.templateCodes, enabled: smsCfg.enabled }) });
+    await fetch('/api/v1/config/sms', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ accessKeyId: smsCfg.accessKeyId, accessKeySecret: smsCfg.accessKeySecret, signName: smsCfg.signName, templateCode: smsCfg.templateCode, templateCodes: smsCfg.templateCodes, dailyLimit: smsCfg.dailyLimit, enabled: smsCfg.enabled }) });
     if (showMsg) { smsSaved.value = true; setTimeout(() => smsSaved.value = false, 3000); ElMessage.success('短信配置已保存'); }
   } catch { ElMessage.error('保存失败'); }
   finally { smsSaving.value = false; }
