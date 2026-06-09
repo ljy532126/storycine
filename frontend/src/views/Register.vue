@@ -29,10 +29,7 @@
           </div>
         </el-form-item>
         <el-form-item v-if="smsEnabled" label="手机号（用于短信登录和找回密码）">
-          <div class="input-counter-wrap">
-            <el-input v-model="form.phone" placeholder="输入手机号" maxlength="11" />
-            <span v-if="form.phone" class="input-counter">{{ form.phone.length }}/11</span>
-          </div>
+          <SmsCodeInput v-model:phone="form.phone" v-model:code="form.smsCode" scene="login" phone-placeholder="输入手机号" code-placeholder="短信验证码" />
         </el-form-item>
         <el-button type="primary" @click="handleRegister" :loading="loading" style="width:100%" size="large">
           {{ loading ? '注册中...' : '注册' }}
@@ -51,12 +48,13 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import SmsCodeInput from '../components/SmsCodeInput.vue';
 
 const router = useRouter();
 const loading = ref(false);
 const formRef = ref(null);
 const smsEnabled = ref(false);
-const form = reactive({ username: '', password: '', confirmPwd: '', phone: '' });
+const form = reactive({ username: '', password: '', confirmPwd: '', phone: '', smsCode: '' });
 
 onMounted(async () => {
   try { const r = await fetch('/api/v1/auth/sms/status'); const d = await r.json(); smsEnabled.value = d.data?.enabled || false; } catch {}
@@ -71,6 +69,12 @@ const rules = {
 async function handleRegister() {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
+  // 填了手机号需要验证短信码
+  if (smsEnabled.value && form.phone) {
+    const vRes = await fetch('/api/v1/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: form.phone, code: form.smsCode }) });
+    const vData = await vRes.json();
+    if (!vRes.ok) { ElMessage.error(vData.message || '短信验证码错误'); return; }
+  }
   loading.value = true;
   try {
     const res = await fetch('/api/v1/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: form.username, password: form.password, phone: form.phone }) });
