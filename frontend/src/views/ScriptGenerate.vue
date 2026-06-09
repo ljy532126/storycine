@@ -72,8 +72,11 @@
           <div class="sg-palette-group">
             <div class="sg-switch-row">
               <div class="sg-switch-info">
-                <span class="sg-switch-label"><Edit theme="outline" size="14" fill="currentColor" /> 内心独白</span>
-                <span class="sg-switch-hint">加深角色层次</span>
+                <span class="sg-switch-label"><Edit theme="outline" size="14" fill="currentColor" /> 内心独白
+                  <el-tooltip content="开启后生成内心独白字段，可加深角色层次；关闭可加快生成速度" placement="top">
+                    <span class="sg-switch-help">?</span>
+                  </el-tooltip>
+                </span>
               </div>
               <el-switch v-model="showInnerThought" :disabled="scriptStore.generating" size="default" />
             </div>
@@ -895,6 +898,11 @@ function applyQuickTemplate(t) {
 .sg-stag-x { cursor: pointer; opacity: 0.5; margin-left: 2px; font-weight: 700; }
 .sg-stag-x:hover { opacity: 1; }
 .sg-check-row { padding: 2px 0; }
+.sg-switch-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+.sg-switch-info { display: flex; flex-direction: column; gap: 1px; }
+.sg-switch-label { font-size: 13px; font-weight: 600; color: var(--text-100); display: flex; align-items: center; gap: 6px; }
+.sg-switch-help { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--text-200); color: var(--text-200); font-size: 10px; font-weight: 700; cursor: help; line-height: 1; }
+.sg-switch-help:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
 .sg-palette-actions { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; border-top: 1px solid var(--bg-300); }
 .sg-main-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 
