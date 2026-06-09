@@ -573,6 +573,35 @@ router.put('/sms', authRequired, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// SMS 连通性测试（仅管理员）
+router.post('/sms/test', authRequired, async (req, res, next) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: '仅管理员可操作' });
+  try {
+    const Dypnsapi20170525 = require('@alicloud/dypnsapi20170525');
+    const OpenApi = require('@alicloud/openapi-client');
+    const settings = await Settings.getSettings(req.user._id);
+    const cfg = settings.smsConfig || {};
+    const akId = cfg.accessKeyId || process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || '';
+    const akSecret = cfg.accessKeySecret || process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || '';
+    if (!akId || !akSecret) return res.json({ ok: false, message: '请先配置 AccessKey' });
+    const client = new Dypnsapi20170525.default(new OpenApi.Config({ accessKeyId: akId, accessKeySecret: akSecret, endpoint: 'dypnsapi.aliyuncs.com' }));
+    const resp = await client.sendSmsVerifyCodeWithOptions(new Dypnsapi20170525.SendSmsVerifyCodeRequest({
+      phoneNumber: '13800138000', signName: cfg.signName || 'test', templateCode: cfg.templateCode || '100001',
+      templateParam: JSON.stringify({ code: '000000', min: '5' }),
+    }), new (require('@alicloud/tea-util')).RuntimeOptions({}));
+    const body = resp.body || {};
+    if (body.code === 'OK' || body.success) return res.json({ ok: true, message: '短信服务连接正常' });
+    // 某些错误码（如手机号无效、模板不存在等）也是 AK 验证通过的表现
+    if (body.code?.endsWith('SMS_TEMPLATE_CODE_ERROR') || body.message?.includes('手机号') || body.message?.includes('模板')) return res.json({ ok: true, message: 'AccessKey 验证通过（模板或号码问题需调整）' });
+    return res.json({ ok: false, message: body.message || '连接失败: ' + (body.code || 'unknown') });
+  } catch (e) {
+    const msg = e.message || '';
+    if (msg.includes('InvalidAccessKeyId') || msg.includes('Specified access key is not found')) return res.json({ ok: false, message: 'AccessKey ID 无效' });
+    if (msg.includes('SignatureDoesNotMatch') || msg.includes('secret')) return res.json({ ok: false, message: 'AccessKey Secret 错误' });
+    return res.json({ ok: false, message: '连接失败: ' + msg.substring(0, 100) });
+  }
+});
+
 function maskSmsSecret(s) {
   if (!s || s.length <= 8) return '';
   return s.substring(0, 4) + '****' + s.substring(s.length - 4);

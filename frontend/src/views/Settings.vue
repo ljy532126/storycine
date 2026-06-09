@@ -280,6 +280,8 @@
           </div>
           <div class="st-prov-actions">
             <el-button type="primary" size="small" @click="saveSmsCfg(true)" :loading="smsSaving">保存配置</el-button>
+            <el-button size="small" @click="testSms" :loading="smsTesting">{{ smsTestMsg }}</el-button>
+            <span class="sms-test-dot" :class="smsTestStatus" v-if="smsTestStatus"></span>
             <span v-if="smsSaved" style="color:#67c23a;font-size:12px;margin-left:8px">✓ 已保存</span>
           </div>
         </div>
@@ -401,6 +403,9 @@ const smsCfg = reactive({ accessKeyId: '', accessKeySecret: '', signName: '', te
 const smsTemplates = ref([]);
 const smsSaving = ref(false);
 const smsSaved = ref(false);
+const smsTesting = ref(false);
+const smsTestStatus = ref('');
+const smsTestMsg = ref('测试连接');
 
 async function loadSmsCfg() {
   try {
@@ -417,6 +422,16 @@ async function saveSmsCfg(showMsg = true) {
     if (showMsg) { smsSaved.value = true; setTimeout(() => smsSaved.value = false, 3000); ElMessage.success('短信配置已保存'); }
   } catch { ElMessage.error('保存失败'); }
   finally { smsSaving.value = false; }
+}
+async function testSms() {
+  smsTesting.value = true; smsTestStatus.value = ''; smsTestMsg.value = '测试中...';
+  try {
+    const r = await fetch('/api/v1/config/sms/test', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const d = await r.json();
+    if (d.ok) { smsTestStatus.value = 'ok'; smsTestMsg.value = '已连通'; ElMessage.success(d.message || '连接成功'); }
+    else { smsTestStatus.value = 'fail'; smsTestMsg.value = '连接失败'; ElMessage.error(d.message || '连接失败'); }
+  } catch { smsTestStatus.value = 'fail'; smsTestMsg.value = '请求失败'; }
+  finally { smsTesting.value = false; }
 }
 
 watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); } });
@@ -567,4 +582,10 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
   font-weight: 600; z-index: 2; font-family: 'DM Sans', sans-serif;
   transition: color 0.2s;
 }
+
+/* 短信连通性测试圆点（呼吸灯） */
+.sms-test-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-left: 4px; }
+.sms-test-dot.ok { background: #67c23a; box-shadow: 0 0 6px rgba(103,194,58,0.5); animation: smsBreathe 2s ease-in-out infinite; }
+.sms-test-dot.fail { background: #f56c6c; box-shadow: 0 0 4px rgba(245,108,108,0.4); }
+@keyframes smsBreathe { 0%, 100% { box-shadow: 0 0 4px rgba(103,194,58,0.3); } 50% { box-shadow: 0 0 16px rgba(103,194,58,0.7); } }
 </style>
