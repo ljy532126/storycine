@@ -273,23 +273,36 @@
         <!-- 修改密码 -->
         <div class="st-card pf-card-pwd">
           <h3 class="st-card-title"><Lock theme="outline" size="17" fill="var(--gold)" /> 修改密码</h3>
-          <el-form ref="pwdForm" :model="pwd" :rules="pwdRules" label-position="top" size="default">
+          <div class="pf-pwd-mode">
+            <span :class="{ active: pwdMode === 'password' }" @click="pwdMode = 'password'">原密码修改</span>
+            <span :class="{ active: pwdMode === 'sms' }" @click="switchPwdMode('sms')">短信验证修改</span>
+          </div>
+
+          <!-- 原密码修改 -->
+          <el-form v-if="pwdMode === 'password'" ref="pwdForm" :model="pwd" :rules="pwdRules" label-position="top" size="default">
             <el-form-item label="原密码" prop="oldPassword"><div class="input-counter-wrap"><el-input v-model="pwd.oldPassword" type="password" show-password placeholder="输入当前密码" maxlength="50" /><span v-if="pwd.oldPassword" class="input-counter">{{ pwd.oldPassword.length }}/50</span></div></el-form-item>
             <el-form-item label="新密码" prop="newPassword"><div class="input-counter-wrap"><el-input v-model="pwd.newPassword" type="password" show-password placeholder="至少6位" maxlength="50" /><span v-if="pwd.newPassword" class="input-counter">{{ pwd.newPassword.length }}/50</span></div></el-form-item>
             <el-form-item label="确认新密码" prop="confirmPwd"><div class="input-counter-wrap"><el-input v-model="pwd.confirmPwd" type="password" show-password placeholder="再次输入" maxlength="50" /><span v-if="pwd.confirmPwd" class="input-counter">{{ pwd.confirmPwd.length }}/50</span></div></el-form-item>
             <el-button class="pf-btn pf-btn-primary" @click="changePwd" :loading="changingPwd"><CheckOne theme="outline" size="16" fill="currentColor" /> 更新密码</el-button>
-            <div v-if="smsEnabled && profileUser.phone" style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bg-300)">
-              <span style="font-size:12px;color:var(--text-200);display:block;margin-bottom:8px">或通过短信验证修改</span>
-              <div style="display:flex;gap:8px">
-                <div class="input-counter-wrap" style="flex:1">
-                  <el-input v-model="pwd.smsCode" placeholder="短信验证码" maxlength="6" />
-                  <span v-if="pwd.smsCode" class="input-counter">{{ pwd.smsCode.length }}/6</span>
-                </div>
-                <el-button @click="sendPwdSms" :loading="bindSending" :disabled="bindCooldown > 0" size="default">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
-              </div>
-              <el-button class="pf-btn pf-btn-primary" @click="changePwdBySms" :loading="changingPwd" :disabled="!pwd.newPassword || !pwd.smsCode" style="width:100%;margin-top:8px"><CheckOne theme="outline" size="16" fill="currentColor" /> 短信验证修改密码</el-button>
-            </div>
           </el-form>
+
+          <!-- 短信验证修改 -->
+          <div v-else>
+            <div class="pf-pwd-sms">
+              <div class="st-field"><label class="st-field-label">新密码</label><div class="input-counter-wrap"><el-input v-model="pwd.newPassword" type="password" show-password placeholder="至少6位" maxlength="50" /><span v-if="pwd.newPassword" class="input-counter">{{ pwd.newPassword.length }}/50</span></div></div>
+              <div class="st-field"><label class="st-field-label">确认新密码</label><div class="input-counter-wrap"><el-input v-model="pwd.confirmPwd" type="password" show-password placeholder="再次输入" maxlength="50" /><span v-if="pwd.confirmPwd" class="input-counter">{{ pwd.confirmPwd.length }}/50</span></div></div>
+              <div class="st-field"><label class="st-field-label">短信验证码</label>
+                <div class="sms-row-inline">
+                  <div class="input-counter-wrap" style="flex:1">
+                    <el-input v-model="pwd.smsCode" placeholder="输入验证码" maxlength="6" />
+                    <span v-if="pwd.smsCode" class="input-counter">{{ pwd.smsCode.length }}/6</span>
+                  </div>
+                  <el-button @click="sendPwdSms" :loading="bindSending" :disabled="bindCooldown > 0" size="default">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
+                </div>
+              </div>
+              <el-button class="pf-btn pf-btn-primary" @click="changePwdBySms" :loading="changingPwd" :disabled="!pwd.newPassword || pwd.newPassword !== pwd.confirmPwd || !pwd.smsCode"><CheckOne theme="outline" size="16" fill="currentColor" /> 短信验证修改密码</el-button>
+            </div>
+          </div>
         </div>
 
         <!-- 短信配置（仅管理员） -->
@@ -352,6 +365,15 @@ async function loadChangelog() { try { const res = await fetch('/changelog.json'
 const profileUser = reactive({ username: '', nickname: '', avatar: '', uid: '', role: '', phone: '', createdAt: '', lastLoginAt: '', lastLoginIp: '' });
 const profileForm = reactive({ nickname: '', avatar: '' });
 const savingProfile = ref(false); const changingPwd = ref(false); const copiedUid = ref(false); const showFullPhone = ref(false); const fileInput = ref(null); const pwdForm = ref(null);
+const pwdMode = ref('password');
+
+function switchPwdMode(mode) {
+  if (mode === 'sms') {
+    if (!smsEnabled.value) { ElMessage.warning('短信认证服务已关闭，如需使用请联系管理员开启'); return; }
+    if (!profileUser.phone) { ElMessage.warning('请先绑定手机号再使用短信验证修改密码'); return; }
+  }
+  pwdMode.value = mode;
+}
 
 function maskPhone(p) { if (!p) return '未绑定'; return p.substring(0, 3) + '****' + p.substring(7); }
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPwd: '', smsCode: '' });
@@ -699,6 +721,16 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
 /* 手机绑定区域 */
 .pf-phone-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
 .pf-phone-bound { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-100); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-100); }
+
+/* 密码修改模式切换 */
+.pf-pwd-mode { display: flex; gap: 0; margin-bottom: 18px; border: 1px solid var(--bg-300); border-radius: 8px; overflow: hidden; }
+.pf-pwd-mode span { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; cursor: pointer; color: var(--text-200); background: var(--bg-100); transition: all 0.15s; font-weight: 500; }
+.pf-pwd-mode span.active { background: var(--navy); color: var(--gold); font-weight: 700; }
+.pf-pwd-mode span:hover:not(.active) { color: var(--text-100); }
+
+/* 短信修改表单 */
+.pf-pwd-sms { display: flex; flex-direction: column; gap: 14px; }
+.sms-row-inline { display: flex; gap: 10px; align-items: flex-start; }
 
 @media (max-width: 700px) {
   .pf-layout { grid-template-columns: 1fr; max-width: 100%; }
