@@ -82,28 +82,8 @@ app.get('/api/v1/monitor/endpoints', require('./middleware/auth.middleware').aut
   const list = Object.entries(apiStats.routes).map(([k, v]) => ({ route: k, ...v }));
   list.sort((a, b) => b.count - a.count);
   const okCount = apiStats.recent.filter(r => r.status < 400).length;
-  // 如果 AI 统计数据太少，用示例数据填充（展示图表效果）
-  const aiData = { ...apiStats.ai };
-  if (aiData.image.total + aiData.video.total + aiData.llm.total < 10) {
-    aiData.image = { total: 156, success: 142, fail: 14 };
-    aiData.video = { total: 67, success: 55, fail: 12 };
-    aiData.llm = { total: 289, success: 276, fail: 13 };
-  }
-  if (list.length < 5) {
-    const demoRoutes = [
-      { route: 'POST /assets/generate-image', count: 220, last: new Date().toISOString(), statuses: { 200: 200, 400: 12, 500: 8 } },
-      { route: 'POST /assets/generate-prompt', count: 140, last: new Date().toISOString(), statuses: { 200: 135, 400: 5 } },
-      { route: 'GET /assets/characters', count: 95, last: new Date().toISOString(), statuses: { 200: 95 } },
-      { route: 'POST /scripts/generate', count: 78, last: new Date().toISOString(), statuses: { 200: 75, 400: 3 } },
-      { route: 'GET /projects', count: 62, last: new Date().toISOString(), statuses: { 200: 62 } },
-      { route: 'PUT /storyboards', count: 48, last: new Date().toISOString(), statuses: { 200: 46, 400: 2 } },
-      { route: 'POST /assets/characters', count: 35, last: new Date().toISOString(), statuses: { 200: 33, 400: 2 } },
-      { route: 'GET /statistics/daily-overview', count: 30, last: new Date().toISOString(), statuses: { 200: 30 } },
-    ];
-    list.length = 0;
-    list.push(...demoRoutes);
-  }
-  res.json({ data: { total: apiStats.total > 10 ? apiStats.total : 720, routes: list, recent: apiStats.recent.slice(0, 10), health: apiStats.recent.length > 0 ? Math.round(okCount / apiStats.recent.length * 100) : 96, ai: aiData } });
+  // 始终展示真实数据
+  res.json({ data: { total: apiStats.total, routes: list, recent: apiStats.recent.slice(0, 10), health: apiStats.recent.length > 0 ? Math.round(okCount / apiStats.recent.length * 100) : 100, ai: apiStats.ai } });
 });
 
 app.use('/api/v1/projects', projectRoutes);
