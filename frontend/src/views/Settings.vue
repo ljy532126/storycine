@@ -282,7 +282,7 @@
             <div class="st-field-row" v-for="scene in smsSceneList" :key="scene.key">
               <span class="st-field-label">{{ scene.label }}</span>
               <el-select v-model="smsCfg.templateCodes[scene.key]" size="small" style="width:280px" filterable allow-create>
-                <el-option v-for="t in smsTemplates" :key="t.code" :label="t.code + ' — ' + t.scene ? '(' + t.scene + ') ' : '' + t.desc" :value="t.code" />
+                <el-option v-for="t in smsTemplates" :key="t.code" :label="t.code + ' — ' + t.desc" :value="t.code" />
               </el-select>
             </div>
           </div>
