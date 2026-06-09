@@ -601,6 +601,8 @@ router.post('/sms/test', authRequired, async (req, res, next) => {
     const errMsg = body.message || body.code || '未知错误';
     if (/SMS_TEMPLATE|模板/.test(errMsg) || /手机号|PhoneNumber/.test(errMsg)) return res.json({ ok: true, message: 'AccessKey 验证通过（' + errMsg + '，需调整配置）' });
     if (/签名/.test(errMsg)) return res.json({ ok: true, message: 'AccessKey 验证通过（签名问题: ' + errMsg + '）' });
+    if (/frequency/i.test(errMsg) || (body.code && /FREQUENCY/i.test(body.code))) return res.json({ ok: true, message: 'AccessKey 验证通过 ✅（阿里云限流，60秒后重试即可正常发送）' });
+    if (/balance|insufficient/i.test(errMsg)) return res.json({ ok: true, message: 'AccessKey 验证通过 ✅（账户余额不足，请充值后即可正常发送）' });
     return res.json({ ok: false, message: errMsg + (body.code ? ' [code: ' + body.code + ']' : '') });
   } catch (e) {
     const msg = e.message || '';
