@@ -229,7 +229,7 @@
           <h3 class="st-card-title"><IdCard theme="outline" size="17" fill="var(--gold)" /> 账号详情</h3>
           <div class="pf-detail-grid">
             <div class="pf-detail-item"><span class="pf-detail-label">用户 ID</span><span class="pf-detail-val pf-uid" @click="copyUid">{{ profileUser.uid || '-' }}<span v-if="copiedUid" class="pf-copied">✓ 已复制</span></span></div>
-            <div class="pf-detail-item"><span class="pf-detail-label">绑定手机</span><span class="pf-detail-val">{{ maskPhone(profileUser.phone) }}<span v-if="profileUser.phone" style="margin-left:6px;cursor:pointer;font-size:11px;color:var(--gold);user-select:none;font-weight:400" @click="showFullPhone = !showFullPhone">{{ showFullPhone ? '隐藏' : '👁' }}</span><span v-if="showFullPhone && profileUser.phone" style="font-size:10px;color:var(--gold);margin-left:6px;font-weight:600">{{ profileUser.phone }}</span></span></div>
+            <div class="pf-detail-item"><span class="pf-detail-label">绑定手机</span><span class="pf-detail-val">{{ showFullPhone ? profileUser.phone : maskPhone(profileUser.phone) }}<span v-if="profileUser.phone" style="margin-left:6px;cursor:pointer;font-size:11px;color:var(--gold);user-select:none;font-weight:400" @click="showFullPhone = !showFullPhone">{{ showFullPhone ? ' 隐藏' : '👁' }}</span></span></div>
             <div class="pf-detail-item"><span class="pf-detail-label">注册时间</span><span class="pf-detail-val">{{ fmt(profileUser.createdAt) }}</span></div>
             <div class="pf-detail-item"><span class="pf-detail-label">最后登录 IP</span><span class="pf-detail-val">{{ profileUser.lastLoginIp || '-' }}</span></div>
           </div>
@@ -365,7 +365,20 @@ function triggerUpload() { fileInput.value?.click(); }
 function onFileChange(e) { const file = e.target.files?.[0]; if (!file) return; if (file.size > 2*1024*1024) { ElMessage.warning('图片不能超过2MB'); return; } const reader = new FileReader(); reader.onload = ev => { profileForm.avatar = ev.target.result; }; reader.readAsDataURL(file); e.target.value = ''; }
 
 async function loadProfileData() {
-  try { const res = await fetch('/api/v1/auth/me', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } }); const d = (await res.json()).data; if (d) { Object.assign(profileUser, d); profileForm.nickname = d.nickname || ''; profileForm.avatar = d.avatar || ''; localStorage.setItem('user', JSON.stringify(d)); } } catch {}
+  try {
+    const res = await fetch('/api/v1/auth/me', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const d = (await res.json()).data;
+    if (d) {
+      // 先清空再赋值，避免上一个用户的残留数据
+      Object.keys(profileUser).forEach(k => delete profileUser[k]);
+      Object.assign(profileUser, { username: '', nickname: '', avatar: '', uid: '', role: '', phone: '', createdAt: '', lastLoginAt: '', lastLoginIp: '' });
+      Object.assign(profileUser, d);
+      profileForm.nickname = d.nickname || '';
+      profileForm.avatar = d.avatar || '';
+      showFullPhone.value = false;
+      localStorage.setItem('user', JSON.stringify(d));
+    }
+  } catch {}
 }
 async function saveProfile() {
   savingProfile.value = true;
@@ -550,7 +563,7 @@ async function testSms() {
 }
 
 watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); fetchSmsStatus(); } });
-watch(() => route.path, p => { if (p === '/settings') refreshStatus(); });
+watch(() => route.path, p => { if (p === '/settings') { refreshStatus(); loadProfileData(); } });
 
 onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); fetchSmsStatus(); if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin.value) loadStorCfg(); } });
 </script>
