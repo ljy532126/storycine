@@ -20,7 +20,7 @@
             <el-form-item label="选择分镜表">
               <el-select v-model="selectedStoryboardId" placeholder="选择分镜表" style="width:100%">
                 <el-option v-for="s in storyboards" :key="s._id"
-                  :label="`分镜表 - ${s.totalShots}镜头 (${new Date(s.createdAt).toLocaleDateString()})`" :value="s._id" />
+                  :label="`分镜表 - ${s.totalShots}镜头 (${new Date(s.createdAt).toLocaleDateString('zh-CN')})`" :value="s._id" />
               </el-select>
             </el-form-item>
             <el-form-item label="输出格式">

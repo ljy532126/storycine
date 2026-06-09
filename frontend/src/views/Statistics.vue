@@ -706,7 +706,7 @@ async function refreshAll() {
       fetchEndpoints(),
       fetchUserRegions(),
     ]);
-    lastUpdated.value = new Date().toLocaleTimeString();
+    lastUpdated.value = new Date().toLocaleTimeString('zh-CN');
   } catch (e) {
     fetchError.value = '部分数据加载失败，请检查网络连接';
   } finally {
