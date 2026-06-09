@@ -10,7 +10,7 @@ sceneSchema.add({
   location: { type: String, default: '' },
   shotType: { type: String, enum: ['远景', '中景', '近景', '特写', '大特写', '全景', '中近景'], default: '中景' },
   composition: { type: String, default: '' },
-  cameraMovement: { type: String, enum: ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动'], default: '静止' },
+  cameraMovement: { type: String, enum: ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动', '摇移', '推拉', '跟移'], default: '静止' },
   lighting: { type: String, default: '' },
   soundEffect: { type: String, default: '' },
   duration: { type: Number, default: 3 },

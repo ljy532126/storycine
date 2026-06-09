@@ -27,7 +27,7 @@ async function verifyScriptAccess(script, userId, role) {
 function sanitizeScriptData(scriptData) {
   if (!scriptData || !scriptData.scenes) return scriptData;
   const VALID_SHOT_TYPES = ['远景', '中景', '近景', '特写', '大特写', '全景', '中近景'];
-  const VALID_CAM_MOVES = ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动'];
+  const VALID_CAM_MOVES = ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动', '摇移', '推拉', '跟移'];
   scriptData.scenes = scriptData.scenes.map(scene => {
     // 智能估算时长（对话数量 + 字数 + 动作复杂度）
     const existingDuration = Number(scene.duration);

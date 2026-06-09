@@ -203,7 +203,7 @@ const scripts=ref([]);const showDirectorDialog=ref(false);const showExtractDialo
 const extractResult=ref(null);const extracting=ref(false);const aiUnderstanding=ref(false);
 const dirty=ref(false);const timeOptions=['白天','夜晚','黄昏','傍晚','清晨','黎明','正午','深夜','雨天','雪天','不限'];
 const shotTypes=['远景','中景','近景','特写','大特写','全景','中近景'];
-const cameraMoves=['推','拉','摇','移','跟','静止','升','降','晃动'];
+const cameraMoves=['推','拉','摇','移','跟','静止','升','降','晃动','摇移','推拉','跟移'];
 const charactersStr=ref([]);const autoStoryboarding=ref(false);const syncing=ref(false);
 const allAssets=ref([]);const showStoryboardDiff=ref(false);const diffShots=ref([]);const diffChanges=ref(0);const diffBackup=ref(null);const flowDoneAI=ref(false);const flowDoneExtract=ref(false);const flowDoneSync=ref(false);
 

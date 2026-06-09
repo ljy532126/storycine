@@ -165,7 +165,7 @@ router.post('/:id/import', async (req, res, next) => {
 
     // 校验并修正数据
     const validShotTypes = ['远景','中景','近景','特写','大特写','全景','中近景'];
-    const validCameraMoves = ['推','拉','摇','移','跟','静止','升','降','晃动'];
+    const validCameraMoves = ['推','拉','摇','移','跟','静止','升','降','晃动','摇移','推拉','跟移'];
 
     const sanitized = shots.map((s, i) => ({
       shotNumber: s.shotNumber || (i + 1),
