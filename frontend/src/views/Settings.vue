@@ -229,6 +229,7 @@
           <h3 class="st-card-title"><IdCard theme="outline" size="17" fill="var(--gold)" /> 账号详情</h3>
           <div class="pf-detail-grid">
             <div class="pf-detail-item"><span class="pf-detail-label">用户 ID</span><span class="pf-detail-val pf-uid" @click="copyUid">{{ profileUser.uid || '-' }}<span v-if="copiedUid" class="pf-copied">✓ 已复制</span></span></div>
+            <div class="pf-detail-item"><span class="pf-detail-label">绑定手机</span><span class="pf-detail-val">{{ profileUser.phone || '未绑定' }}</span></div>
             <div class="pf-detail-item"><span class="pf-detail-label">注册时间</span><span class="pf-detail-val">{{ fmt(profileUser.createdAt) }}</span></div>
             <div class="pf-detail-item"><span class="pf-detail-label">最后登录 IP</span><span class="pf-detail-val">{{ profileUser.lastLoginIp || '-' }}</span></div>
           </div>
@@ -243,6 +244,25 @@
             <div class="input-counter-wrap">
               <el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" />
               <span v-if="profileForm.nickname" class="input-counter">{{ profileForm.nickname.length }}/20</span>
+            </div>
+          </div>
+          <div class="st-field" v-if="smsEnabled">
+            <label class="st-field-label">手机号</label>
+            <div style="display:flex;gap:8px;align-items:center" v-if="!profileUser.phone">
+              <div class="input-counter-wrap" style="flex:1">
+                <el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" />
+                <span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span>
+              </div>
+              <div class="input-counter-wrap" style="flex:1">
+                <el-input v-model="phoneBindForm.code" placeholder="验证码" maxlength="6" />
+                <span v-if="phoneBindForm.code" class="input-counter">{{ phoneBindForm.code.length }}/6</span>
+              </div>
+              <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone" size="default" style="min-width:110px">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
+              <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" size="default">绑定</el-button>
+            </div>
+            <div v-else style="display:flex;align-items:center;gap:8px">
+              <el-input :model-value="profileUser.phone" disabled style="flex:1" />
+              <el-tag type="success" size="default">已绑定</el-tag>
             </div>
           </div>
           <el-button class="pf-btn" @click="saveProfile" :loading="savingProfile"><CheckOne theme="outline" size="16" fill="currentColor" /> 保存资料</el-button>
@@ -316,7 +336,7 @@ const changelog = ref([]);
 async function loadChangelog() { try { const res = await fetch('/changelog.json'); if (res.ok) changelog.value = await res.json(); } catch {} }
 
 // ===== 个人中心 =====
-const profileUser = reactive({ username: '', nickname: '', avatar: '', uid: '', role: '', createdAt: '', lastLoginAt: '', lastLoginIp: '' });
+const profileUser = reactive({ username: '', nickname: '', avatar: '', uid: '', role: '', phone: '', createdAt: '', lastLoginAt: '', lastLoginIp: '' });
 const profileForm = reactive({ nickname: '', avatar: '' });
 const savingProfile = ref(false); const changingPwd = ref(false); const copiedUid = ref(false); const fileInput = ref(null); const pwdForm = ref(null);
 const pwd = reactive({ oldPassword: '', newPassword: '', confirmPwd: '' });
@@ -422,6 +442,36 @@ const smsSaved = ref(false);
 const smsTesting = ref(false);
 const smsTestStatus = ref('');
 const smsTestMsg = ref('测试连接');
+
+// 个人中心手机号绑定
+const phoneBindForm = reactive({ phone: '', code: '' });
+const bindSending = ref(false);
+const bindCooldown = ref(0);
+const bindSubmitting = ref(false);
+let bindTimer = null;
+
+async function sendBindSms() {
+  if (bindCooldown.value > 0) return;
+  bindSending.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phoneBindForm.phone, scene: 'bindPhone' }) });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success(data.message || '验证码已发送'); bindCooldown.value = 60; clearInterval(bindTimer); bindTimer = setInterval(() => { bindCooldown.value--; if (bindCooldown.value <= 0) clearInterval(bindTimer); }, 1000); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('发送失败'); }
+  finally { bindSending.value = false; }
+}
+
+async function bindPhone() {
+  bindSubmitting.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/phone', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ phone: phoneBindForm.phone, code: phoneBindForm.code }) });
+    const data = await res.json();
+    if (res.ok) { profileUser.phone = phoneBindForm.phone; ElMessage.success('手机号绑定成功'); phoneBindForm.phone = ''; phoneBindForm.code = ''; }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('绑定失败'); }
+  finally { bindSubmitting.value = false; }
+}
 
 async function loadSmsCfg() {
   try {

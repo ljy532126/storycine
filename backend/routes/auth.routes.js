@@ -175,7 +175,7 @@ router.post('/login-sms', async (req, res) => {
     if (user.status === 'banned') return res.status(403).json({ message: '账号已被封禁' });
     if (user.status === 'disabled') return res.status(403).json({ message: '账号已被禁用' });
 
-    await User.updateOne({ _id: user._id }, { $set: { loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastLoginIp: getClientIp(req) } });
+    await User.updateOne({ _id: user._id }, { $set: { loginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastLoginIp: getClientIp(req), phone } });
     await logLogin(user.username, getClientIp(req), req.headers['user-agent'] || '', true, '短信登录', user._id);
     const token = generateToken(user);
     res.json({ message: '登录成功', data: { token, user: { id: user._id, uid: user.uid, username: user.username, nickname: user.nickname || user.username, avatar: user.avatar || '', role: user.role } } });
