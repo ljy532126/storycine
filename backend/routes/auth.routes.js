@@ -167,8 +167,13 @@ router.post('/login-sms', async (req, res) => {
     const { smsEnabled } = require('../utils/sms');
     if (!(await smsEnabled())) return res.status(403).json({ message: '短信认证服务未开启' });
 
-    const { phone } = req.body;
+    const { phone, code } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
+    if (!code) return res.status(400).json({ message: '请输入短信验证码' });
+
+    // 必须验证短信码
+    const verify = await verifySmsCode(phone, code);
+    if (!verify.ok) return res.status(400).json({ message: verify.message });
 
     const user = await User.findOne({ phone });
     if (!user) return res.status(400).json({ message: '该手机号未注册' });

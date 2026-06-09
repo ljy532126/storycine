@@ -127,10 +127,7 @@ const smsForm = reactive({ phone: '', code: '' });
 async function handleSmsLogin() {
   loading.value = true;
   try {
-    const vRes = await fetch('/api/v1/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, code: smsForm.code }) });
-    const vData = await vRes.json();
-    if (!vRes.ok) { ElMessage.error(vData.message); loading.value = false; return; }
-    const res = await fetch('/api/v1/auth/login-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone }) });
+    const res = await fetch('/api/v1/auth/login-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: smsForm.phone, code: smsForm.code }) });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '登录失败'); loading.value = false; return; }
     localStorage.setItem('token', data.data.token);
@@ -149,15 +146,9 @@ const smsResetting = ref(false);
 const forgotForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: '' });
 
 async function verifyForgotCode() {
-  smsVerifying.value = true;
-  try {
-    const res = await fetch('/api/v1/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: forgotForm.phone, code: forgotForm.code }) });
-    const data = await res.json();
-    if (res.ok) { smsStep.value = 1; ElMessage.success('验证通过'); }
-    else ElMessage.error(data.message);
-  } catch { ElMessage.error('验证失败'); }
-  finally { smsVerifying.value = false; }
-}
+  if (!forgotForm.phone) { ElMessage.warning('请输入手机号'); return; }
+  if (!forgotForm.code) { ElMessage.warning('请输入验证码'); return; }
+  smsStep.value = 1; // 直接进第二步，重置密码时后端会校验验证码
 
 async function resetPasswordBySms() {
   if (!forgotForm.newPassword || forgotForm.newPassword.length < 8) { ElMessage.warning('密码至少8位'); return; }
