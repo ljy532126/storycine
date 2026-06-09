@@ -141,7 +141,6 @@ async function handleSmsLogin() {
 // 找回密码
 const smsVisible = ref(false);
 const smsStep = ref(0);
-const smsVerifying = ref(false);
 const smsResetting = ref(false);
 const forgotForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: '' });
 
@@ -149,6 +148,7 @@ async function verifyForgotCode() {
   if (!forgotForm.phone) { ElMessage.warning('请输入手机号'); return; }
   if (!forgotForm.code) { ElMessage.warning('请输入验证码'); return; }
   smsStep.value = 1; // 直接进第二步，重置密码时后端会校验验证码
+}
 
 async function resetPasswordBySms() {
   if (!forgotForm.newPassword || forgotForm.newPassword.length < 8) { ElMessage.warning('密码至少8位'); return; }
