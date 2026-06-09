@@ -426,7 +426,11 @@ async function saveSmsCfg(showMsg = true) {
 async function testSms() {
   smsTesting.value = true; smsTestStatus.value = ''; smsTestMsg.value = '测试中...';
   try {
-    const r = await fetch('/api/v1/config/sms/test', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const r = await fetch('/api/v1/config/sms/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      body: JSON.stringify({ accessKeyId: smsCfg.accessKeyId, accessKeySecret: smsCfg.accessKeySecret, signName: smsCfg.signName, templateCode: smsCfg.templateCode }),
+    });
     const d = await r.json();
     if (d.ok) { smsTestStatus.value = 'ok'; smsTestMsg.value = '已连通'; ElMessage.success(d.message || '连接成功'); }
     else { smsTestStatus.value = 'fail'; smsTestMsg.value = '连接失败'; ElMessage.error(d.message || '连接失败'); }

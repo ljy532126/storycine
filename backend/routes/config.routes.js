@@ -579,14 +579,17 @@ router.post('/sms/test', authRequired, async (req, res, next) => {
   try {
     const Dypnsapi20170525 = require('@alicloud/dypnsapi20170525');
     const OpenApi = require('@alicloud/openapi-client');
+    // 优先用表单当前值，兜底读数据库
     const settings = await Settings.getSettings(req.user._id);
-    const cfg = settings.smsConfig || {};
-    const akId = cfg.accessKeyId || process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || '';
-    const akSecret = cfg.accessKeySecret || process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || '';
-    if (!akId || !akSecret) return res.json({ ok: false, message: '请先配置 AccessKey' });
+    const dbCfg = settings.smsConfig || {};
+    const akId = req.body.accessKeyId || dbCfg.accessKeyId || process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || '';
+    const akSecret = req.body.accessKeySecret || dbCfg.accessKeySecret || process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || '';
+    const signName = req.body.signName || dbCfg.signName || process.env.SMS_SIGN_NAME || '';
+    const templateCode = req.body.templateCode || dbCfg.templateCode || process.env.SMS_TEMPLATE_CODE || '';
+    if (!akId || !akSecret) return res.json({ ok: false, message: '请先填写 AccessKey ID 和 Secret' });
     const client = new Dypnsapi20170525.default(new OpenApi.Config({ accessKeyId: akId, accessKeySecret: akSecret, endpoint: 'dypnsapi.aliyuncs.com' }));
     const resp = await client.sendSmsVerifyCodeWithOptions(new Dypnsapi20170525.SendSmsVerifyCodeRequest({
-      phoneNumber: '13800138000', signName: cfg.signName || 'test', templateCode: cfg.templateCode || '100001',
+      phoneNumber: '13800138000', signName: signName || 'test', templateCode: templateCode || '100001',
       templateParam: JSON.stringify({ code: '000000', min: '5' }),
     }), new (require('@alicloud/tea-util')).RuntimeOptions({}));
     const body = resp.body || {};
