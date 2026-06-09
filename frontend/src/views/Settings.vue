@@ -238,36 +238,39 @@
         <!-- 编辑资料 -->
         <div class="st-card pf-card-edit">
           <h3 class="st-card-title"><EditTwo theme="outline" size="17" fill="var(--gold)" /> 编辑资料</h3>
-          <div class="st-field"><label class="st-field-label">账号</label><el-input :model-value="profileUser.username" disabled /></div>
-          <div class="st-field">
-            <label class="st-field-label">昵称</label>
-            <div class="input-counter-wrap">
-              <el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" />
-              <span v-if="profileForm.nickname" class="input-counter">{{ profileForm.nickname.length }}/20</span>
+          <div class="pf-edit-grid">
+            <div class="pf-edit-row">
+              <span class="pf-edit-label">账号</span>
+              <div class="pf-edit-val"><el-input :model-value="profileUser.username" disabled /></div>
             </div>
-          </div>
-          <div class="st-field" v-if="smsEnabled">
-            <label class="st-field-label">绑定手机号<span class="st-field-help" v-if="!profileUser.phone">需要短信验证</span></label>
-            <div v-if="!profileUser.phone">
-              <div class="pf-phone-row">
-                <div class="input-counter-wrap" style="width:180px">
-                  <el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" />
-                  <span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span>
+            <div class="pf-edit-row">
+              <span class="pf-edit-label">昵称</span>
+              <div class="pf-edit-val">
+                <div class="input-counter-wrap">
+                  <el-input v-model="profileForm.nickname" placeholder="给自己取个昵称" maxlength="20" />
+                  <span v-if="profileForm.nickname" class="input-counter">{{ profileForm.nickname.length }}/20</span>
                 </div>
-                <div class="input-counter-wrap" style="width:140px">
-                  <el-input v-model="phoneBindForm.code" placeholder="验证码" maxlength="6" />
-                  <span v-if="phoneBindForm.code" class="input-counter">{{ phoneBindForm.code.length }}/6</span>
-                </div>
-                <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone" style="min-width:110px">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
               </div>
-              <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code">确认绑定</el-button>
             </div>
-            <div v-else class="pf-phone-bound">
-              <span>{{ maskPhone(profileUser.phone) }}</span>
-              <el-tag type="success" size="small">已绑定</el-tag>
+            <div class="pf-edit-row" v-if="smsEnabled">
+              <span class="pf-edit-label">手机号</span>
+              <div class="pf-edit-val">
+                <div v-if="!profileUser.phone" class="pf-phone-bind">
+                  <div class="pf-phone-fields">
+                    <div class="input-counter-wrap" style="flex:1.5"><el-input v-model="phoneBindForm.phone" placeholder="输入手机号" maxlength="11" /><span v-if="phoneBindForm.phone" class="input-counter">{{ phoneBindForm.phone.length }}/11</span></div>
+                    <div class="input-counter-wrap" style="flex:1"><el-input v-model="phoneBindForm.code" placeholder="验证码" maxlength="6" /><span v-if="phoneBindForm.code" class="input-counter">{{ phoneBindForm.code.length }}/6</span></div>
+                    <el-button @click="sendBindSms" :loading="bindSending" :disabled="bindCooldown > 0 || !phoneBindForm.phone">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
+                  </div>
+                  <el-button type="primary" @click="bindPhone" :loading="bindSubmitting" :disabled="!phoneBindForm.phone || !phoneBindForm.code" size="small">确认绑定</el-button>
+                </div>
+                <div v-else class="pf-edit-val-bound">
+                  <span>{{ maskPhone(profileUser.phone) }}</span>
+                  <el-tag type="success" size="small">已绑定</el-tag>
+                </div>
+              </div>
             </div>
           </div>
-          <el-button class="pf-btn" @click="saveProfile" :loading="savingProfile"><CheckOne theme="outline" size="16" fill="currentColor" /> 保存资料</el-button>
+          <el-button class="pf-btn-save" @click="saveProfile" :loading="savingProfile"><CheckOne theme="outline" size="16" fill="currentColor" /> 保存资料</el-button>
         </div>
 
         <!-- 修改密码 -->
@@ -718,9 +721,18 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
 .pf-btn-primary { background: var(--gold); border-color: var(--gold); color: var(--navy); }
 .pf-btn-primary:hover { background: var(--gold-dark); border-color: var(--gold-dark); color: #fff; }
 
-/* 手机绑定区域 */
-.pf-phone-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
+/* 编辑资料样式 */
+.pf-edit-grid { display: flex; flex-direction: column; }
+.pf-edit-row { display: flex; align-items: flex-start; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--bg-300); }
+.pf-edit-row:first-child { padding-top: 0; }
+.pf-edit-label { width: 56px; font-size: 13px; font-weight: 600; color: var(--text-200); padding-top: 8px; flex-shrink: 0; }
+.pf-edit-val { flex: 1; min-width: 0; }
+.pf-edit-val-bound { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-100); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-100); }
+.pf-phone-bind { display: flex; flex-direction: column; gap: 8px; }
+.pf-phone-fields { display: flex; gap: 8px; align-items: flex-start; }
 .pf-phone-bound { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-100); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-100); }
+.pf-btn-save { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--bg-300); background: var(--bg-100); color: var(--text-100); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.pf-btn-save:hover { border-color: var(--gold); color: var(--gold-dark); background: var(--bg-200); transform: translateY(-1px); }
 
 /* 密码修改模式切换 */
 .pf-pwd-mode { display: flex; gap: 0; margin-bottom: 18px; border: 1px solid var(--bg-300); border-radius: 8px; overflow: hidden; }
