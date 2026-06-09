@@ -276,6 +276,17 @@
             <el-form-item label="新密码" prop="newPassword"><div class="input-counter-wrap"><el-input v-model="pwd.newPassword" type="password" show-password placeholder="至少6位" maxlength="50" /><span v-if="pwd.newPassword" class="input-counter">{{ pwd.newPassword.length }}/50</span></div></el-form-item>
             <el-form-item label="确认新密码" prop="confirmPwd"><div class="input-counter-wrap"><el-input v-model="pwd.confirmPwd" type="password" show-password placeholder="再次输入" maxlength="50" /><span v-if="pwd.confirmPwd" class="input-counter">{{ pwd.confirmPwd.length }}/50</span></div></el-form-item>
             <el-button class="pf-btn pf-btn-primary" @click="changePwd" :loading="changingPwd"><CheckOne theme="outline" size="16" fill="currentColor" /> 更新密码</el-button>
+            <div v-if="smsEnabled && profileUser.phone" style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bg-300)">
+              <span style="font-size:12px;color:var(--text-200);display:block;margin-bottom:8px">或通过短信验证修改</span>
+              <div style="display:flex;gap:8px">
+                <div class="input-counter-wrap" style="flex:1">
+                  <el-input v-model="pwd.smsCode" placeholder="短信验证码" maxlength="6" />
+                  <span v-if="pwd.smsCode" class="input-counter">{{ pwd.smsCode.length }}/6</span>
+                </div>
+                <el-button @click="sendPwdSms" :loading="bindSending" :disabled="bindCooldown > 0" size="default">{{ bindCooldown > 0 ? bindCooldown + 's' : '获取验证码' }}</el-button>
+              </div>
+              <el-button class="pf-btn pf-btn-primary" @click="changePwdBySms" :loading="changingPwd" :disabled="!pwd.newPassword || !pwd.smsCode" style="width:100%;margin-top:8px"><CheckOne theme="outline" size="16" fill="currentColor" /> 短信验证修改密码</el-button>
+            </div>
           </el-form>
         </div>
 
@@ -341,7 +352,7 @@ const profileForm = reactive({ nickname: '', avatar: '' });
 const savingProfile = ref(false); const changingPwd = ref(false); const copiedUid = ref(false); const showFullPhone = ref(false); const fileInput = ref(null); const pwdForm = ref(null);
 
 function maskPhone(p) { if (!p) return '未绑定'; return p.substring(0, 3) + '****' + p.substring(7); }
-const pwd = reactive({ oldPassword: '', newPassword: '', confirmPwd: '' });
+const pwd = reactive({ oldPassword: '', newPassword: '', confirmPwd: '', smsCode: '' });
 const pwdRules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
   newPassword: [{ required: true, min: 6, message: '新密码至少6位', trigger: 'blur' }],
@@ -478,6 +489,31 @@ async function bindPhone() {
     else ElMessage.error(data.message);
   } catch { ElMessage.error('绑定失败'); }
   finally { bindSubmitting.value = false; }
+}
+
+async function sendPwdSms() {
+  if (bindCooldown.value > 0) return;
+  bindSending.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: profileUser.phone, scene: 'resetPwd' }) });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success(data.message); bindCooldown.value = 60; clearInterval(bindTimer); bindTimer = setInterval(() => { bindCooldown.value--; if (bindCooldown.value <= 0) clearInterval(bindTimer); }, 1000); }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('发送失败'); }
+  finally { bindSending.value = false; }
+}
+
+async function changePwdBySms() {
+  if (!pwd.newPassword || pwd.newPassword.length < 6) { ElMessage.warning('新密码至少6位'); return; }
+  if (pwd.newPassword !== pwd.confirmPwd) { ElMessage.warning('两次密码不一致'); return; }
+  changingPwd.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: profileUser.phone, code: pwd.smsCode, newPassword: pwd.newPassword }) });
+    const data = await res.json();
+    if (res.ok) { ElMessage.success('密码已修改，需重新登录'); localStorage.clear(); window.location.href = '/login'; }
+    else ElMessage.error(data.message);
+  } catch { ElMessage.error('操作失败'); }
+  finally { changingPwd.value = false; }
 }
 
 async function loadSmsCfg() {
