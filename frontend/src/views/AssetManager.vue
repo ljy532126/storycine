@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="asset-root">
     <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
       <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">角色场景库 🎭</span>
+      <span class="bc-current">角色场景库</span>
     </div>
     <div class="top-bar">
       <div class="sg-project-pills">
@@ -15,12 +15,13 @@
       <!-- ===== 左侧：资产列表 ===== -->
       <div class="left-list">
         <el-tabs v-model="activeTab" @tab-change="onTabChange">
-          <el-tab-pane label="🎭 角色" name="characters">
+          <el-tab-pane name="characters">
+            <template #label><span style="display:inline-flex;align-items:center;gap:4px"><People size="14" fill="currentColor"/> 角色</span></template>
             <div class="list-header">
               <span>{{ assetStore.characters.length }} 位角色</span>
               <div style="display:flex;gap:6px">
-                <el-button size="small" type="success" @click="batchGenerateAssets('characters')" :loading="batchGenning">一键生图 🎨</el-button>
-                <el-button size="small" type="primary" @click="createNew('character')">+ 新建</el-button>
+                <el-button size="small" type="success" @click="batchGenerateAssets('characters')" :loading="batchGenning"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
+                <el-button size="small" type="primary" @click="createNew('character')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
               </div>
             </div>
             <div v-if="assetStore.characters.length > 0" class="batch-bar">
@@ -53,12 +54,13 @@
             <el-empty v-if="assetStore.characters.length === 0" description="还没有角色哦，点击「新建」添加第一位演员吧 ✨" :image-size="40" />
           </el-tab-pane>
 
-          <el-tab-pane label="🏞️ 场景" name="scenes">
+          <el-tab-pane name="scenes">
+            <template #label><span style="display:inline-flex;align-items:center;gap:4px"><PictureOne size="14" fill="currentColor"/> 场景</span></template>
             <div class="list-header">
               <span>{{ assetStore.scenes.length }} 处场景</span>
               <div style="display:flex;gap:6px">
-                <el-button size="small" type="success" @click="batchGenerateAssets('scenes')" :loading="batchGenning">一键生图 🎨</el-button>
-                <el-button size="small" type="primary" @click="createNew('scene')">+ 新建</el-button>
+                <el-button size="small" type="success" @click="batchGenerateAssets('scenes')" :loading="batchGenning"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
+                <el-button size="small" type="primary" @click="createNew('scene')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
               </div>
             </div>
             <div v-if="assetStore.scenes.length > 0" class="batch-bar">
@@ -87,15 +89,16 @@
                 <span class="card-name">{{ s.sceneName }}</span>
               </div>
             </div>
-            <el-empty v-if="assetStore.scenes.length === 0" description="还没有场景哦，点击「新建」添加第一处场景吧 🏞️" :image-size="40" />
+            <el-empty v-if="assetStore.scenes.length === 0" description="还没有场景哦，点击「新建」添加第一处场景吧" :image-size="40" />
           </el-tab-pane>
 
-          <el-tab-pane label="🔧 道具" name="props">
+          <el-tab-pane name="props">
+            <template #label><span style="display:inline-flex;align-items:center;gap:4px"><Tool size="14" fill="currentColor"/> 道具</span></template>
             <div class="list-header">
               <span>{{ assetStore.props.length }} 件道具</span>
               <div style="display:flex;gap:6px">
-                <el-button size="small" type="success" @click="batchGenerateAssets('props')" :loading="batchGenning">一键生图 🎨</el-button>
-                <el-button size="small" type="primary" @click="createNew('prop')">+ 新建</el-button>
+                <el-button size="small" type="success" @click="batchGenerateAssets('props')" :loading="batchGenning"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
+                <el-button size="small" type="primary" @click="createNew('prop')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
               </div>
             </div>
             <div v-if="assetStore.props.length > 0" class="batch-bar">
@@ -124,7 +127,7 @@
                 <span class="card-name">{{ p.propName }}</span>
               </div>
             </div>
-            <el-empty v-if="assetStore.props.length === 0" description="还没有道具哦，点击「新建」添加第一件道具吧 🔧" :image-size="40" />
+            <el-empty v-if="assetStore.props.length === 0" description="还没有道具哦，点击「新建」添加第一件道具吧" :image-size="40" />
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -165,9 +168,9 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                <el-form-item label="外貌描述 👤"><el-input v-model="selectedAsset.appearance" type="textarea" :rows="2" placeholder="描述角色的外貌特征..." /></el-form-item>
-                <el-form-item label="性格特征 💭"><el-input v-model="selectedAsset.personality" placeholder="角色的性格特点..." /></el-form-item>
-                <el-form-item label="背景故事 📖"><el-input v-model="selectedAsset.background" type="textarea" :rows="2" placeholder="角色的背景故事..." /></el-form-item>
+                <el-form-item label="外貌描述"><el-input v-model="selectedAsset.appearance" type="textarea" :rows="2" placeholder="描述角色的外貌特征..." /></el-form-item>
+                <el-form-item label="性格特征"><el-input v-model="selectedAsset.personality" placeholder="角色的性格特点..." /></el-form-item>
+                <el-form-item label="背景故事"><el-input v-model="selectedAsset.background" type="textarea" :rows="2" placeholder="角色的背景故事..." /></el-form-item>
               </el-form>
             </template>
             <template v-else-if="activeTab === 'scenes'">
@@ -175,7 +178,7 @@
                 <el-form-item label="场景名称">
                   <el-input v-model="selectedAsset.sceneName" placeholder="场景名称" />
                 </el-form-item>
-                <el-form-item label="场景描述 🏞️">
+                <el-form-item label="场景描述">
                   <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
                 </el-form-item>
               </el-form>
@@ -193,7 +196,7 @@
                 </el-select>
               </div>
               <div class="model-section">
-                <div class="section-label">画幅比例 📐</div>
+                <div class="section-label">画幅比例</div>
                 <el-select v-model="genRatio" size="small" style="width:100%">
                   <el-option label="9:16 竖屏" value="9:16" />
                   <el-option label="16:9 横屏" value="16:9" />
@@ -201,14 +204,14 @@
                   <el-option label="3:4" value="3:4" />
                 </el-select>
               </div>
-              <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成场景图 🖼️</el-button>
+              <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成场景图</el-button>
             </template>
             <template v-else>
               <el-form label-position="top" size="small">
                 <el-form-item label="道具名称">
                   <el-input v-model="selectedAsset.propName" placeholder="道具名称" />
                 </el-form-item>
-                <el-form-item label="道具描述 🔧">
+                <el-form-item label="道具描述">
                   <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
                 </el-form-item>
               </el-form>
@@ -225,8 +228,8 @@
                   <el-option label="gpt-image-2" value="openai_image" />
                 </el-select>
               </div>
-<div class="model-section"><div class="section-label">画幅比例 📐</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
-              <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成道具图 🔧</el-button>
+<div class="model-section"><div class="section-label">画幅比例</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
+              <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成道具图</el-button>
             </template>
           </div>
 
@@ -248,11 +251,11 @@
                 <el-option label="gpt-image-2" value="openai_image" />
               </el-select>
             </div>
-<div class="model-section"><div class="section-label">画幅比例 📐</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
-            <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成角色图 🎭</el-button>
-            <!-- 音色选择 🎙️ -->
+<div class="model-section"><div class="section-label">画幅比例</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
+            <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成角色图</el-button>
+            <!-- 音色选择 -->
             <div style="margin-top:14px">
-              <div class="section-label">音色选择 🎙️</div>
+              <div class="section-label">音色选择</div>
               <el-select v-model="charVoice" size="small" style="width:100%">
                 <el-option label="温柔女声" value="gentle_female" />
                 <el-option label="沉稳男声" value="calm_male" />
@@ -275,18 +278,18 @@
           <!-- 底部操作 -->
           <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bg-300);display:flex;gap:8px">
             <el-button type="danger" size="small" @click="handleDelete">移除</el-button>
-            <el-button size="small" @click="saveAssetDetails" :loading="saving">保存修改 💾</el-button>
+            <el-button size="small" @click="saveAssetDetails" :loading="saving">保存修改</el-button>
           </div>
         </div>
       </div>
 
       <!-- 未选择资产 -->
       <div class="right-detail right-empty" v-if="!selectedAsset && currentProjectId">
-        <el-empty description="👈 点击左侧卡片查看详情和提示词" />
+        <el-empty description="点击左侧卡片查看详情和提示词" />
       </div>
     </div>
 
-    <el-empty v-if="!currentProjectId" description="请先在上方选择一个片场 🎬" style="margin-top:80px" />
+    <el-empty v-if="!currentProjectId" description="请先在上方选择一个片场" style="margin-top:80px" />
 
     <!-- ===== 新建对话框 ===== -->
     <el-dialog v-model="createDialogVisible" :title="createDialogTitle" width="420px" destroy-on-close>
@@ -337,7 +340,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { PictureFilled, Plus } from '@element-plus/icons-vue';
+import { PictureFilled } from '@element-plus/icons-vue';
+import { People, PictureOne, MagicWand, FolderDownload, Voice, Tool } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI } from '../api';
