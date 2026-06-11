@@ -115,16 +115,9 @@
           <div class="st-toggle-row"><div class="st-toggle-info"><span class="st-toggle-label">禁止文字/水印</span><span class="st-toggle-hint">追加「严禁出现任何文字、logo、乱码、水印」约束，同时关闭豆包自带水印</span></div><el-switch v-model="imgCfg.noTextWatermark" @change="saveImgCfg" /></div>
         </div>
         <div class="st-card">
-          <h3 class="st-card-title"><PictureOne theme="outline" size="17" fill="var(--gold)" /> 画质 & 风格预设</h3>
-          <p class="st-card-sub">生图和生视频时自动使用的默认参数，每个镜头可单独覆盖。</p>
-          <div class="st-field-row"><span class="st-field-label">图片默认画质</span><el-select v-model="imgCfg.imageQuality" size="small" @change="saveImgCfg" style="width:160px"><el-option label="8K 极致" value="8K"/><el-option label="4K 高清" value="4K"/><el-option label="2K 标清" value="2K"/></el-select></div>
-          <div class="st-field-row"><span class="st-field-label">图片默认风格</span><el-select v-model="imgCfg.imageStyle" size="small" @change="saveImgCfg" style="width:160px"><el-option label="超写实" value="超写实"/><el-option label="古风" value="古风"/><el-option label="动漫" value="动漫"/><el-option label="电影级" value="电影级"/></el-select></div>
-          <div class="st-field-row"><span class="st-field-label">角色生图比例</span><el-select v-model="imgCfg.characterRatio" size="small" @change="saveImgCfg" style="width:160px"><el-option label="16:9 横屏" value="16:9"/><el-option label="9:16 竖屏" value="9:16"/><el-option label="4:3 方形" value="4:3"/></el-select></div>
-        </div>
-        <div class="st-card">
           <h3 class="st-card-title"><Shield theme="outline" size="17" fill="var(--gold)" /> 内容安全</h3>
           <p class="st-card-sub">豆包 Seedance 对真人内容审核较严。开启后自动在视频提示词末尾追加风格化引导，降低被误拦的概率。</p>
-          <div class="st-toggle-row"><div class="st-toggle-info"><span class="st-toggle-label">视频风格化模式</span><span class="st-toggle-hint">追加非写实风格标签，减少因"疑似真人"被拒</span></div><el-switch v-model="imgCfg.noRealPerson" @change="saveImgCfg" /></div>
+          <div class="st-toggle-row"><div class="st-toggle-info"><span class="st-toggle-label">视频风格化模式</span><span class="st-toggle-hint">追加非写实风格标签，减少因"疑似真人"被拒</span></div><el-switch v-model="imgCfg.characterStyleMode" @change="saveImgCfg" /></div>
         </div>
         <div class="st-hint-card">配置修改后自动保存，无需手动确认。全局生效，拍摄时可临时覆盖。</div>
       </div>
@@ -447,7 +440,7 @@ async function refreshStatus() { loading.value = true; try { const [cfgRes, stat
 async function saveConfig(provider) { saving.value = true; try { const cfg = form[provider]; await configAPI.updateLLMConfig({ provider, apiKey: cfg.apiKey, baseUrl: cfg.baseUrl, model: cfg.model, imageModel: cfg.imageModel || '' }); ElMessage.success('已保存'); await refreshStatus(); } catch (e) { ElMessage.error('保存失败: ' + (e.response?.data?.message || e.message)); } finally { saving.value = false; } }
 
 // ===== 生图设置 =====
-const imgCfg = reactive({ noTextWatermark: true, imageQuality: '8K', imageStyle: '超写实', characterRatio: '16:9', noRealPerson: true });
+const imgCfg = reactive({ noTextWatermark: true, characterStyleMode: true });
 const tokenHdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` });
 async function loadImgCfg() { try { const r = await fetch('/api/v1/config/all', { headers: tokenHdr() }); const d = await r.json(); if (d.data?.aiConfig) Object.assign(imgCfg, d.data.aiConfig); window.__aiConfig = imgCfg; } catch {} }
 async function saveImgCfg() { try { await fetch('/api/v1/config/ai', { method: 'PUT', headers: tokenHdr(), body: JSON.stringify(imgCfg) }); window.__aiConfig = imgCfg; } catch {} }
