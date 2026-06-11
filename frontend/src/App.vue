@@ -546,6 +546,8 @@ function stopAnnPoll() {
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
+
 :root {
   --primary-100: #8B7355; --primary-200: #D4C5C0; --primary-300: #E8D5C4;
   --accent-100: #C9A84C; --accent-200: #F5E6C8;
@@ -554,7 +556,6 @@ function stopAnnPoll() {
   --gold: #C9A84C; --gold-light: #F5E6C8; --gold-dark: #8B6914;
   --navy: #1A1A2E;
 }
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--bg-100); color: var(--text-200); }
