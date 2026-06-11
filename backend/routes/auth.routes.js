@@ -347,6 +347,18 @@ router.post('/sms/send', async (req, res) => {
   try {
     const { phone, scene } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
+
+    // 找回密码/修改密码等场景：手机号必须已注册
+    if (scene === 'resetPwd' || scene === 'changePhone' || scene === 'bindPhone') {
+      const existingUser = await User.findOne({ phone });
+      if (!existingUser) return res.status(404).json({ message: '该手机号未注册，请先注册账号' });
+    }
+    // 注册场景：手机号不能已被绑定
+    if (scene === 'register') {
+      const existingUser = await User.findOne({ phone });
+      if (existingUser) return res.status(400).json({ message: '该手机号已被其他账号绑定' });
+    }
+
     const result = await sendSMS(phone, scene || 'login');
     if (result.ok) {
       res.json({ message: result.message, degraded: result.degraded || false });
