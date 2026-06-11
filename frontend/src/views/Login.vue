@@ -15,17 +15,23 @@
         <span :class="{ active: loginMode === 'sms' }" @click="loginMode = 'sms'">短信登录</span>
       </div>
 
+      <!-- 隐藏陷阱表单吸收浏览器自动填充 -->
+      <form style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true" tabindex="-1">
+        <input type="text" name="username" autocomplete="username" tabindex="-1" />
+        <input type="password" name="password" autocomplete="current-password" tabindex="-1" />
+      </form>
+
       <!-- 密码登录 -->
       <el-form v-if="loginMode === 'password'" ref="formRef" :model="form" :rules="rules" label-position="top" size="large" @keyup.enter="handleLogin">
         <el-form-item label="账号" prop="username">
           <div class="input-counter-wrap">
-            <el-input :model-value="form.username" placeholder="字母开头英文+数字" maxlength="30" @update:model-value="v => form.username = String(v).replace(/[^a-zA-Z0-9_]/g, '')" />
+            <el-input :model-value="form.username" placeholder="字母开头英文+数字" maxlength="30" autocomplete="off" @update:model-value="v => form.username = String(v).replace(/[^a-zA-Z0-9_]/g, '')" />
             <span v-if="form.username" class="input-counter">{{ form.username.length }}/30</span>
           </div>
         </el-form-item>
         <el-form-item label="密码" prop="password">
           <div class="input-counter-wrap">
-            <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" maxlength="50" />
+            <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" maxlength="50" autocomplete="off" />
             <span v-if="form.password" class="input-counter">{{ form.password.length }}/50</span>
           </div>
         </el-form-item>
@@ -195,13 +201,13 @@ async function resetPasswordBySms() {
 
 .input-counter-wrap { position: relative; width: 100%; }
 .input-counter {
-  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  position: absolute; right: 38px; top: 50%; transform: translateY(-50%);
   font-size: 11px; color: var(--text-200); background: var(--bg-100);
-  padding: 1px 8px; border-radius: 4px; pointer-events: none; font-weight: 600; z-index: 2;
+  padding: 1px 8px; border-radius: 4px; pointer-events: none; font-weight: 600; z-index: 1;
 }
 
 /* 把验证码输入框的 show-password 图标空间留出来 */
-.input-counter-wrap :deep(.el-input--suffix .el-input__inner) { padding-right: 50px; }
+.input-counter-wrap :deep(.el-input--suffix .el-input__inner) { padding-right: 85px; }
 
 @media (max-width: 500px) {
   .auth-card { width: 100%; padding: 30px 20px; }
