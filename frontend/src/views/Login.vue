@@ -93,7 +93,7 @@ import SmsCodeInput from '../components/SmsCodeInput.vue';
 
 const router = useRouter();
 const loading = ref(false);
-const rememberMe = ref(false);
+const rememberMe = ref(localStorage.getItem('rememberMe') === 'true');
 const formRef = ref(null);
 const loginMode = ref('password');
 const smsEnabled = ref(false);
@@ -104,12 +104,18 @@ const rules = {
     { required: true, message: '请输入账号', trigger: 'blur' },
     { pattern: /^[a-zA-Z][a-zA-Z0-9_]{2,29}$/, message: '字母开头，3-30位英文/数字/下划线', trigger: 'blur' },
   ],
-  password: [{ required: true, min: 8, message: '密码至少8位', trigger: 'blur' }],
+  password: [{ required: true, min: 6, message: '密码至少6位', trigger: 'blur' }],
 };
 
 onMounted(async () => {
   const reason = sessionStorage.getItem('logout_reason');
   if (reason) { sessionStorage.removeItem('logout_reason'); ElMessage.warning(reason); }
+  if (rememberMe.value && localStorage.getItem('token')) {
+    try {
+      const r = await fetch('/api/v1/auth/me', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+      if (r.ok) { router.push('/dashboard'); return; }
+    } catch {}
+  }
   try { const r = await fetch('/api/v1/auth/sms/status'); const d = await r.json(); smsEnabled.value = d.data?.enabled || false; } catch {}
 });
 
@@ -124,6 +130,7 @@ async function handleLogin() {
     if (!res.ok) { ElMessage.error(data.message || '登录失败'); return; }
     localStorage.setItem('token', data.data.token);
     localStorage.setItem('user', JSON.stringify(data.data.user));
+    localStorage.setItem('rememberMe', rememberMe.value ? 'true' : 'false');
     ElMessage.success('登录成功');
     router.push('/dashboard');
   } catch { ElMessage.error('网络错误'); }
@@ -141,6 +148,7 @@ async function handleSmsLogin() {
     if (!res.ok) { ElMessage.error(data.message || '登录失败'); loading.value = false; return; }
     localStorage.setItem('token', data.data.token);
     localStorage.setItem('user', JSON.stringify(data.data.user));
+    localStorage.setItem('rememberMe', rememberMe.value ? 'true' : 'false');
     ElMessage.success('登录成功');
     router.push('/dashboard');
   } catch { ElMessage.error('网络错误'); }
