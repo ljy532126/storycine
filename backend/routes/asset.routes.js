@@ -71,6 +71,10 @@ const refUpload = multer({
   },
 });
 const THREE_VIEW_SUFFIX = `左区：角色正脸特写，面部占满左区，五官/发型/配饰清晰，无身体入镜、无遮挡变形；右区：标准角色设定三视图，横向依次排列侧视图、正视图和背视图，三个视图严格呈现侧视、正视和背视，从头到脚完整无遮挡；核心约束：特写与三视图为同一角色，五官/服装/配饰/体态100%一致；右区尺寸：三视图角色高度画面高度的80%，三视图高度统一；无多余元素的浅灰色背景，角色无阴影；超高清分辨率，统一85mm焦距，无畸变，角色无动作，平视；中性表情（无喜怒哀乐），眼神平静，自然站立，双手自然下垂，空手（无手持物），身上无任何背负物（无背包/无武器背负）；严禁画面出现不相关的文字；古风/仙侠风格下严禁光腿、严禁腿部裸露、严禁服饰残缺暴露`;
+
+const STYLE_JSON_IMAGE = `{"艺术风格":{"主风格":"彩铅艺术插画","创作类型":"AI绘制角色设计图"},"色彩风格":{"色彩倾向":"柔和彩铅质感，低饱和古典配色，雅致中高饱和度"},"构图风格":{"景别":"组合式（面部特写+全身多视角）","视角":"正面/侧面多视角展示","元素布局":"分区域呈现角色整体形制"}}`;
+const STYLE_JSON_VIDEO = `{"艺术风格":{"主风格":"微距写实人像摄影","创作类型":"高清写实人像局部特写"},"色彩风格":{"色彩倾向":"自然肤色系，低饱和高真实度，柔和漫射自然明暗过渡"},"构图风格":{"景别":"近景/特写","视角":"平视微侧","元素布局":"主体清晰，无多余背景"}}`;
+
 const { buildCharacterMap, buildShotPrompt } = require('../services/asset.service');
 
 // ===== 角色管理 =====
@@ -770,14 +774,19 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
       if (resolvedInput && resolvedRefs.length > 0 && !refs.includes(resolvedInput)) refs.push(resolvedInput);
       console.log(`[video-gen] 参考图数量: ${refs.length}`, refs.map((u, i) => `[${i + 1}] ${u.substring(0, 100)}`));
 
-      // 生图风格化开关开启时，注入解锁提示词（解除参考图上的遮挡物，恢复完整五官）
+      // 风格化模式：写实风格注入质感提示词（动漫风格跳过）
       let videoPrompt = prompt;
       try {
         const Settings = require('../models/settings.model');
         const settings = await Settings.getSettings();
-        if (settings.aiConfig?.characterStyleMode) {
-          videoPrompt = `Character full face close-up, clear eyes without occlusion, remove the black square or obscuring object in the image, keep the character's facial features intact. ` + prompt;
-          console.log('[video-gen] 风格化模式：已注入人脸解锁提示词');
+        if (settings.aiConfig?.characterStyleMode && projectId) {
+          const Project = require('../models/project.model');
+          const proj = await Project.findById(projectId);
+          const vs = proj?.videoConfig?.visualStyle || '写实';
+          if (vs !== '动漫') {
+            videoPrompt = STYLE_JSON_VIDEO + '\n' + prompt;
+            console.log('[video-gen] 风格化模式：已注入写实质感提示词');
+          }
         }
       } catch (e) { /* ignore */ }
       // 检测 localhost/内网 URL，提前警告
@@ -829,11 +838,15 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
       if (settings.aiConfig?.noTextWatermark !== false) {
         genParams.watermark = false;
       }
-      // 生图风格化模式：注入遮挡提示词（对所有生图模型有效，降低AI审核误判）
-      if (settings.aiConfig?.characterStyleMode) {
-        const styleSuffix = ', Add a solid black square to cover the person\'s left eye (the viewer\'s left side). Leave all other parts of the image completely unchanged.';
-        finalPrompt = prompt + styleSuffix;
-        console.log('[generate-image] 风格化已启用');
+      // 风格化模式：写实风格注入艺术插画提示词（动漫风格跳过）
+      if (settings.aiConfig?.characterStyleMode && projectId) {
+        const Project = require('../models/project.model');
+        const proj = await Project.findById(projectId);
+        const vs = proj?.videoConfig?.visualStyle || '写实';
+        if (vs !== '动漫') {
+          finalPrompt = STYLE_JSON_IMAGE + '\n' + prompt;
+          console.log('[generate-image] 风格化模式：已注入彩铅艺术提示词');
+        }
       }
     } catch (e) { /* ignore, keep default */ }
 

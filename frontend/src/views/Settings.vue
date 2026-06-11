@@ -117,7 +117,7 @@
         <div class="st-card">
           <h3 class="st-card-title"><Shield theme="outline" size="17" fill="var(--gold)" /> 内容安全</h3>
           <p class="st-card-sub">豆包 Seedance 对真人内容审核较严。开启后自动在视频提示词末尾追加风格化引导，降低被误拦的概率。</p>
-          <div class="st-toggle-row"><div class="st-toggle-info"><span class="st-toggle-label">视频风格化模式</span><span class="st-toggle-hint">追加非写实风格标签，减少因"疑似真人"被拒</span></div><el-switch v-model="imgCfg.characterStyleMode" @change="saveImgCfg" /></div>
+          <div class="st-toggle-row"><div class="st-toggle-info"><span class="st-toggle-label">视频风格化模式</span><span class="st-toggle-hint">写实风格生图时注入彩铅艺术JSON提示词；生视频时注入微距写实JSON提示词；动漫风格自动跳过</span></div><el-switch v-model="imgCfg.characterStyleMode" @change="saveImgCfg" /></div>
         </div>
         <div class="st-hint-card">配置修改后自动保存，无需手动确认。全局生效，拍摄时可临时覆盖。</div>
       </div>
