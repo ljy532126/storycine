@@ -774,11 +774,11 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
       if (resolvedInput && resolvedRefs.length > 0 && !refs.includes(resolvedInput)) refs.push(resolvedInput);
       console.log(`[video-gen] 参考图数量: ${refs.length}`, refs.map((u, i) => `[${i + 1}] ${u.substring(0, 100)}`));
 
-      // 风格化模式：写实风格注入质感提示词（动漫风格跳过）
+      // 风格化模式：写实风格注入样铅艺术插画提示词（动漫风格跳过）
       let videoPrompt = prompt;
       try {
         const Settings = require('../models/settings.model');
-        const settings = await Settings.getSettings();
+        const settings = await Settings.getSettings(req.user._id);
         if (settings.aiConfig?.characterStyleMode && projectId) {
           const Project = require('../models/project.model');
           const proj = await Project.findById(projectId);
@@ -834,11 +834,11 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
     let finalPrompt = prompt;
     try {
       const Settings = require('../models/settings.model');
-      const settings = await Settings.getSettings();
+      const settings = await Settings.getSettings(req.user._id);
       if (settings.aiConfig?.noTextWatermark !== false) {
         genParams.watermark = false;
       }
-      // 风格化模式：写实风格注入艺术插画提示词（动漫风格跳过）
+      // 风格化模式：写实风格注入样铅艺术插画提示词（动漫风格跳过）
       if (settings.aiConfig?.characterStyleMode && projectId) {
         const Project = require('../models/project.model');
         const proj = await Project.findById(projectId);
