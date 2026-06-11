@@ -150,6 +150,7 @@ async function handleSmsLogin() {
 // 找回密码
 const smsVisible = ref(false);
 const smsStep = ref(0);
+const smsVerifying = ref(false);
 const smsResetting = ref(false);
 const forgotForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: '' });
 
