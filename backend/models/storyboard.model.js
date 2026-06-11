@@ -6,7 +6,7 @@ const shotSchema = new mongoose.Schema({
   shotType: { type: String, enum: ['远景', '全景', '中景', '近景', '特写', '大特写', '微距'], default: '中景' },
   cameraAngle: { type: String, enum: ['平视', '俯拍', '仰拍', '顶拍', '荷兰角'], default: '平视' },
   composition: { type: String, default: '' },
-  cameraMovement: { type: String, enum: ['固定', '推镜', '拉镜', '平移', '摇镜', '跟镜', '升降', '希区柯克变焦', '变速推近'], default: '固定' },
+  cameraMovement: { type: String, enum: ['固定', '静止', '推镜', '拉镜', '平移', '摇镜', '跟镜', '升降', '希区柯克变焦', '变速推近'], default: '固定' },
   lighting: { type: String, default: '' },
   characterEmotion: { type: String, default: '' },
   duration: { type: Number, default: 3 },

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Storyboard = require('../models/storyboard.model');
+const appConfig = require('../config/app.config');
 const {
   optimizeShotRhythm,
   autoGenerateStoryboard,
@@ -13,6 +14,9 @@ router.use(authRequired);
 router.post('/auto-generate', async (req, res, next) => {
   try {
     const { scriptId, projectId, batchShots, useAI = true, maxDuration = 15, startScene, sceneCount } = req.body;
+
+    // 先为用户加载 LLM 配置
+    await appConfig.loadUserConfig(req.user._id);
 
     // 从分镜管理同步过来的数据
     if (batchShots && Array.isArray(batchShots)) {
@@ -35,7 +39,7 @@ router.post('/auto-generate', async (req, res, next) => {
         shots = await autoGenerateStoryboardAI(scriptId, projectId, { maxDuration, startScene: startScene || 0, sceneCount: sceneCount || 99, returnShots: isBatch });
       } catch (aiErr) {
         console.warn('[storyboard] AI分镜失败，回退到规则拆解:', aiErr.message);
-        if (isBatch) throw aiErr;
+        if (isBatch && (!scriptId || !projectId)) throw aiErr;
         shots = (await autoGenerateStoryboard(scriptId, projectId)).shots;
       }
     } else {
