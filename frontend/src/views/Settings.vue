@@ -141,10 +141,10 @@
           <div class="st-field-row" v-if="stor.enabled && stor.provider !== 'minio'"><span class="st-field-label">Bucket 地域</span><el-select v-model="selRegion" size="small" style="width:300px" @change="onRegionChange" filterable><el-option v-for="r in storRegions" :key="r.region" :label="`${r.label} — ${r.endpoint}`" :value="r.region"/></el-select></div>
           <div class="st-field-row" v-if="stor.enabled"><span class="st-field-label">Endpoint</span><div style="display:flex;align-items:center;gap:6px"><el-input v-model="stor.endpoint" size="small" style="width:300px" :placeholder="epPlaceholder" :readonly="!customEp && stor.provider !== 'minio'" @change="saveStor"/></div></div>
           <template v-if="stor.enabled">
-            <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="stor.accessKeyId" size="small" style="width:320px" placeholder="阿里云/腾讯云 AccessKey ID" /></div>
-            <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="stor.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="stor._hasSecret ? '已保存（留空不修改）' : '密钥'" /></div>
-            <div class="st-field-row"><span class="st-field-label">Bucket 名称</span><el-input v-model="stor.bucket" size="small" style="width:320px" placeholder="my-bucket" /></div>
-            <div class="st-field-row"><span class="st-field-label">存储路径前缀</span><el-input v-model="stor.prefix" size="small" style="width:320px" placeholder="/autodrama/uploads/" /></div>
+            <div class="st-field-row"><span class="st-field-label">AccessKey ID</span><el-input v-model="stor.accessKeyId" size="small" style="width:320px" placeholder="阿里云/腾讯云 AccessKey ID" autocomplete="off" name="stor-accesskey-id" /></div>
+            <div class="st-field-row"><span class="st-field-label">AccessKey Secret</span><el-input v-model="stor.accessKeySecret" size="small" style="width:320px" type="password" show-password :placeholder="stor._hasSecret ? '已保存（留空不修改）' : '密钥'" autocomplete="off" name="stor-accesskey-secret" /></div>
+            <div class="st-field-row"><span class="st-field-label">Bucket 名称</span><el-input v-model="stor.bucket" size="small" style="width:320px" placeholder="my-bucket" autocomplete="off" /></div>
+            <div class="st-field-row"><span class="st-field-label">存储路径前缀</span><el-input v-model="stor.prefix" size="small" style="width:320px" placeholder="/autodrama/uploads/" autocomplete="off" /></div>
             <div class="st-prov-actions"><el-button type="primary" size="small" @click="testStorConnection" :loading="storTesting">测试连接</el-button><el-button size="small" @click="saveStor">保存</el-button><span v-if="storResult" :style="{ color: storResult.ok ? '#67C23A' : '#F56C6C', fontSize:'13px', marginLeft:'8px' }">{{ storResult.ok ? '✓' : '✗' }} {{ storResult.message }}</span></div>
           </template>
         </div>
