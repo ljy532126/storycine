@@ -4,6 +4,7 @@ const Storyboard = require('../models/storyboard.model');
 const {
   optimizeShotRhythm,
   autoGenerateStoryboard,
+  autoGenerateStoryboardAI,
 } = require('../services/storyboard.service');
 const { authRequired } = require('../middleware/auth.middleware');
 router.use(authRequired);
@@ -11,7 +12,7 @@ router.use(authRequired);
 // 自动分镜拆解 / 同步
 router.post('/auto-generate', async (req, res, next) => {
   try {
-    const { scriptId, projectId, batchShots } = req.body;
+    const { scriptId, projectId, batchShots, useAI = true, maxDuration = 15, startScene, sceneCount } = req.body;
 
     // 从分镜管理同步过来的数据
     if (batchShots && Array.isArray(batchShots)) {
@@ -25,8 +26,29 @@ router.post('/auto-generate', async (req, res, next) => {
       return res.status(400).json({ message: '缺少参数: scriptId, projectId' });
     }
 
-    const storyboard = await autoGenerateStoryboard(scriptId, projectId);
-    res.status(201).json({ message: '分镜拆解完成', data: storyboard });
+    // 分批模式：只返回镜头数组，不创建 Storyboard 文档
+    const isBatch = startScene !== undefined || sceneCount !== undefined;
+
+    let shots;
+    if (useAI) {
+      try {
+        shots = await autoGenerateStoryboardAI(scriptId, projectId, { maxDuration, startScene: startScene || 0, sceneCount: sceneCount || 99, returnShots: isBatch });
+      } catch (aiErr) {
+        console.warn('[storyboard] AI分镜失败，回退到规则拆解:', aiErr.message);
+        if (isBatch) throw aiErr;
+        shots = (await autoGenerateStoryboard(scriptId, projectId)).shots;
+      }
+    } else {
+      shots = (await autoGenerateStoryboard(scriptId, projectId)).shots;
+    }
+
+    if (isBatch) {
+      return res.status(201).json({ message: `分镜生成完成`, data: { shots } });
+    }
+
+    const storyboard = await Storyboard.create({ projectId, scriptId, shots });
+    const mode = shots?.[0]?._videoPrompt ? 'AI' : '规则';
+    res.status(201).json({ message: `分镜拆解完成 (${mode})`, data: storyboard });
   } catch (error) {
     console.error('[storyboard] 拆解失败:', error.message, error.stack);
     next(error);
@@ -164,21 +186,31 @@ router.post('/:id/import', async (req, res, next) => {
     }
 
     // 校验并修正数据
-    const validShotTypes = ['远景','中景','近景','特写','大特写','全景','中近景'];
-    const validCameraMoves = ['推','拉','摇','移','跟','静止','升','降','晃动','摇移','推拉','跟移'];
+    const validShotTypes = ['远景','全景','中景','近景','特写','大特写','微距'];
+    const validCameraMoves = ['固定','推镜','拉镜','平移','摇镜','跟镜','升降','希区柯克变焦','变速推近'];
+    const validCameraAngles = ['平视','俯拍','仰拍','顶拍','荷兰角'];
 
     const sanitized = shots.map((s, i) => ({
       shotNumber: s.shotNumber || (i + 1),
       sceneName: s.sceneName || '',
       shotType: validShotTypes.includes(s.shotType) ? s.shotType : '中景',
+      cameraAngle: validCameraAngles.includes(s.cameraAngle) ? s.cameraAngle : '平视',
       composition: s.composition || '',
-      cameraMovement: validCameraMoves.includes(s.cameraMovement) ? s.cameraMovement : '静止',
+      cameraMovement: validCameraMoves.includes(s.cameraMovement) ? s.cameraMovement : '固定',
       lighting: s.lighting || '',
+      characterEmotion: (s.characterEmotion || '').substring(0, 300),
       duration: Number(s.duration) || 3,
       imageDescription: s.imageDescription || '',
       renderedImage: s.renderedImage || '',
       renderedVideo: s.renderedVideo || '',
-      dialogue: { characterName: s.characterName || s.dialogue?.characterName || '', text: s.text || s.dialogue?.text || '', audioUrl: s.dialogue?.audioUrl || '' },
+      dialogue: {
+        characterName: s.characterName || s.dialogue?.characterName || '',
+        text: s.text || s.dialogue?.text || '',
+        audioUrl: s.dialogue?.audioUrl || '',
+        actionHint: s.actionHint || s.dialogue?.actionHint || '',
+        cameraHint: s.cameraHint || s.dialogue?.cameraHint || '',
+        innerThought: s.innerThought || s.dialogue?.innerThought || '',
+      },
       soundEffect: s.soundEffect || '',
       notes: s.notes || '',
       status: 'pending',
@@ -193,9 +225,11 @@ router.post('/:id/import', async (req, res, next) => {
 
 /** CSV 文本解析为镜头数组 */
 function parseCSVShots(csvText) {
-  const lines = csvText.split('\n').filter(l => l.trim());
+  // 去除 UTF-8 BOM
+  const cleanText = csvText.charCodeAt(0) === 0xFEFF ? csvText.slice(1) : csvText;
+  const lines = cleanText.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^﻿/, ''));
   const shots = [];
   for (let i = 1; i < lines.length; i++) {
     const vals = parseCSVLine(lines[i]);

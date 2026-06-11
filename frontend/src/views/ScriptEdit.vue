@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="script-edit-root">
     <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
@@ -9,23 +9,26 @@
     </div>
     <div class="top-bar">
       <div class="sg-project-pills">
-        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
+ <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
       </div>
-      <el-button type="primary" size="large" style="margin-left:12px" @click="handleSave" :disabled="!currentScript">保存分镜 💾</el-button>
-      <span v-if="currentScript" class="word-count">{{ currentScript.wordCount || 0 }} / 2000 字
-        <el-progress :percentage="Number(Math.min((currentScript.wordCount||0)/2000*100,100).toFixed(2))" :stroke-width="8" style="width:120px;display:inline-block;margin-left:8px" />
-      </span>
+      <el-button type="primary" size="large" style="margin-left:12px" @click="handleSave" :disabled="!currentScript">
+ <Download size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 保存分镜
+      </el-button>
+      <div v-if="currentScript" class="word-count-bar">
+ <span class="wc-label">{{ currentScript.wordCount || 0 }}<span style="font-size:11px;color:var(--text-200)"> / 2000 字</span></span>
+ <el-progress :percentage="Number(Math.min((currentScript.wordCount||0)/2000*100,100).toFixed(2))" :stroke-width="6" class="wc-pulse" />
+      </div>
     </div>
 
     <!-- PC 端：剧集横排 -->
     <div class="episode-row-wrap" v-if="currentProjectId && screenWidth >= 768">
       <div class="er-header">
-        <span class="er-label">剧集：</span>
-        <el-button size="small" text @click="addEpisode" title="新建剧集">+ 新建</el-button>
-        <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
+ <span class="er-label">剧集：</span>
+ <el-button size="small" text @click="addEpisode" title="新建剧集">+ 新建</el-button>
+ <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
       </div>
       <div class="episode-row">
-        <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
+ <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
       </div>
     </div>
 
@@ -39,143 +42,178 @@
     <div class="three-column" v-if="currentProjectId">
       <!-- 移动端才显示左侧剧集面板 -->
       <div class="left-panel" v-if="screenWidth < 768" v-show="mobileTab === 'episodes'">
-        <div class="panel-title"><span>剧集列表</span><span class="panel-actions"><el-button size="small" text @click="addEpisode" title="新建剧集">+</el-button><el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉</el-button></span></div>
-        <div class="episode-list"><div v-for="ep in scripts" :key="ep._id" :class="['ep-item',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)"><span class="ep-num">第 {{ ep.episodeNumber }} 集</span><span class="ep-title">{{ ep.episodeTitle||'未命名剧集' }}</span></div></div>
+ <div class="panel-title"><span>剧集列表</span><span class="panel-actions"><el-button size="small" text @click="addEpisode" title="新建剧集">+</el-button><el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉</el-button></span></div>
+ <div class="episode-list"><div v-for="ep in scripts" :key="ep._id" :class="['ep-item',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)"><span class="ep-num">第 {{ ep.episodeNumber }} 集</span><span class="ep-title">{{ ep.episodeTitle||'未命名剧集' }}</span></div></div>
       </div>
       <div class="center-panel" v-if="currentScript && (screenWidth >= 768 || mobileTab === 'scenes')">
-        <div class="ep-header">
-          <el-input v-model="currentScript.episodeTitle" placeholder="给这集起个名字..." size="large" class="title-input" @change="markDirty" />
-          <el-tooltip content="AI 根据剧本内容自动推荐景别/运镜/光影/时长，点击后弹出前后对比" placement="bottom"><el-button type="primary" @click="handleAutoStoryboard" :loading="autoStoryboarding" style="margin-left:12px">AI 智能拆镜 🎯</el-button></el-tooltip>
-          <el-button type="success" @click="syncToStoryboard" :loading="syncing" style="margin-left:8px">同步至故事板 📤</el-button>
-          <el-button size="large" style="margin-left:8px" @click="openExport">导出分镜 📋</el-button>
-          <span class="scene-count">{{ currentScript.scenes?.length||0 }} 个镜头</span>
-        </div>
-        <div class="scenes-area">
-          <div v-for="(scene,si) in currentScript.scenes" :key="si" :class="['scene-card',{'shot-invalid':!scene.sceneDescription}]">
-            <div class="scene-top-row"><span class="scene-num">🎬 镜号 {{ scene.sceneNumber }}</span><el-button size="small" type="danger" text @click="removeScene(si)">移除此镜</el-button></div>
-            <div class="scene-meta-row">
-              <div class="meta-item"><label>📍 场景</label><el-input v-model="scene.location" size="small" placeholder="如：咖啡厅、街道..." @change="markDirty" /></div>
-              <div class="meta-item"><label>⏰ 时间</label><el-select v-model="scene.timeOfDay" size="small" @change="markDirty"><el-option v-for="t in timeOptions" :key="t" :label="t" :value="t" /></el-select></div>
-              <div class="meta-item"><label>📷 景别</label><el-select v-model="scene.shotType" size="small" @change="markDirty"><el-option v-for="t in shotTypes" :key="t" :label="t" :value="t" /></el-select></div>
-              <div class="meta-item"><label>🖼️ 构图</label><el-input v-model="scene.composition" size="small" placeholder="如：三分法、对角线..." @change="markDirty" /></div>
-            </div>
-            <div class="scene-meta-row">
-              <div class="meta-item"><label>🎥 运镜</label><el-select v-model="scene.cameraMovement" size="small" @change="markDirty"><el-option v-for="t in cameraMoves" :key="t" :label="t" :value="t" /></el-select></div>
-              <div class="meta-item"><label>💡 光影</label><el-input v-model="scene.lighting" size="small" placeholder="如：柔光、逆光..." @change="markDirty" /></div>
-              <div class="meta-item"><label>🔊 音效</label><el-input v-model="scene.soundEffect" size="small" placeholder="如：雨声、脚步声..." @change="markDirty" /></div>
-              <div class="meta-item"><label>⏱ 时长</label><el-input-number v-model="scene.duration" :min="1" :max="60" size="small" @change="markDirty" /></div>
-            </div>
-            <div class="scene-meta-row">
-              <div class="meta-item" style="flex:1"><label>👤 人物</label><el-input v-model="charactersStr[si]" size="small" placeholder="角色名，逗号分隔" @change="onCharsChange(si)" /></div>
-              <div class="meta-item" style="flex:1"><label>🌤 氛围</label><el-input v-model="scene.atmosphere" size="small" placeholder="如：温馨、紧张..." @change="markDirty" /></div>
-              <div class="meta-item" style="flex:1"><label>🔗 绑定主体</label><el-select v-model="scene.boundSubjects" size="small" multiple filterable placeholder="选择关联的角色或场景" @change="markDirty"><el-option v-for="a in allAssets" :key="a._id" :label="a.name||a.sceneName||a.propName" :value="a._id" /></el-select></div>
-            </div>
-            <div class="scene-desc-row"><label>分镜描述 ✍️ <span style="font-size:10px;color:var(--text-200);font-weight:400">（只写画面内容，不用写运镜/景别，那些有专门参数）</span></label><el-input v-model="scene.sceneDescription" type="textarea" :rows="3" placeholder="写清4要素：①谁在画面 ②做什么动作 ③什么环境 ④什么情绪。运镜/景别/光影用上方参数设置，不要写进描述里。例：林晓站在落地窗前，夕阳勾勒出轮廓，办公室空无一人，她低头看手机嘴角微扬" @change="markDirty" /></div>
-            <div class="dialogues-block">
-              <div class="dr-table">
-                <div class="dr-thead">
-                  <span class="dr-th dr-th-role">角色</span>
-                  <span class="dr-th dr-th-text">对话内容</span>
-                  <span class="dr-th dr-th-action">动作/表情</span>
-                  <span class="dr-th dr-th-camera">镜头提示</span>
-                  <span class="dr-th dr-th-inner">内心独白</span>
-                  <span class="dr-th dr-th-op"></span>
-                </div>
-                <div v-for="(d,di) in scene.dialogues" :key="di" class="dr-tr">
-                  <div class="dr-td dr-td-role"><el-input v-model="d.characterName" size="small" placeholder="角色" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-text"><el-input v-model="d.text" size="small" placeholder="对话内容" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-action"><el-input v-model="d.actionHint" size="small" placeholder="动作/表情" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-camera"><el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-inner"><el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" /></div>
-                  <div class="dr-td dr-td-op"><el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button></div>
-                </div>
-              </div>
-              <el-button size="small" text type="primary" @click="addDialogue(scene)" style="margin-top:4px">+ 加句台词</el-button>
-              <div class="scene-notes-row" style="margin-top:6px">
-                <el-input v-model="scene.notes" size="small" placeholder="备注（环境音/BGM/转场）" @change="markDirty" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <el-button style="margin-top:12px;width:100%" @click="addScene" dashed>+ 添加新镜头</el-button>
+ <div class="ep-header">
+   <el-input v-model="currentScript.episodeTitle" placeholder="给这集起个名字..." size="large" class="title-input" @change="markDirty" />
+   <el-tooltip content="AI 分析剧本后智能补全空白字段，不覆盖已有数据，支持撤消/重做" placement="bottom">
+     <el-button type="primary" @click="handleAutoStoryboard" :loading="autoStoryboarding" style="margin-left:12px">
+<MagicWand v-if="!autoStoryboarding" size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> AI 智能补全
+     </el-button>
+   </el-tooltip>
+   <el-button-group v-if="historyStack.length>0" size="small" style="margin-left:6px">
+     <el-button :disabled="historyIndex<=0" @click="undoHistory" title="回退"><Undo size="14" fill="currentColor"/></el-button>
+     <el-button :disabled="historyIndex>=historyStack.length-1" @click="redoHistory" title="前进"><Redo size="14" fill="currentColor"/></el-button>
+   </el-button-group>
+   <span v-if="historyStack.length>0" style="font-size:11px;color:var(--text-200);margin-left:4px">{{ historyIndex+1 }}/{{ historyStack.length }}</span>
+   <el-button type="success" @click="syncToStoryboard" :loading="syncing" style="margin-left:8px">
+     <Send size="15" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 同步至故事板
+   </el-button>
+   <el-button @click="showExportDialog = true" style="margin-left:8px">
+     <Download size="15" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导出
+   </el-button>
+   <span class="scene-count">{{ currentScript.scenes?.length||0 }} 个镜头</span>
+ </div>
+ <div class="scenes-area">
+   <div v-for="(scene,si) in currentScript.scenes" :key="si" :class="['scene-card',{'shot-invalid':!scene.sceneDescription},{'shot-amended': amendedFields[si] && Object.keys(amendedFields[si]||{}).length>0}]">
+     <div class="scene-top-row"><span class="scene-num"><Film size="14" fill="var(--gold)" style="vertical-align:text-bottom;margin-right:2px"/> 镜号 {{ scene.sceneNumber }}</span><el-button size="small" type="danger" text @click="removeScene(si)">移除此镜</el-button></div>
+     <div class="scene-meta-row">
+<div class="meta-item"><label><Local size="12" fill="var(--text-200)"/> 场景</label><el-input v-model="scene.location" size="small" placeholder="如：咖啡厅、街道..." @change="markDirty" /></div>
+<div class="meta-item"><label><Time size="12" fill="var(--text-200)"/> 时间</label><el-select v-model="scene.timeOfDay" size="small" @change="markDirty"><el-option v-for="t in timeOptions" :key="t" :label="t" :value="t" /></el-select></div>
+<div class="meta-item"><label><Camera size="12" fill="var(--text-200)"/> 景别</label><el-select v-model="scene.shotType" size="small" @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.shotType }"><el-option v-for="t in shotTypes" :key="t" :label="t" :value="t" /></el-select></div>
+<div class="meta-item"><label><Edit size="12" fill="var(--text-200)"/> 构图</label><el-input v-model="scene.composition" size="small" placeholder="如：三分法、对角线..." @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.composition }" /></div>
+     </div>
+     <div class="scene-meta-row">
+<div class="meta-item"><label><PlayTwo size="12" fill="var(--text-200)"/> 运镜</label><el-select v-model="scene.cameraMovement" size="small" @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.cameraMovement }"><el-option v-for="t in cameraMoves" :key="t" :label="t" :value="t" /></el-select></div>
+<div class="meta-item"><label><PictureOne size="12" fill="var(--text-200)"/> 视角</label><el-select v-model="scene.cameraAngle" size="small" @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.cameraAngle }"><el-option v-for="t in cameraAngles" :key="t" :label="t" :value="t" /></el-select></div>
+<div class="meta-item"><label><Light size="12" fill="var(--text-200)"/> 光影</label><el-input v-model="scene.lighting" size="small" placeholder="如：柔光、逆光..." @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.lighting }" /></div>
+<div class="meta-item"><label><Help size="12" fill="var(--text-200)"/> 音效</label><el-input v-model="scene.soundEffect" size="small" placeholder="如：雨声、脚步声..." @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.soundEffect }" /></div>
+<div class="meta-item"><label><Time size="12" fill="var(--text-200)"/> 时长</label><el-input-number v-model="scene.duration" :min="1" :max="60" size="small" @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.duration }" /></div>
+     </div>
+     <div class="scene-meta-row">
+<div class="meta-item" style="flex:1"><label><User size="12" fill="var(--text-200)"/> 人物</label><el-input v-model="charactersStr[si]" size="small" placeholder="角色名，逗号分隔" @change="onCharsChange(si)" /></div>
+<div class="meta-item" style="flex:1"><label><SunOne size="12" fill="var(--text-200)"/> 氛围</label><el-input v-model="scene.atmosphere" size="small" placeholder="如：温馨、紧张..." @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.atmosphere }" /></div>
+<div class="meta-item" style="flex:1"><label><LinkOne size="12" fill="var(--text-200)"/> 绑定主体</label><el-select v-model="scene.boundSubjects" size="small" multiple filterable placeholder="选择关联的角色或场景" @change="markDirty"><el-option v-for="a in allAssets" :key="a._id" :label="a.name||a.sceneName||a.propName" :value="a._id" /></el-select></div>
+     </div>
+     <div class="scene-desc-row"><label>分镜描述 ✍️ <span style="font-size:10px;color:var(--text-200);font-weight:400">（只写画面内容，不用写运镜/景别，那些有专门参数）</span></label><el-input v-model="scene.sceneDescription" type="textarea" :rows="3" placeholder="写清4要素：①谁在画面 ②做什么动作 ③什么环境 ④什么情绪。运镜/景别/光影用上方参数设置，不要写进描述里。例：林晓站在落地窗前，夕阳勾勒出轮廓，办公室空无一人，她低头看手机嘴角微扬" @change="markDirty" :class="{ 'field-amended': amendedFields[si]?.sceneDescription }" /></div>
+     <div class="dialogues-block">
+<div class="dr-table">
+  <div class="dr-thead">
+    <span class="dr-th dr-th-role">角色</span>
+    <span class="dr-th dr-th-text">对话内容</span>
+    <span class="dr-th dr-th-action">动作/表情</span>
+    <span class="dr-th dr-th-camera">镜头提示</span>
+    <span class="dr-th dr-th-inner">内心独白</span>
+    <span class="dr-th dr-th-op"></span>
+  </div>
+  <div v-for="(d,di) in scene.dialogues" :key="di" class="dr-tr">
+    <div class="dr-td dr-td-role"><el-input v-model="d.characterName" size="small" placeholder="角色" @change="markDirty" /></div>
+    <div class="dr-td dr-td-text"><el-input v-model="d.text" size="small" placeholder="对话内容" @change="markDirty" /></div>
+    <div class="dr-td dr-td-action"><el-input v-model="d.actionHint" size="small" placeholder="动作/表情" @change="markDirty" /></div>
+    <div class="dr-td dr-td-camera"><el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" @change="markDirty" /></div>
+    <div class="dr-td dr-td-inner"><el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" /></div>
+    <div class="dr-td dr-td-op"><el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button></div>
+  </div>
+</div>
+<el-button size="small" text type="primary" @click="addDialogue(scene)" style="margin-top:4px">+ 加句台词</el-button>
+<div class="scene-notes-row" style="margin-top:6px">
+  <el-input v-model="scene.notes" size="small" placeholder="备注（环境音/BGM/转场）" @change="markDirty" />
+</div>
+     </div>
+   </div>
+ </div>
+ <el-button style="margin-top:12px;width:100%" @click="addScene" dashed>+ 添加新镜头</el-button>
       </div>
       <div class="center-panel center-empty" v-if="!currentScript && scripts.length===0 && (screenWidth >= 768 || mobileTab === 'scenes')"><el-empty description="点击上方剧集「新建」创建第一集 ✨" /></div>
       <div class="center-panel center-empty" v-if="!currentScript && scripts.length>0 && (screenWidth >= 768 || mobileTab === 'scenes')"><el-empty description="点击上方剧集，开始编辑 ✍️" /></div>
       <div class="right-panel" :class="{ collapsed: rightCollapsed }" v-show="screenWidth >= 768 || mobileTab === 'settings'">
-        <div class="panel-title" @click="rightCollapsed = !rightCollapsed" style="cursor:pointer;user-select:none">
-          <span>导演设定 🎥</span>
-          <span class="collapse-toggle">{{ rightCollapsed ? '◀ 展开' : '▶ 收起' }}</span>
-        </div>
-        <div class="right-panel-body" v-show="!rightCollapsed">
-        <div class="setting-group"><label>画面比例 📐</label><el-radio-group v-model="videoConfig.aspectRatio" size="small" @change="onVideoConfigChange"><el-radio-button value="16:9">16:9</el-radio-button><el-radio-button value="9:16">9:16</el-radio-button><el-radio-button value="4:3">4:3</el-radio-button><el-radio-button value="3:4">3:4</el-radio-button></el-radio-group></div>
-        <div class="setting-group"><label>风格参考 🎨 <span style="font-size:10px;color:var(--text-200);font-weight:400">（选后自动配置导演设定）</span></label><el-radio-group v-model="videoConfig.visualStyle" size="small" @change="onStyleChange"><el-radio-button value="写实">写实</el-radio-button><el-radio-button value="动漫">动漫</el-radio-button></el-radio-group></div>
-        <div class="setting-group" v-if="videoConfig.visualStyle"><label>风格细分 ✨</label><div class="sub-style-grid"><div v-for="s in currentSubStyles" :key="s" :class="['sub-style-item',{active:videoConfig.subStyle===s}]" @click="selectSubStyle(s)">{{ s }}</div></div></div>
-        <div class="setting-group">
-          <el-tooltip content="从剧本中自动识别角色、场景、道具，一键创建到「角色小店」方便后续生图时参考" placement="left">
-            <el-button size="small" style="width:100%" @click="handleExtractSubjects" :disabled="!currentScriptId">提取主体 👥</el-button>
-          </el-tooltip>
-        </div>
-        <div class="setting-group">
-          <el-tooltip content="选完右侧风格后自动填充。点击手动检查和微调导演设定参数" placement="left">
-            <el-button size="small" type="warning" style="width:100%" @click="openDirectorDialog" :disabled="!currentProjectId">导演全局设定 🎬</el-button>
-          </el-tooltip>
-        </div>
-        </div><!-- end right-panel-body -->
+ <div class="panel-title" @click="rightCollapsed = !rightCollapsed" style="cursor:pointer;user-select:none">
+   <Config size="16" fill="var(--gold)" style="vertical-align:text-bottom;margin-right:4px"/>
+   <span>导演设定</span>
+   <span class="collapse-toggle">{{ rightCollapsed ? '◀ 展开' : '▶ 收起' }}</span>
+ </div>
+ <div class="right-panel-body" v-show="!rightCollapsed">
+ <div class="setting-group"><label><Video size="12" fill="var(--text-200)"/> 画面比例</label><el-radio-group v-model="videoConfig.aspectRatio" size="small" @change="onVideoConfigChange"><el-radio-button value="16:9">16:9</el-radio-button><el-radio-button value="9:16">9:16</el-radio-button><el-radio-button value="4:3">4:3</el-radio-button><el-radio-button value="3:4">3:4</el-radio-button></el-radio-group></div>
+ <div class="setting-group"><label><MagicWand size="12" fill="var(--text-200)"/> 风格参考 <span style="font-size:10px;color:var(--text-200);font-weight:400">（选后自动配置导演设定）</span></label><el-radio-group v-model="videoConfig.visualStyle" size="small" @change="onStyleChange"><el-radio-button value="写实">写实</el-radio-button><el-radio-button value="动漫">动漫</el-radio-button></el-radio-group></div>
+ <div class="setting-group" v-if="videoConfig.visualStyle"><label><Edit size="12" fill="var(--text-200)"/> 风格细分</label><div class="sub-style-grid"><div v-for="s in currentSubStyles" :key="s" :class="['sub-style-item',{active:videoConfig.subStyle===s}]" @click="selectSubStyle(s)">{{ s }}</div></div></div>
+ <div class="setting-group" v-if="directorForm.qualityKeywords">
+   <div class="director-preset-badge">
+     <Light size="12" fill="var(--gold)"/> 已加载预设：
+     <span class="dpb-value">{{ videoConfig.subStyle || videoConfig.visualStyle }}</span>
+     <el-button size="small" type="warning" link @click="openDirectorDialog">查看/微调</el-button>
+   </div>
+ </div>
+ <div class="setting-group">
+   <el-tooltip content="从剧本中自动识别角色、场景、道具，一键创建到演员库方便后续生图时参考" placement="left">
+     <el-button size="small" style="width:100%" @click="handleExtractSubjects" :disabled="!currentScriptId"><User size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 提取主体</el-button>
+   </el-tooltip>
+ </div>
+ <div class="setting-group">
+   <el-button size="small" type="warning" style="width:100%" @click="openDirectorDialog" :disabled="!currentProjectId"><Config size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导演全局设定</el-button>
+ </div>
+ </div><!-- end right-panel-body -->
       </div>
     </div>
     <el-empty v-if="!currentProjectId" description="请先在上方选择一个片场 🎬" style="margin-top:80px" />
     <el-dialog v-model="showDirectorDialog" title="导演全局设定 🎬" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
-      <el-form :model="directorForm" label-position="top">
-        <el-form-item label="画质与质感 🖌️"><el-input v-model="directorForm.qualityKeywords" type="textarea" :rows="2" placeholder="8K、超写实、电影级摄影..." /></el-form-item>
-        <el-form-item label="氛围与光影 🌅"><el-input v-model="directorForm.atmosphereLighting" placeholder="情感氛围描述..." /></el-form-item>
-        <el-form-item label="画风指令 🎨"><el-input v-model="directorForm.artStyleCommands" type="textarea" :rows="3" placeholder="写实风、电影颗粒感..." /></el-form-item>
-      </el-form>
+      <div class="director-body"><div class="director-intro"><Light size="14" fill="var(--navy)"/> 这些设定会注入到每一镜的图片和视频提示词中，直接影响生成画面的质感和风格。</div><div class="director-field"><div class="director-field-label"><Edit size="13" fill="var(--gold)"/> 画质质感</div><el-input v-model="directorForm.qualityKeywords" type="textarea" :rows="2" placeholder="例：8K, 超写实, 电影级摄影, 高细节, HDR, 胶片颗粒感" /><div class="director-field-hint">控制画质分辨率、摄影风格、细节层次。</div></div><div class="director-field"><div class="director-field-label"><SunOne size="13" fill="var(--gold)"/> 氛围光影</div><el-input v-model="directorForm.atmosphereLighting" placeholder="例：冷峻光影，低饱和，侧光突出轮廓，阴影浓郁" /><div class="director-field-hint">控制灯光方向、色调、明暗对比。</div></div><div class="director-field"><div class="director-field-label"><MagicWand size="13" fill="var(--gold)"/> 画风指令</div><el-input v-model="directorForm.artStyleCommands" type="textarea" :rows="3" placeholder="例：写实风, 胶片颗粒, 低饱和调色, 浅景深, 柔焦高光" /><div class="director-field-hint">控制整体美术风格、后期调色、特效倾向。</div></div><div class="director-preview" v-if="directorForm.qualityKeywords"><div class="director-preview-title"><PreviewOpen size="14" fill="var(--navy)"/> 注入效果预览</div><code class="director-preview-code">【画质/构图】竖屏9:16，{场景}，{氛围光影}，{画质}，{风格}，{景别}，{视角}视角，{构图}，焦点清晰，背景虚化</code></div></div>
+ 
+ 
+ 
+  
       <div class="ai-hint"><el-alert type="info" :closable="false" show-icon><template #title>AI 会读懂你的设定，自动优化后应用到全剧所有镜头 ✨</template></el-alert></div>
-      <template #footer><el-button size="small" @click="showDirectorDialog=false">下次再说叭</el-button><el-button size="small" type="primary" @click="handleAIUnderstand" :loading="aiUnderstanding">AI 理解并润色 ✨</el-button><el-button size="small" type="success" @click="handleApplyDirectorSettings">应用到全剧 ✅</el-button></template>
+      <template #footer><el-button @click="showDirectorDialog=false">取消</el-button><el-button type="primary" @click="handleAIUnderstand" :loading="aiUnderstanding"><MagicWand size="14" fill="currentColor" style="margin-right:4px"/> AI 理解并润色</el-button><el-button type="success" @click="handleApplyDirectorSettings"><Send size="14" fill="currentColor" style="margin-right:4px"/> 应用到全剧</el-button></template>
     </el-dialog>
     <el-dialog v-model="showExtractDialog" title="提取结果 👥" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
       <div v-if="extracting" style="text-align:center;padding:40px"><p style="color:var(--text-100)">AI 正在识别剧本中的角色、场景、道具...</p></div>
       <div v-else-if="extractResult">
-        <el-divider content-position="left"><strong>角色 ({{extractResult.characters?.length||0}})</strong></el-divider>
-        <div v-if="extractResult.characters?.length" class="extract-tags"><el-tag v-for="c in extractResult.characters" :key="c.name" :type="c.existed?'info':'success'" size="default" style="margin:4px">{{c.name}}{{c.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
-        <el-divider content-position="left"><strong>场景 ({{extractResult.scenes?.length||0}})</strong></el-divider>
-        <div v-if="extractResult.scenes?.length" class="extract-tags"><el-tag v-for="s in extractResult.scenes" :key="s.sceneName" :type="s.existed?'info':''" size="default" style="margin:4px">{{s.sceneName}}{{s.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
-        <el-divider content-position="left"><strong>道具 ({{extractResult.props?.length||0}})</strong></el-divider>
-        <div v-if="extractResult.props?.length" class="extract-tags"><el-tag v-for="p in extractResult.props" :key="p.propName" :type="p.existed?'info':'warning'" size="default" style="margin:4px">{{p.propName}}{{p.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
-        <el-alert type="success" style="margin-top:16px" :closable="false"><template #title>提取完成！已自动添加到「主体管理」页面 ✅</template></el-alert>
+ <el-divider content-position="left"><strong>角色 ({{extractResult.characters?.length||0}})</strong></el-divider>
+ <div v-if="extractResult.characters?.length" class="extract-tags"><el-tag v-for="c in extractResult.characters" :key="c.name" :type="c.existed?'info':'success'" size="default" style="margin:4px">{{c.name}}{{c.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
+ <el-divider content-position="left"><strong>场景 ({{extractResult.scenes?.length||0}})</strong></el-divider>
+ <div v-if="extractResult.scenes?.length" class="extract-tags"><el-tag v-for="s in extractResult.scenes" :key="s.sceneName" :type="s.existed?'info':''" size="default" style="margin:4px">{{s.sceneName}}{{s.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
+ <el-divider content-position="left"><strong>道具 ({{extractResult.props?.length||0}})</strong></el-divider>
+ <div v-if="extractResult.props?.length" class="extract-tags"><el-tag v-for="p in extractResult.props" :key="p.propName" :type="p.existed?'info':'warning'" size="default" style="margin:4px">{{p.propName}}{{p.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
+ <el-alert type="success" style="margin-top:16px" :closable="false"><template #title>提取完成！已自动添加到「主体管理」页面 ✅</template></el-alert>
       </div>
       <template #footer><el-button @click="showExtractDialog=false">知道啦</el-button><el-button type="primary" @click="goToAssets">去主体管理看看</el-button></template>
     </el-dialog>
-    <!-- AI 拆镜对比 -->
-    <el-dialog v-model="showStoryboardDiff" title="AI 拆镜前后对比 🎯" :width="screenWidth < 768 ? '94%' : '700px'" destroy-on-close>
-      <el-alert type="success" :closable="false" show-icon style="margin-bottom:14px"><template #title>AI 已优化 {{ diffChanges }} 处参数</template></el-alert>
-      <div style="max-height:50vh;overflow-y:auto">
-        <div v-for="(d, i) in diffShots" :key="i" v-if="d && d.changes && d.changes.length > 0" style="margin-bottom:10px;padding:12px;background:var(--bg-100);border-radius:8px">
-          <div style="font-weight:700;color:var(--text-100);margin-bottom:6px">🎬 镜号 {{ d.shotNumber }}</div>
-          <div v-for="ch in d.changes" :key="ch.field" style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:3px;padding:3px 6px;background:var(--bg-200);border-radius:4px">
-            <span style="color:var(--text-200);min-width:44px;font-weight:600">{{ ch.label }}</span>
-            <span style="color:#999;text-decoration:line-through;min-width:50px">{{ ch.old }}</span>
-            <span style="color:var(--text-200)">→</span>
-            <span style="color:#67C23A;font-weight:600">{{ ch.new }}</span>
-          </div>
-        </div>
-      </div>
+    <!-- AI 补全回退确认 -->
+    <el-dialog v-model="showStoryboardDiff" title="回退确认" :width="screenWidth < 768 ? '94%' : '420px'" destroy-on-close>
+      <el-alert type="warning" :closable="false" show-icon style="margin-bottom:14px">
+ <template #title>确认回退到 AI 补全前的版本？回退将恢复所有字段的原始值。</template>
+      </el-alert>
       <template #footer>
-        <el-button @click="undoStoryboardDiff" type="warning">撤销 AI 修改</el-button>
-        <el-button @click="showStoryboardDiff = false">保留优化</el-button>
+ <el-button @click="showStoryboardDiff = false">取消</el-button>
+ <el-button @click="undoHistory(); showStoryboardDiff = false" type="warning">确认回退</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="showExportDialog" title="导出分镜内容 📋" :width="screenWidth < 768 ? '94%' : '540px'">
-      <el-form label-position="top" size="small">
-        <el-form-item label="选择剧集">
-          <el-select v-model="exportEpisodes" style="width:100%" multiple collapse-tags placeholder="全部剧集（不选=导出全部）"><el-option v-for="ep in scripts" :key="ep._id" :label="formatEpLabel(ep)" :value="ep._id" /></el-select>
-          <div style="display:flex;gap:8px;margin-top:4px"><el-button size="small" link @click="exportEpisodes = scripts.map(e => e._id)">全选</el-button><el-button size="small" link @click="exportEpisodes = currentScriptId ? [currentScriptId] : []">当前集</el-button><el-button size="small" link @click="exportEpisodes = []">清空</el-button></div>
-        </el-form-item>
-        <el-form-item label="导出内容"><el-checkbox-group v-model="exportTypes"><el-checkbox value="script">📝 剧本全文</el-checkbox><el-checkbox value="shots">🎬 分镜全文</el-checkbox><el-checkbox value="full_storyboard">🎞️ 故事板全文</el-checkbox></el-checkbox-group></el-form-item>
-        <el-form-item label="导出格式"><el-select v-model="exportFormat" style="width:100%"><el-option label="PDF" value="pdf" /><el-option label="Markdown" value="markdown" /><el-option label="CSV" value="csv" /><el-option label="Word" value="word" /></el-select></el-form-item>
-      </el-form>
-      <el-alert type="info" :closable="false" show-icon style="margin-top:8px"><template #title>{{ formatHint }}</template></el-alert>
-      <template #footer><el-button @click="showExportDialog = false">下次再说叭</el-button><el-button type="primary" @click="handleExport" :disabled="exportTypes.length === 0 || exportEpisodes.length === 0">导出文件</el-button></template>
+    <el-dialog v-model="showExportDialog" :width="screenWidth < 768 ? '94%' : '520px'" destroy-on-close class="export-dialog">
+      <template #header>
+ <div style="display:flex;align-items:center;gap:8px">
+   <Download size="20" fill="var(--gold)"/>
+   <span style="font-size:17px;font-weight:700;color:var(--text-100)">导出分镜</span>
+ </div>
+      </template>
+      <div class="export-body">
+ <div class="export-section">
+   <div class="export-section-title"><Film size="14" fill="var(--navy)"/> 选择剧集</div>
+   <el-select v-model="exportEpisodes" style="width:100%" multiple collapse-tags placeholder="全部剧集（不选=导出全部）"><el-option v-for="ep in scripts" :key="ep._id" :label="formatEpLabel(ep)" :value="ep._id" /></el-select>
+   <div style="display:flex;gap:8px;margin-top:6px"><el-button size="small" link @click="exportEpisodes = scripts.map(e => e._id)">全选</el-button><el-button size="small" link @click="exportEpisodes = currentScriptId ? [currentScriptId] : []">当前集</el-button><el-button size="small" link @click="exportEpisodes = []">清空</el-button></div>
+ </div>
+ <div class="export-section">
+   <div class="export-section-title"><FolderOpen size="14" fill="var(--navy)"/> 导出内容</div>
+   <el-checkbox-group v-model="exportTypes"><el-checkbox value="script">剧本全文</el-checkbox><el-checkbox value="shots">分镜全文</el-checkbox><el-checkbox value="full_storyboard">故事板全文</el-checkbox></el-checkbox-group>
+ </div>
+ <div class="export-section">
+   <div class="export-section-title"><Edit size="14" fill="var(--navy)"/> 导出格式</div>
+   <div class="export-format-cards">
+     <div v-for="f in formatOptions" :key="f.value" :class="['ef-card',{active:exportFormat===f.value}]" @click="exportFormat=f.value">
+<div class="ef-card-icon" v-html="f.icon"></div>
+<div class="ef-card-label">{{ f.label }}</div>
+<div class="ef-card-hint">{{ f.hint }}</div>
+     </div>
+   </div>
+ </div>
+      </div>
+      <el-alert type="info" :closable="false" show-icon style="margin-top:12px"><template #title>{{ formatHint }}</template></el-alert>
+      <template #footer>
+ <el-button @click="showExportDialog = false">取消</el-button>
+ <el-button type="primary" @click="handleExport" :disabled="exportTypes.length === 0 || exportEpisodes.length === 0">
+   <Download size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导出文件
+ </el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -194,6 +232,8 @@ import { useScriptStore } from '../stores/script';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI,scriptAPI,storyboardAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
+import html2canvas from 'html2canvas';
+import { MagicWand, Send, Download, Undo, Redo, Add, Delete, Camera, Edit, Film, FolderOpen, PictureOne, PlayTwo, PlusCross, Help, Local, Time, User, SunOne, LinkOne, Light, Config, Video, PreviewOpen } from '@icon-park/vue-next';
 
 const route=useRoute();const router=useRouter();
 const projectStore=useProjectStore();const scriptStore=useScriptStore();const assetStore=useAssetStore();
@@ -202,18 +242,85 @@ const currentProjectId=ref('');const currentScriptId=ref('');const currentScript
 const scripts=ref([]);const showDirectorDialog=ref(false);const showExtractDialog=ref(false);
 const extractResult=ref(null);const extracting=ref(false);const aiUnderstanding=ref(false);
 const dirty=ref(false);const timeOptions=['白天','夜晚','黄昏','傍晚','清晨','黎明','正午','深夜','雨天','雪天','不限'];
-const shotTypes=['远景','中景','近景','特写','大特写','全景','中近景'];
-const cameraMoves=['推','拉','摇','移','跟','静止','升','降','晃动','摇移','推拉','跟移'];
+const shotTypes=['远景','全景','中景','近景','特写','大特写','微距'];
+const cameraMoves=['固定','推镜','拉镜','平移','摇镜','跟镜','升降','希区柯克变焦','变速推近'];
+const cameraAngles=['平视','俯拍','仰拍','顶拍','荷兰角'];
 const charactersStr=ref([]);const autoStoryboarding=ref(false);const syncing=ref(false);
-const allAssets=ref([]);const showStoryboardDiff=ref(false);const diffShots=ref([]);const diffChanges=ref(0);const diffBackup=ref(null);const flowDoneAI=ref(false);const flowDoneExtract=ref(false);const flowDoneSync=ref(false);
+const allAssets=ref([]);const showStoryboardDiff=ref(false);const diffChanges=ref(0);const flowDoneAI=ref(false);const flowDoneExtract=ref(false);const flowDoneSync=ref(false);
+// 历史栈：支持前进/后退双向回退，每项是 scenes+charsStr 的深拷贝
+const historyStack=ref([]);
+const historyIndex=ref(-1);
+const amendedFields=ref({}); // { [sceneIdx]: Set of field names } — AI 补全过的字段用于高亮
+
+function pushHistory(label='') {
+  if(!currentScript.value)return;
+  // 截断当前位置之后的历史（新操作覆盖旧redo）
+  historyStack.value=historyStack.value.slice(0,historyIndex.value+1);
+  historyStack.value.push({
+    scenes:JSON.parse(JSON.stringify(currentScript.value.scenes)),
+    charsStr:[...charactersStr.value],
+    label,
+    time:new Date().toLocaleTimeString('zh-CN',{hour12:false}),
+  });
+  if(historyStack.value.length>30)historyStack.value.shift(); // 最多30步
+  historyIndex.value=historyStack.value.length-1;
+  diffChanges.value=historyStack.value.length;
+  persistHistory();
+}
+
+function undoHistory(){
+  if(historyIndex.value<=0)return;
+  historyIndex.value--;
+  applyHistory(historyStack.value[historyIndex.value]);
+  persistHistory();
+  showStoryboardDiff.value=false;
+  ElMessage.success(`已回退 (${historyIndex.value+1}/${historyStack.value.length})`);
+}
+
+function redoHistory(){
+  if(historyIndex.value>=historyStack.value.length-1)return;
+  historyIndex.value++;
+  applyHistory(historyStack.value[historyIndex.value]);
+  persistHistory();
+  ElMessage.success(`已前进 (${historyIndex.value+1}/${historyStack.value.length})`);
+}
+
+function applyHistory(item){
+  currentScript.value.scenes=JSON.parse(JSON.stringify(item.scenes));
+  charactersStr.value=[...item.charsStr];
+  amendedFields.value={};
+  markDirty();
+}
+
+const HISTORY_KEY = () => `se_hist_${currentProjectId.value}_${currentScriptId.value}`;
+function persistHistory(){
+  try {
+    sessionStorage.setItem(HISTORY_KEY(), JSON.stringify({
+      stack: historyStack.value.slice(0, historyIndex.value+1),
+      index: historyIndex.value,
+    }));
+  } catch{}
+}
+function loadHistory(){
+  historyStack.value=[]; historyIndex.value=-1; amendedFields.value={};
+  try {
+    const raw = sessionStorage.getItem(HISTORY_KEY());
+    if(raw){
+      const parsed = JSON.parse(raw);
+      historyStack.value = parsed.stack || [];
+      historyIndex.value = parsed.index ?? -1;
+    }
+  } catch{}
+}
 
 const videoConfig=reactive({aspectRatio:'9:16',visualStyle:'写实',subStyle:''});
 const directorForm=reactive({qualityKeywords:'8K, 超写实, 电影级摄影, 高细节, HDR',atmosphereLighting:'',artStyleCommands:''});
-const realisticSubStyles=['古风写实','古风明艳','古风唐朝','古风宋朝','古风明朝','古风清朝','真人写实','都市情感','玄幻修仙','历史战争','现代末日','悬疑恐怖','赛博朋克','未来科幻','纪实摄影','民国风格','乡土风格','职场商战','家庭伦理','医疗救援','80年代','律政法庭','北欧极简'];
-const animeSubStyles=['二次元','国风动漫','日系动漫','水墨风','赛博朋克'];
+const realisticSubStyles=['邵氏风格','古风写实','古风明艳','古风唐朝','古风宋朝','古风明朝','古风清朝','真人写实','都市情感','玄幻修仙','历史战争','现代末日','悬疑恐怖','赛博朋克','未来科幻','纪实摄影','民国风格','乡土风格','职场商战','家庭伦理','医疗救援','80年代','律政法庭','北欧极简'];
+const animeSubStyles=['二次元','国风动漫','日系动漫','水墨风'];
 const currentSubStyles=computed(()=>videoConfig.visualStyle==='动漫'?animeSubStyles:realisticSubStyles);
 
 const directorPresets={
+  '邵氏风格':{qualityKeywords:'4K, 电影级摄影, 浓艳胶片色, 柔和颗粒感',atmosphereLighting:'戏剧暖光，柔焦漫射，朦胧梦幻，高饱和暖色笼罩',artStyleCommands:'邵氏风格, 手绘棚景质感, 古典对称构图, 浓艳胶片调色, 假得高级艳得有韵味'},
   '古风写实':{qualityKeywords:'4K, 电影级摄影, 高细节, 古风质感',atmosphereLighting:'古典雅致，柔光漫射，暖金色调为主',artStyleCommands:'古风写实, 服饰考究, 场景古朴'},
   '古风明艳':{qualityKeywords:'8K, 高饱和, 电影级摄影, HDR',atmosphereLighting:'明艳华丽，强对比光影，富丽堂皇',artStyleCommands:'古风明艳, 色彩浓烈, 装饰繁复, 宫廷贵气'},
   '古风唐朝':{qualityKeywords:'8K, 电影级摄影, 高细节',atmosphereLighting:'盛唐气象，大气磅礴，暖金与朱红色调',artStyleCommands:'唐朝风格, 丰腴华美, 唐装襦裙'},
@@ -238,7 +345,7 @@ const directorPresets={
   '律政法庭':{qualityKeywords:'4K, 纪实风格, 高细节',atmosphereLighting:'法庭庄重光影，深木色调，严肃氛围',artStyleCommands:'律政法庭, 法庭场景, 庄重严肃, 深色调'},
   '北欧极简':{qualityKeywords:'4K, 极简风格, 自然光',atmosphereLighting:'北欧极简光影，大面积留白，柔和自然光',artStyleCommands:'北欧极简, 简约设计, 留白美学, 清新色调'},
   '二次元':{qualityKeywords:'8K, 赛璐珞风格, 日式动画质感',atmosphereLighting:'明亮通透，高饱和色彩，动画光影',artStyleCommands:'二次元, 赛璐珞风格, 日系动画, 明亮色彩, 清晰线条'},
-  '国风动漫':{qualityKeywords:'4K, 中国传统水墨画, 水彩风格',atmosphereLighting:'宁静雅致，散射柔光，墨色浓淡晕染，虚实相生',artStyleCommands:'中国传统水墨画与水彩风格融合，墨线勾勒轮廓，水彩透明晕染着色，色彩清透淡雅，飞白留白，气韵生动'},
+  '国风动漫':{qualityKeywords:'4K, 国风动画质感, 赛璐珞风格, 手绘线条',atmosphereLighting:'明亮雅致，柔光散射，国风色彩搭配，适度留白',artStyleCommands:'国风动漫, 赛璐珞描线, 水墨晕染背景, 国风配色, 工笔细节, 动画光影'},
   '日系动漫':{qualityKeywords:'8K, 赛璐珞风格, 日式动画电影质感',atmosphereLighting:'清新明亮，柔和漫反射，新海诚式光影',artStyleCommands:'日系动漫, 赛璐珞风格, 新海诚式光影, 治愈系色调'},
   '水墨风':{qualityKeywords:'4K, 中国传统水墨画, 水彩风格',atmosphereLighting:'宁静雅致，散射柔光，墨色浓淡晕染，虚实相生',artStyleCommands:'中国传统水墨画与水彩风格融合，墨线勾勒轮廓，水彩透明晕染着色，色彩清透淡雅，飞白留白，气韵生动'},
   '写实':{qualityKeywords:'8K, 超写实, 电影级摄影, 高细节, HDR',atmosphereLighting:'根据剧情情感动态调整',artStyleCommands:'写实风, 电影颗粒感, 低饱和调色'},
@@ -281,97 +388,138 @@ async function onProjectChange(val){
 
 async function loadAllAssets(pid){try{await assetStore.fetchCharacters(pid);await assetStore.fetchScenes(pid);await assetStore.fetchProps(pid);allAssets.value=[...assetStore.characters,...assetStore.scenes,...assetStore.props]}catch(e){}}
 
-async function switchEpisode(scriptId){if(dirty.value)await handleSave();currentScriptId.value=scriptId;const s=await scriptStore.fetchScript(scriptId);currentScript.value=JSON.parse(JSON.stringify(s));charactersStr.value=(currentScript.value.scenes||[]).map(x=>(x.characters||[]).join(', '));dirty.value=false}
+async function switchEpisode(scriptId){if(dirty.value)await handleSave();currentScriptId.value=scriptId;const s=await scriptStore.fetchScript(scriptId);currentScript.value=JSON.parse(JSON.stringify(s));charactersStr.value=(currentScript.value.scenes||[]).map(x=>(x.characters||[]).join(', '));dirty.value=false;loadHistory();}
 async function addEpisode(){if(!currentProjectId.value)return;const maxNum=scripts.value.reduce((m,s)=>Math.max(m,s.episodeNumber),0);try{const res=await scriptAPI.createEmpty({projectId:currentProjectId.value,episodeNumber:maxNum+1,episodeTitle:''});await scriptStore.fetchScripts(currentProjectId.value);scripts.value=[...scriptStore.scripts];currentScriptId.value=res.data._id;await switchEpisode(res.data._id);ElMessage.success(`第${maxNum+1}集已创建 🎉`)}catch(e){ElMessage.error('哎呀，创建出错啦，再试一次哦')}}
 async function duplicateEpisode(){if(!currentScript.value)return;const maxNum=scripts.value.reduce((m,s)=>Math.max(m,s.episodeNumber),0);try{const res=await scriptAPI.createEmpty({projectId:currentProjectId.value,episodeNumber:maxNum+1,episodeTitle:(currentScript.value.episodeTitle||'')+' (副本)',scenes:JSON.parse(JSON.stringify(currentScript.value.scenes||[]))});await scriptStore.fetchScripts(currentProjectId.value);scripts.value=[...scriptStore.scripts];const ns=scripts.value.find(s=>s._id===res.data._id);if(ns){currentScriptId.value=ns._id;await switchEpisode(ns._id)}ElMessage.success(`已复制为第${maxNum+1}集 📋`)}catch(e){ElMessage.error('复制失败')}}
 
 function cleanEpTitle(ep){return(ep.episodeTitle||"").replace(/^第d+集[：:]*s*/,"").trim()}
-function markDirty(){dirty.value=true}
+let _lastAutoHistory=0;
+function markDirty(){
+  dirty.value=true;
+  // 自动写历史（节流3秒，避免每次按键都push）
+  const now=Date.now();
+  if(now-_lastAutoHistory>3000){
+    _lastAutoHistory=now;
+    pushHistory('编辑');
+  }
+}
 function onCharsChange(si){const names=charactersStr.value[si]?.split(/[,，、]/).map(s=>s.trim()).filter(Boolean)||[];currentScript.value.scenes[si].characters=names;markDirty()}
-function addScene(){const maxNum=(currentScript.value.scenes||[]).reduce((m,s)=>Math.max(m,s.sceneNumber),0);currentScript.value.scenes.push({sceneNumber:maxNum+1,timeOfDay:'白天',location:'',shotType:'中景',composition:'',cameraMovement:'静止',lighting:'',soundEffect:'',duration:3,characters:[],atmosphere:'',sceneDescription:'',dialogues:[],boundSubjects:[]});charactersStr.value.push('');markDirty()}
-function removeScene(i){currentScript.value.scenes.splice(i,1);charactersStr.value.splice(i,1);markDirty()}
-function addDialogue(scene){scene.dialogues.push({characterName:'',text:'',actionHint:'',innerThought:'',cameraHint:''});markDirty()}
-function removeDialogue(scene,i){scene.dialogues.splice(i,1);markDirty()}
+function addScene(){const maxNum=(currentScript.value.scenes||[]).reduce((m,s)=>Math.max(m,s.sceneNumber),0);currentScript.value.scenes.push({sceneNumber:maxNum+1,timeOfDay:'白天',location:'',shotType:'中景',cameraAngle:'平视',composition:'',cameraMovement:'固定',lighting:'',soundEffect:'',duration:3,characters:[],atmosphere:'',sceneDescription:'',dialogues:[],boundSubjects:[]});charactersStr.value.push('');pushHistory('添加镜头');markDirty()}
+function removeScene(i){currentScript.value.scenes.splice(i,1);charactersStr.value.splice(i,1);pushHistory('删除镜头');markDirty()}
+function addDialogue(scene){scene.dialogues.push({characterName:'',text:'',actionHint:'',innerThought:'',cameraHint:''});pushHistory('添加台词');markDirty()}
+function removeDialogue(scene,i){scene.dialogues.splice(i,1);pushHistory('删除台词');markDirty()}
 
-async function handleSave(){if(!currentScript.value)return;try{await scriptStore.updateScript(currentScript.value._id,{scenes:currentScript.value.scenes,episodeTitle:currentScript.value.episodeTitle});dirty.value=false;ElMessage.success('内容已经稳稳保存好咯~')}catch(e){ElMessage.error('哎呀，保存出错啦，再试一次哦')}}
+async function handleSave(){if(!currentScript.value)return;try{await scriptStore.updateScript(currentScript.value._id,{scenes:currentScript.value.scenes,episodeTitle:currentScript.value.episodeTitle});dirty.value=false;_lastAutoHistory=0;pushHistory('保存');ElMessage.success('内容已经稳稳保存好咯~')}catch(e){ElMessage.error('哎呀，保存出错啦，再试一次哦')}}
 
 async function handleAutoStoryboard(){
   if(!currentProjectId.value||!currentScript.value)return;
   const scenes=currentScript.value.scenes;if(!scenes||scenes.length===0){ElMessage.warning('当前没有分镜哦，先添加一个镜头吧');return}
   autoStoryboarding.value=true;
+  const token=localStorage.getItem('token');
+  // 保存历史快照（补全前状态）
+  pushHistory('补全前');
   try{
-    const backup=scenes.map(s=>({shotType:s.shotType,composition:s.composition,cameraMovement:s.cameraMovement,lighting:s.lighting,duration:s.duration,soundEffect:s.soundEffect,sceneDescription:s.sceneDescription}));
-    diffBackup.value={scenes:scenes,backup:backup};
-    const scriptFull=scenes.map((s,i)=>{const dialogs=(s.dialogues||[]).map(d=>`${d.characterName}: ${d.text} ${d.actionHint?'('+d.actionHint+')':''}`).join('\n');const sceneTitle=s.location+(s.atmosphere?'（'+s.atmosphere+'）':'');return `[镜${i+1}] ${s.timeOfDay||''}，${sceneTitle}\n${s.sceneDescription||''}\n对话:${dialogs}`}).join('\n\n');
-    const sysPrompt=`你是资深影视分镜师，为每个分镜推荐镜头参数。规则：景别-表情特写用特写/对话用中近景/多人用中景/环境用全景；构图-对角线/对称/框架式/三分法/中心；运镜-揭示信息推/展示环境摇移/跟踪人物跟；光影-柔光/硬光/逆光/侧光/自然光/暖光/冷光；时长智能估算-纯场景无对话2~4秒/单人单句4~6秒/2-3轮对话6~10秒/多人互动或情绪转折8~12秒/激烈动作3~5秒；音效-环境音/动作音/背景音乐。【重要】sceneDescription字段严格保留原描述原文不动，禁止缩短、改写、删减。仅当字段完全为空时才补写简短描述。输出JSON数组：[{"index":0,"shotType":"中景","composition":"三分法","cameraMovement":"静止","lighting":"柔光","duration":5,"soundEffect":"环境音","sceneDescription":"保留原描述或补写"}]`;
-    const res=await fetch('/api/v1/assets/generate-prompt',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({projectId:currentProjectId.value,assetId:currentProjectId.value,assetType:'storyboard',existingPrompt:`${sysPrompt}\n\n剧本：\n${scriptFull}\n\n为以上${scenes.length}个分镜推荐参数。只输出JSON数组。`})});
-    const data=await res.json();const raw=data.data?.prompt||'';const m=raw.match(/\[[\s\S]*\]/);const rec=m?JSON.parse(m[0]):[];
-    let filled=0;rec.forEach(r=>{if(scenes[r.index]!==undefined){const s=scenes[r.index];if(r.shotType)s.shotType=r.shotType;if(r.composition)s.composition=r.composition;if(r.cameraMovement)s.cameraMovement=r.cameraMovement;if(r.lighting)s.lighting=r.lighting;if(r.duration)s.duration=r.duration;if(r.soundEffect)s.soundEffect=r.soundEffect;if(r.sceneDescription)s.sceneDescription=r.sceneDescription.replace(/^\[镜\d+\]\s*/,'');filled++}});
-    // 1.5. 自动拆分台词过多的分镜（按每镜最多2句拆分）
-    let splitCount = 0;
-    const newScenes = [];
-    scenes.forEach(s => {
-      const dialogs = s.dialogues || [];
-      if (dialogs.length <= 2) {
-        newScenes.push(s);
-        return;
-      }
-      // 按每镜最多2句台词拆分
-      for (let i = 0; i < dialogs.length; i += 2) {
-        const chunk = dialogs.slice(i, i + 2);
-        const newShot = JSON.parse(JSON.stringify(s));
-        newShot.dialogues = chunk;
-        newShot.sceneNumber = 0; // 后续统一编号
-        newScenes.push(newShot);
-      }
-      splitCount++;
-    });
-    if (splitCount > 0) {
-      // 重新编号 + 按台词数修正时长
-      newScenes.forEach((s, i) => {
-        s.sceneNumber = i + 1;
-        const dc = (s.dialogues || []).length;
-        const chars = (s.dialogues || []).reduce((a, d) => a + (d.text || '').length, 0);
-        if (dc <= 1) s.duration = Math.max(3, Math.min(6, Math.round(chars / 3) + 1));
-        else s.duration = Math.max(4, Math.min(10, Math.round(chars / 2) + 2));
+        ElMessage.info('AI 正在分析剧本，智能补全空白字段...');
+    const startTime = Date.now();
+
+    // 按每批3场分批调用LLM，每批独立请求+进度反馈
+    const BATCH_SIZE = 3;
+    const totalBatches = Math.ceil(scenes.length / BATCH_SIZE);
+    const allAiShots = [];
+
+    for (let b = 0; b < totalBatches; b++) {
+      const startIdx = b * BATCH_SIZE;
+      const endIdx = Math.min(startIdx + BATCH_SIZE, scenes.length);
+      const batchLabel = `${startIdx + 1}-${endIdx}/${scenes.length}`;
+      ElMessage.info(`AI 正在分析第 ${batchLabel} 镜... (${b + 1}/${totalBatches})`);
+      const rawRes = await fetch('/api/v1/storyboards/auto-generate',{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+        body:JSON.stringify({
+          scriptId:currentScriptId.value, projectId:currentProjectId.value,
+          useAI:true, maxDuration:15,
+          startScene: startIdx, sceneCount: endIdx - startIdx,
+        })
       });
-      currentScript.value.scenes = newScenes;
-      charactersStr.value = newScenes.map(s => (s.characters || []).join(', '));
-      ElMessage.success(`已自动拆分 ${splitCount} 个台词过多的分镜（已自动修正时长）`);
+      if(!rawRes.ok){const errText=await rawRes.text();throw new Error(`第${batchLabel}镜失败: ${errText}`)}
+      const batchData = await rawRes.json();
+      allAiShots.push(...(batchData.data?.shots || []));
     }
-    const finalScenes = currentScript.value.scenes;
-    markDirty();
-    // 2. 构建前后对比数据（使用拆分后的分镜）
-    const diffResult=finalScenes.map((s,i)=>{const b=backup[i];if(!b)return {shotNumber:s.sceneNumber,changes:[]};const changes=[];const fields=[{key:'shotType',label:'景别'},{key:'composition',label:'构图'},{key:'cameraMovement',label:'运镜'},{key:'lighting',label:'光影'},{key:'duration',label:'时长'},{key:'soundEffect',label:'音效'},{key:'sceneDescription',label:'描述'}];fields.forEach(f=>{if(b[f.key]!==s[f.key]&&(s[f.key]||b[f.key]))changes.push({field:f.key,label:f.label,old:b[f.key]||'(空)',new:s[f.key]||'(空)'});});return {shotNumber:s.sceneNumber,changes};});
-    let totalChanges=0;diffResult.forEach(d=>totalChanges+=d.changes.length);
-    diffShots.value=diffResult;diffChanges.value=totalChanges;
-    console.log('[AI拆镜] 变化数:', totalChanges, 'filled:', filled);if(totalChanges>0){showStoryboardDiff.value=true;}else{ElMessage.success('所有分镜参数已是最优，无需调整 ✨');}
+    allAiShots.sort((a,b)=>(a.shotNumber||0)-(b.shotNumber||0));
+    const aiShots = allAiShots;
+    if(!aiShots.length)throw new Error('AI未生成有效分镜');
+
+
+    // 角色名→assetId 映射表，用于自动绑定主体
+    const charNameToId={};
+    allAssets.value.forEach(a=>{if(a.name)charNameToId[a.name]=a._id;});
+
+    const newAmended={};let totalAmended=0;
+    scenes.forEach((s,i)=>{
+      const ai=aiShots[i];
+      if(!ai)return;
+      newAmended[i]={};
+      if(!s.shotType||s.shotType==='中景'){s.shotType=ai.shotType||'中景';newAmended[i].shotType=true;totalAmended++;}
+      if(!s.cameraAngle||s.cameraAngle==='平视'){s.cameraAngle=ai.cameraAngle||'平视';newAmended[i].cameraAngle=true;totalAmended++;}
+      if(!s.composition||!s.composition.trim()){s.composition=ai.composition||'';newAmended[i].composition=true;totalAmended++;}
+      if(!s.cameraMovement||s.cameraMovement==='固定'){s.cameraMovement=ai.cameraMovement||'固定';newAmended[i].cameraMovement=true;totalAmended++;}
+      if(!s.lighting||!s.lighting.trim()){s.lighting=ai.lighting||'';newAmended[i].lighting=true;totalAmended++;}
+      if(!s.soundEffect||!s.soundEffect.trim()){s.soundEffect=ai.soundEffect||'';newAmended[i].soundEffect=true;totalAmended++;}
+      if(!s.atmosphere||!s.atmosphere.trim()){s.atmosphere=ai.characterEmotion||'';newAmended[i].atmosphere=true;totalAmended++;}
+      if(!s.sceneDescription||!s.sceneDescription.trim()){s.sceneDescription=ai._imagePrompt||ai.imageDescription||'';newAmended[i].sceneDescription=true;totalAmended++;}
+      if(!s.duration||s.duration===3){s.duration=ai.duration||5;newAmended[i].duration=true;totalAmended++;}
+      // 自动绑定主体：匹配台词角色名 → assetId
+      s.characters?.forEach(cName=>{
+ const id=charNameToId[cName];
+ if(id&&(!s.boundSubjects||!s.boundSubjects.includes(id))){
+   if(!s.boundSubjects)s.boundSubjects=[];
+   s.boundSubjects.push(id);
+   newAmended[i].boundSubjects=true;totalAmended++;
+ }
+      });
+      (s.dialogues||[]).forEach((d,j)=>{
+ const aiDialogues=(ai._dialogues||[]);
+ const aiD=aiDialogues[j]||(ai.dialogue?.text===d.text?ai.dialogue:null);
+ if(!aiD)return;
+ if((!d.actionHint||!d.actionHint.trim())&&aiD.actionHint){d.actionHint=aiD.actionHint;newAmended[i].dialogues=true;totalAmended++;}
+ if((!d.cameraHint||!d.cameraHint.trim())&&aiD.cameraHint){d.cameraHint=aiD.cameraHint;newAmended[i].dialogues=true;totalAmended++;}
+      });
+    });
+
+    
+    amendedFields.value=newAmended;
+    pushHistory('AI补全');
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const msg = [];
+    if(totalAmended>0) msg.push(`补全 ${totalAmended} 处字段`);
+    msg.push(`${totalBatches} 批 ${elapsed}s`);
+    ElMessage.success(msg.length?`AI 补全完成：${msg.join('，')} | 可回退/前进`:'所有字段已完善');
     flowDoneAI.value=true;
-  }catch(e){console.error(e);fallbackAutoStoryboard()}finally{autoStoryboarding.value=false}
+  }catch(e){console.error(e);ElMessage.error('AI补全失败: '+(e.message||''));fallbackAutoStoryboard()}finally{autoStoryboarding.value=false}
 }
 
-function undoStoryboardDiff(){
-  if(!diffBackup.value)return;
-  const {scenes,backup}=diffBackup.value;
-  backup.forEach((b,i)=>{
-    Object.keys(b).forEach(k=>{scenes[i][k]=b[k];});
+function fallbackAutoStoryboard(){
+  const scenes=currentScript.value.scenes;
+  if(!scenes||!scenes.length)return;
+  pushHistory('补全前');
+  const rules={'特写':[/表情|眼神|泪|笑|吻|哭|怒|惊|细节|手|脸/],'全景':[/全景|环境|城市|天空|山|海|街道|建筑|远处/],'近景':[/对话|说|问|答|告诉|喊|叫/],'中景':[/走|跑|站|坐|躺|动作|拿|放|推/]};
+  let localAmend=0;
+  scenes.forEach(x=>{
+    const t=(x.sceneDescription||'')+' '+(x.dialogues||[]).map(d=>d.text).join(' ');
+    if(!x.shotType||x.shotType==='中景'){for(const[ty,ps]of Object.entries(rules)){if(ps.some(p=>p.test(t))){x.shotType=ty;localAmend++;break}}}
+    if(!x.composition||!x.composition.trim()){x.composition='中心构图';localAmend++;}
+    if(!x.duration||x.duration===3){const dialogs=x.dialogues||[];const totalChars=dialogs.reduce((a,d)=>a+(d.text||'').length,0);const count=dialogs.length;
+      if(count===0)x.duration=totalChars>20?4:2;else if(count===1)x.duration=Math.max(4,Math.min(8,Math.round(totalChars/4)+2));else if(count<=3)x.duration=Math.max(6,Math.min(12,Math.round(totalChars/3)+3));else x.duration=Math.max(8,Math.min(15,Math.round(totalChars/2)+4));
+      if(/(跑|追|打|冲|逃|摔|跳|飞|转)/.test(t))x.duration=Math.min(x.duration,6);if(/(哭|怒|吻|拥抱|转身|回头)/.test(t))x.duration=Math.max(x.duration,5);localAmend++;}
   });
-  diffBackup.value=null;diffShots.value=[];diffChanges.value=0;
-  showStoryboardDiff.value=false;markDirty();
-  ElMessage.success('已撤销 AI 修改，恢复原始参数');
+  pushHistory('本地规则补全');
+  markDirty();ElMessage.success(`本地规则补全 ${localAmend} 处空白（AI 暂不可用，可回退）`);
 }
-
-function fallbackAutoStoryboard(){const s=currentScript.value.scenes;if(!s)return;const backup2=s.map(x=>({shotType:x.shotType,duration:x.duration}));diffBackup.value={scenes:s,backup:backup2};const rules={'特写':[/表情|眼神|泪|笑|吻|哭|怒|惊|细节|手|脸/],'全景':[/全景|环境|城市|天空|山|海|街道|建筑|远处/],'近景':[/对话|说|问|答|告诉|喊|叫/],'中景':[/走|跑|站|坐|躺|动作|拿|放|推/]};s.forEach(x=>{const t=(x.sceneDescription||'')+' '+(x.dialogues||[]).map(d=>d.text).join(' ');if(!x.shotType||x.shotType==='中景'){for(const[ty,ps]of Object.entries(rules)){if(ps.some(p=>p.test(t))){x.shotType=ty;break}}}
-// 智能时长估算
-if(!x.duration||x.duration===3){const dialogs=x.dialogues||[];const totalChars=dialogs.reduce((a,d)=>a+(d.text||'').length,0);const count=dialogs.length;
-if(count===0) x.duration=totalChars>20?4:2;else if(count===1) x.duration=Math.max(4,Math.min(8,Math.round(totalChars/4)+2));else if(count<=3) x.duration=Math.max(6,Math.min(12,Math.round(totalChars/3)+3));else x.duration=Math.max(8,Math.min(15,Math.round(totalChars/2)+4));
-if(/(跑|追|打|冲|逃|摔|跳|飞|转)/.test(t)) x.duration=Math.min(x.duration,6);if(/(哭|怒|吻|拥抱|转身|回头)/.test(t)) x.duration=Math.max(x.duration,5)}});markDirty();ElMessage.success(`智能规则已填充 ${s.length} 个分镜（含智能时长）`)}
 
 async function syncToStoryboard(){if(!currentProjectId.value||!currentScriptId.value||!currentScript.value)return;syncing.value=true;try{const scenes=currentScript.value.scenes;if(!scenes||scenes.length===0){ElMessage.warning('没有分镜可同步，请先添加镜头');syncing.value=false;return}const noSub=localStorage.getItem('ad_no_subtitles')==='true';const shots=buildShotsFromScenes(scenes, videoConfig, noSub, directorForm, allAssets.value);const rawRes=await fetch('/api/v1/storyboards/auto-generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({scriptId:currentScriptId.value,projectId:currentProjectId.value,batchShots:shots})});const data=await rawRes.json();ElMessage.success(`已同步 ${shots.length} 个分镜到故事板，图片/视频提示词已区分生成`);flowDoneSync.value=true}catch(e){ElMessage.error('同步失败: '+(e.message||''))}finally{syncing.value=false}}
 
-function selectSubStyle(s){videoConfig.subStyle=s;const preset=getStylePreset();if(preset){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}onVideoConfigChange();handleApplyDirectorSettings()}
-function openDirectorDialog(){const preset=getStylePreset();if(preset&&!directorForm.atmosphereLighting&&!directorForm.artStyleCommands){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}showDirectorDialog.value=true}
-function getStylePreset(){if(videoConfig.subStyle&&directorPresets[videoConfig.subStyle])return directorPresets[videoConfig.subStyle];if(directorPresets[videoConfig.visualStyle])return directorPresets[videoConfig.visualStyle];return null}
+function selectSubStyle(s){videoConfig.subStyle=s;const preset=getStylePreset();if(preset){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}onVideoConfigChange();handleApplyDirectorSettings();}
+function openDirectorDialog(){const preset=getStylePreset();if(preset&&!directorForm.atmosphereLighting&&!directorForm.artStyleCommands){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}showDirectorDialog.value=true;}
+function getStylePreset(){if(videoConfig.subStyle&&directorPresets[videoConfig.subStyle])return directorPresets[videoConfig.subStyle];if(directorPresets[videoConfig.visualStyle])return directorPresets[videoConfig.visualStyle];return null;}
 async function onVideoConfigChange(){if(!currentProjectId.value)return;dirty.value=true;try{await projectStore.updateProject(currentProjectId.value,{videoConfig:{...videoConfig}})}catch(e){}}
 function onStyleChange(){videoConfig.subStyle='';const preset=directorPresets[videoConfig.visualStyle];if(preset){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}onVideoConfigChange();handleApplyDirectorSettings()}
 async function handleExtractSubjects(){if(!currentScriptId.value||!currentProjectId.value)return;extracting.value=true;extractResult.value=null;showExtractDialog.value=true;try{const res=await assetAPI.extractAll(currentScriptId.value,currentProjectId.value);extractResult.value=res.data;flowDoneExtract.value=true}catch(e){ElMessage.error('提取失败，请确认已选择剧集')}finally{extracting.value=false}}
@@ -380,10 +528,16 @@ async function handleAIUnderstand(){
   if(!currentProjectId.value)return;
   aiUnderstanding.value=true;
   try{
-    const systemPrompt='你是资深影视导演。根据用户提供的风格关键词，输出优化后的导演设定。只返回JSON：{"qualityKeywords":"画质质感设定","atmosphereLighting":"氛围光影设定","artStyleCommands":"画风指令设定"}。每个字段用中文，不超过100字。';
-    const userPrompt=`当前风格：${videoConfig.visualStyle||'写实'} ${videoConfig.subStyle||''}
+    const systemPrompt='你是资深影视导演和AI绘图调参专家。根据风格关键词和当前剧本内容，输出优化后的导演设定。读懂剧本基调，给出精准匹配的画质、光影、画风建议。只返回JSON：{"qualityKeywords":"画质质感设定","atmosphereLighting":"氛围光影设定","artStyleCommands":"画风指令设定"}。每个字段用中文，不超过150字。';
+    const userPrompt=`【剧本信息】
+标题：${currentScript.value?.episodeTitle || '未设定'} 
+摘要：${currentScript.value?.summary || '暂无'} 
+当前风格：${videoConfig.subStyle||videoConfig.visualStyle||'写实'}
+
+【当前导演设定】
+画质质感：${directorForm.qualityKeywords}
 当前画质质感：${directorForm.qualityKeywords}
-当前氛围光影：${directorForm.atmosphereLighting||'无'}
+氛围光影：${directorForm.atmosphereLighting||'无'}
 当前画风指令：${directorForm.artStyleCommands||'无'}
 请基于风格优化以上三项设定。`;
     const res=await fetch('/api/v1/assets/generate-prompt',{
@@ -403,7 +557,7 @@ async function handleAIUnderstand(){
   }catch(e){ElMessage.error('润色失败，请稍后重试')}
   finally{aiUnderstanding.value=false}
 }
-async function handleApplyDirectorSettings(){if(!currentProjectId.value)return;try{await projectStore.updateProject(currentProjectId.value,{directorSettings:{...directorForm,aiOptimized:true}});showDirectorDialog.value=false;ElMessage.success('导演设定已应用到全剧 ✅')}catch(e){ElMessage.error('应用失败')}}
+async function handleApplyDirectorSettings(){if(!currentProjectId.value)return;try{await projectStore.updateProject(currentProjectId.value,{videoConfig:{...videoConfig},directorSettings:{...directorForm,aiOptimized:true}});showDirectorDialog.value=false;ElMessage.success('导演设定已应用到全剧 ✅')}catch(e){ElMessage.error('应用失败')}}
 
 // ===== 导出 =====
 const showExportDialog = ref(false);
@@ -411,9 +565,18 @@ const exportTypes = ref(['script', 'shots']);
 const exportFormat = ref('pdf');
 const exportEpisodes = ref([]);
 const formatHint = computed(() => {
-  const m = { pdf: 'PDF：打开打印预览，浏览器「另存为 PDF」保存', markdown: 'Markdown：下载 .md 文件，可用 Typora/VS Code 打开', csv: 'Excel/CSV：下载 .csv 文件，用 Excel/WPS 打开编辑', word: 'Word：下载 .doc 文件，用 Word/WPS 打开编辑' };
+  const m = { pdf: 'PDF：打开打印预览，浏览器「另存为 PDF」保存', markdown: 'Markdown：下载 .md 文件，可用 Typora/VS Code 打开', csv: 'Excel/CSV：下载 .csv 文件，用 Excel/WPS 打开编辑', word: 'Word：下载 .doc 文件，用 Word/WPS 打开编辑', json: 'JSON：下载 .json 文件，结构化数据，可程序化处理', html: 'HTML：下载 .html 文件，浏览器直接打开查看', png: 'PNG：将导出内容渲染为高清截图下载，多集全选时可能需几秒' };
   return m[exportFormat.value] || '';
 });
+const formatOptions = [
+  { value:'pdf', label:'PDF', hint:'打印预览保存', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#e74c3c"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zM16.5 13H15v-2h-1.5V7H15v2h1.5v1.5H15V13zM19 13h-1.5V7H19v6zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>' },
+  { value:'markdown', label:'Markdown', hint:'Typora/VS Code', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#3498db"><path d="M20.56 18H3.44C2.65 18 2 17.37 2 16.59V7.41C2 6.63 2.65 6 3.44 6h17.12c.79 0 1.44.63 1.44 1.41v9.18c0 .78-.65 1.41-1.44 1.41zM6.81 15.19v-4.69l1.88 2.35 1.88-2.35v4.69h1.13V8.81h-1.13l-1.88 2.35-1.88-2.35H5.69v6.38h1.12zM15.73 15.19l2.62-3.19-2.62-3.19h1.51l1.87 2.31 1.87-2.31h1.51l-2.62 3.19 2.62 3.19h-1.51l-1.87-2.31-1.87 2.31h-1.51z"/></svg>' },
+  { value:'csv', label:'CSV Excel', hint:'Excel/WPS', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#27ae60"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6h2v-2H8v2zm0-4h2V8H8v2zm4 4h2v-2h-2v2zm0-4h2V8h-2v2zm4 4h2v-2h-2v2zm0-4h2V8h-2v2z"/></svg>' },
+  { value:'word', label:'Word', hint:'Word/WPS', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#2980b9"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2.5-4.5L10 13l1.5 2.5H13l-2-3 2-3h-1.5L10 11.5 8.5 9.5H7l2 3-2 3h1.5z"/></svg>' },
+  { value:'json', label:'JSON', hint:'结构化数据', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#8e44ad"><path d="M5 3h2v2H5v5c0 1.1-.9 2-2 2v1c1.1 0 2 .9 2 2v5h2v2H5c-1.07 0-2-.94-2-2.03V17c0-1.1-.9-2-2-2v-1c1.1 0 2-.9 2-2V7c0-1.08.93-2 2-2zm14 0c1.07 0 2 .94 2 2.03V7c0 1.1.9 2 2 2v1c-1.1 0-2 .9-2 2v5.03c0 1.09-.93 2-2 2h-2v-2h2v-5c0-1.1.9-2 2-2V7c0-1.1-.9-2-2-2h-2V3h2z"/></svg>' },
+  { value:'html', label:'HTML', hint:'浏览器打开', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#e67e22"><path d="M12 18.177l-6.72-3.878-.9-8.12L12 2l7.62 4.179-.9 8.12L12 18.177zM4.86 6.556l.72 6.482L12 16.545l6.42-3.507.72-6.482L12 3.455 4.86 6.556zM11 13h2l-.3 3.5-1 .5-1-.5L11 13zm0-6h2l-.2 5H11.2L11 7z"/></svg>' },
+  { value:'png', label:'PNG 图片', hint:'截图导出', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#16a085"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>' },
+];
 
 function formatEpLabel(ep) {
   const title = (ep.episodeTitle || '').replace(/^第\d+集[：:]*\s*/, '').trim();
@@ -426,7 +589,7 @@ function openExport() {
 }
 
 async function handleExport() {
-  if (exportTypes.value.length === 0 || exportEpisodes.value.length === 0) return;
+  if (exportTypes.value.length === 0) return;
   const fmt = exportFormat.value;
   showExportDialog.value = false;
   try {
@@ -434,30 +597,61 @@ async function handleExport() {
     const res = await fetch('/api/v1/export', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        projectId: currentProjectId.value,
-        episodeIds: exportEpisodes.value,
-        types: exportTypes.value,
-        format: fmt,
+ projectId: currentProjectId.value,
+ episodeIds: exportEpisodes.value,
+ types: exportTypes.value,
+ format: fmt === 'png' ? 'html' : fmt,
       }),
     });
-    const result = await res.json();
-    const data = result.data || result;
+    const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '导出失败'); return; }
-    const ext = fmt === 'csv' ? 'csv' : fmt === 'markdown' ? 'md' : fmt === 'word' ? 'doc' : 'html';
-    if (fmt === 'csv' || fmt === 'markdown' || fmt === 'word') {
-      const blob = new Blob([data.content || ''], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `${data.filename || 'export'}.${ext}`;
-      a.click(); URL.revokeObjectURL(url);
-    } else {
+
+    if (fmt === 'pdf') {
       const w = window.open('', '_blank');
       w.document.write(data.html || '');
       w.document.close();
       setTimeout(() => w.print(), 500);
+    } else if (fmt === 'html') {
+      const blob = new Blob([data.html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = (data.filename || 'export') + '.html';
+      a.click(); URL.revokeObjectURL(url);
+    } else if (fmt === 'png') {
+      await exportAsPng(data.html, data.filename || 'export');
+    } else if (fmt === 'csv' || fmt === 'markdown' || fmt === 'word' || fmt === 'json') {
+      const ext = { markdown: 'md', csv: 'csv', word: 'doc', json: 'json' }[fmt] || 'txt';
+      const blob = new Blob([data.content || ''], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = (data.filename || 'export') + '.' + ext;
+      a.click(); URL.revokeObjectURL(url);
     }
     ElMessage.success('备份文件已准备就绪~');
   } catch (e) { ElMessage.error('哎呀，导出出错啦，再试一次哦'); }
+}
+
+async function exportAsPng(html, filename) {
+  var iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:820px;height:0;border:0;';
+  document.body.appendChild(iframe);
+  var doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  await new Promise(function(r) { setTimeout(r, 600); });
+  try {
+    var canvas = await html2canvas(doc.body, {
+      scale: 2, useCORS: true, backgroundColor: '#FBF7F0',
+      windowWidth: 820, windowHeight: doc.body.scrollHeight,
+    });
+    canvas.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename + '.png';
+      a.click(); URL.revokeObjectURL(url);
+      ElMessage.success('PNG 导出完成');
+    }, 'image/png');
+  } catch (e) { ElMessage.error('PNG 截图失败'); }
+  finally { document.body.removeChild(iframe); }
 }
 </script>
 <style scoped>
@@ -486,6 +680,12 @@ async function handleExport() {
 .scenes-area{display:flex;flex-direction:column;gap:12px}
 .scene-card{background:var(--bg-200);border:1px solid var(--bg-300);border-radius:8px;padding:12px}
 .shot-invalid{border-color:var(--accent-200);background:var(--bg-100)}
+/* AI 补全高亮：柔和的琥珀色边框 + 左侧色条 */
+.shot-amended{border-left:3px solid #e6a23c !important;background:linear-gradient(90deg,rgba(230,162,60,0.04) 0%,var(--bg-200) 8%)}
+.shot-amended .scene-num::after{content:' ✨';font-size:11px}
+/* 补全字段高亮：输入框/下拉框微染 */
+:deep(.field-amended .el-input__wrapper){background:rgba(230,162,60,0.06);box-shadow:0 0 0 1px rgba(230,162,60,0.25) inset}
+:deep(.field-amended .el-select .el-input__wrapper){background:rgba(230,162,60,0.06);box-shadow:0 0 0 1px rgba(230,162,60,0.25) inset}
 .scene-top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .scene-num{color:var(--primary-200);font-weight:bold;font-size:14px}
 .scene-meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
@@ -653,4 +853,44 @@ async function handleExport() {
   /* 消除底部空白 */
   .center-empty { padding: 40px 16px !important; }
 }
+
+/* ===== 导出对话框 ===== */
+.export-dialog :deep(.el-dialog__header) { padding-bottom: 8px; border-bottom: 1px solid var(--bg-300); }
+.export-body { display: flex; flex-direction: column; gap: 16px; }
+.export-section { padding: 12px 16px; background: var(--bg-100); border-radius: 10px; border: 1px solid var(--bg-300); }
+.export-section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--text-100); margin-bottom: 10px; }
+.export-format-cards { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+@media (max-width: 600px) { .export-format-cards { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 400px) { .export-format-cards { grid-template-columns: repeat(3, 1fr); } }
+.ef-card { display: flex; flex-direction: column; align-items: center; padding: 12px 6px 8px; border-radius: 10px; border: 2px solid var(--bg-300); cursor: pointer; transition: all 0.2s; background: var(--bg-200); }
+.ef-card:hover { border-color: var(--navy); background: var(--bg-100); transform: translateY(-1px); }
+.ef-card.active { border-color: var(--navy); background: rgba(26,35,50,0.05); box-shadow: 0 0 0 2px rgba(26,35,50,0.12); }
+.ef-card-icon { margin-bottom: 6px; line-height: 1; }
+.ef-card-label { font-size: 12px; font-weight: 700; color: var(--text-100); margin-bottom: 1px; }
+.ef-card-hint { font-size: 10px; color: var(--text-200); }
+
+/* ===== 字数统计进度条（脉冲效果）===== */
+.word-count-bar { display: flex; align-items: center; gap: 10px; margin-left: 16px; min-width: 180px; }
+.word-count-bar .wc-label { font-size: 14px; font-weight: 700; color: var(--text-100); white-space: nowrap; }
+.wc-pulse { flex: 1; min-width: 80px; }
+@keyframes pulse-bar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; filter: brightness(1.15); }
+}
+.wc-pulse :deep(.el-progress-bar__inner) { animation: pulse-bar 2s ease-in-out infinite; transition: width 0.6s ease; }
+.wc-pulse :deep(.el-progress-bar__outer) { background: var(--bg-300); border-radius: 3px; }
+/* ===== 导演设定面板 ===== */
+.director-preset-badge { display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(230,162,60,0.08);border-radius:8px;border:1px solid rgba(230,162,60,0.2);font-size:12px;color:var(--text-100) }
+.director-preset-badge .dpb-value { font-weight:700;color:var(--navy) }
+
+/* ===== 导演全局设定弹窗 ===== */
+.director-dialog :deep(.el-dialog__header) { padding-bottom:8px;border-bottom:1px solid var(--bg-300) }
+.director-body { display:flex;flex-direction:column;gap:16px }
+.director-intro { display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-200);padding:8px 12px;background:var(--bg-100);border-radius:8px;border:1px solid var(--bg-300) }
+.director-field { padding:12px 14px;background:var(--bg-100);border-radius:10px;border:1px solid var(--bg-300) }
+.director-field-label { display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-100);margin-bottom:8px }
+.director-field-hint { margin-top:6px;font-size:11px;color:var(--text-200);line-height:1.5 }
+.director-preview { padding:12px 14px;background:rgba(26,35,50,0.03);border-radius:10px;border:1px solid var(--navy);border-left:3px solid var(--navy) }
+.director-preview-title { display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px }
+.director-preview-code { display:block;font-size:12px;line-height:1.6;color:var(--text-100);background:var(--bg-200);padding:10px 12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,SFMono-Regular,monospace }
 </style>

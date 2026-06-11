@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sb-root">
     <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
@@ -21,7 +21,7 @@
       <div class="tb-right">
         <el-button type="primary" style="margin-left:8px" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating">生成故事板</el-button>
         <el-button size="small" class="btn-danger-delete" style="margin-left:4px" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
-        <el-button size="small" style="margin-left:4px" @click="openExport">导出</el-button>
+        <el-button size="small" style="margin-left:4px" @click="openExport" :disabled="!currentProjectId">导出</el-button>
         <el-button size="small" style="margin-left:4px" @click="showImportDialog = true" :disabled="!currentStoryboard">导入</el-button>
         <el-button size="small" type="warning" style="margin-left:4px" @click="openTTSDialog(null)" :disabled="!currentStoryboard || ttsBatchRunning" :loading="ttsBatchRunning">
           {{ ttsBatchRunning ? '批量配音中...' : '' }}<Voice size="14" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/>批量配音
@@ -382,54 +382,86 @@
     <el-empty v-if="!currentProjectId" description="请选择片场" style="margin-top:80px" />
 
     <!-- 导出弹窗 -->
-    <el-dialog v-model="showExportDialog" title="导出内容" width="540px">
-      <el-form label-position="top" size="small">
-        <el-form-item label="选择剧集">
+    <el-dialog v-model="showExportDialog" :width="screenWidth < 768 ? '94%' : '520px'" destroy-on-close class="export-dialog">
+      <template #header>
+        <div style="display:flex;align-items:center;gap:8px">
+          <Download size="20" fill="var(--gold)"/>
+          <span style="font-size:17px;font-weight:700;color:var(--text-100)">导出分镜</span>
+        </div>
+      </template>
+      <div class="export-body">
+        <div class="export-section">
+          <div class="export-section-title"><Film size="14" fill="var(--navy)"/> 选择剧集</div>
           <el-select v-model="exportEpisodes" style="width:100%" multiple collapse-tags placeholder="全部剧集（不选=导出全部）">
             <el-option v-for="ep in scripts" :key="ep._id" :label="formatEpLabel(ep)" :value="ep._id" />
           </el-select>
-          <div style="display:flex;gap:8px;margin-top:4px">
+          <div style="display:flex;gap:8px;margin-top:6px">
             <el-button size="small" link @click="exportEpisodes = scripts.map(e => e._id)">全选</el-button>
             <el-button size="small" link @click="exportEpisodes = currentScriptId ? [currentScriptId] : []">当前集</el-button>
             <el-button size="small" link @click="exportEpisodes = []">清空</el-button>
           </div>
-        </el-form-item>
-        <el-form-item label="导出内容">
+        </div>
+        <div class="export-section">
+          <div class="export-section-title"><FolderOpen size="14" fill="var(--navy)"/> 导出内容</div>
           <el-checkbox-group v-model="exportTypes">
-            <el-checkbox value="script">📝 剧本全文</el-checkbox>
-            <el-checkbox value="shots">🎬 分镜全文</el-checkbox>
-            <el-checkbox value="full_storyboard">🎞️ 故事板全文</el-checkbox>
+            <el-checkbox value="script">剧本全文</el-checkbox>
+            <el-checkbox value="shots">分镜全文</el-checkbox>
+            <el-checkbox value="full_storyboard">故事板全文</el-checkbox>
           </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="导出格式">
-          <el-select v-model="exportFormat" style="width:100%">
-            <el-option label="PDF（浏览器打印/另存为 PDF）" value="pdf" />
-            <el-option label="Markdown（.md 文件）" value="markdown" />
-            <el-option label="Excel / CSV（表格格式）" value="csv" />
-            <el-option label="Word（.doc 文件）" value="word" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <el-alert type="info" :closable="false" show-icon style="margin-top:8px">
-        <template #title>{{ formatHint }}</template>
-      </el-alert>
+        </div>
+        <div class="export-section">
+          <div class="export-section-title"><Edit size="14" fill="var(--navy)"/> 导出格式</div>
+          <div class="export-format-cards">
+            <div v-for="f in formatOptions" :key="f.value" :class="['ef-card',{active:exportFormat===f.value}]" @click="exportFormat=f.value">
+              <div class="ef-card-icon" v-html="f.icon"></div>
+              <div class="ef-card-label">{{ f.label }}</div>
+              <div class="ef-card-hint">{{ f.hint }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <el-alert type="info" :closable="false" show-icon style="margin-top:12px"><template #title>{{ formatHint }}</template></el-alert>
       <template #footer>
         <el-button @click="showExportDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleExport" :disabled="exportTypes.length === 0 || exportEpisodes.length === 0">导出</el-button>
+        <el-button type="primary" @click="handleExport" :disabled="exportTypes.length === 0">
+          <Download size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导出文件
+        </el-button>
       </template>
     </el-dialog>
 
     <ImageLightbox v-model:visible="imgViewerVisible" :url="imgViewerSrc || ''" title="图片预览" />
 
     <!-- 导入弹窗 -->
-    <el-dialog v-model="showImportDialog" title="导入分镜数据" width="600px">
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
-        <template #title>粘贴 CSV 或 JSON。CSV表头：镜头号,场景名称,景别,构图,运镜,灯光,时长,图像描述,角色名,台词,音效,备注,状态</template>
+    <el-dialog v-model="showImportDialog" title="导入分镜数据" width="600px" class="export-dialog">
+      <div class="export-body">
+        <div class="export-section">
+          <div class="export-section-title"><FolderOpen size="14" fill="var(--navy)"/> 数据格式</div>
+          <el-radio-group v-model="importFormat">
+            <el-radio value="csv">CSV（逗号分隔）</el-radio>
+            <el-radio value="json">JSON（结构化数据）</el-radio>
+          </el-radio-group>
+          <div style="margin-top:10px">
+            <el-upload :auto-upload="false" :show-file-list="false" accept=".csv,.json,.txt" @change="onImportFileChange">
+              <el-button size="small">📁 选择文件上传</el-button>
+            </el-upload>
+          </div>
+        </div>
+        <div class="export-section">
+          <div class="export-section-title"><Edit size="14" fill="var(--navy)"/> 粘贴数据</div>
+          <el-input v-model="importText" type="textarea" :rows="14" placeholder="粘贴 CSV 或 JSON 数据到此处..." />
+        </div>
+      </div>
+      <el-alert type="info" :closable="false" show-icon style="margin-top:12px">
+        <template #title>
+          CSV表头：镜头号,场景名称,景别,构图,运镜,灯光,时长,图像描述,角色名,台词,音效,备注,状态
+          <br>JSON：数组格式 [{ shotNumber, shotType, imageDescription, ... }]
+        </template>
       </el-alert>
-      <el-input v-model="importText" type="textarea" :rows="14" placeholder="粘贴数据..." />
       <template #footer>
         <el-button @click="showImportDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleImport" :loading="importing" :disabled="!importText.trim()">导入</el-button>
+        <el-button type="primary" @click="handleImport" :loading="importing" :disabled="!importText.trim()">
+          <Download size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导入数据
+        </el-button>
       </template>
     </el-dialog>
 
@@ -468,7 +500,7 @@
 <script setup>
 import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock, Movie } from '@icon-park/vue-next';
+import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock, Movie, MagicWand, Download, FolderOpen, Edit } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -477,6 +509,7 @@ import { storyboardAPI, assetAPI } from '../api';
 import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 import ImageLightbox from '../components/ImageLightbox.vue';
+import html2canvas from 'html2canvas';
 
 const projectStore = useProjectStore();
 const scriptStore = useScriptStore();
@@ -506,12 +539,22 @@ const showExportDialog = ref(false);
 const exportTypes = ref(['script', 'shots', 'full_storyboard']);
 const exportFormat = ref('pdf');
 const exportEpisodes = ref([]);
+const formatOptions = [
+  { value:'pdf', label:'PDF', hint:'打印预览保存', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#e74c3c"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zM16.5 13H15v-2h-1.5V7H15v2h1.5v1.5H15V13zM19 13h-1.5V7H19v6zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>' },
+  { value:'markdown', label:'Markdown', hint:'Typora/VS Code', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#3498db"><path d="M20.56 18H3.44C2.65 18 2 17.37 2 16.59V7.41C2 6.63 2.65 6 3.44 6h17.12c.79 0 1.44.63 1.44 1.41v9.18c0 .78-.65 1.41-1.44 1.41zM6.81 15.19v-4.69l1.88 2.35 1.88-2.35v4.69h1.13V8.81h-1.13l-1.88 2.35-1.88-2.35H5.69v6.38h1.12zM15.73 15.19l2.62-3.19-2.62-3.19h1.51l1.87 2.31 1.87-2.31h1.51l-2.62 3.19 2.62 3.19h-1.51l-1.87-2.31-1.87 2.31h-1.51z"/></svg>' },
+  { value:'csv', label:'CSV Excel', hint:'Excel/WPS', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#27ae60"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6h2v-2H8v2zm0-4h2V8H8v2zm4 4h2v-2h-2v2zm0-4h2V8h-2v2zm4 4h2v-2h-2v2zm0-4h2V8h-2v2z"/></svg>' },
+  { value:'word', label:'Word', hint:'Word/WPS', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#2980b9"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2.5-4.5L10 13l1.5 2.5H13l-2-3 2-3h-1.5L10 11.5 8.5 9.5H7l2 3-2 3h1.5z"/></svg>' },
+  { value:'json', label:'JSON', hint:'结构化数据', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#8e44ad"><path d="M5 3h2v2H5v5c0 1.1-.9 2-2 2v1c1.1 0 2 .9 2 2v5h2v2H5c-1.07 0-2-.94-2-2.03V17c0-1.1-.9-2-2-2v-1c1.1 0 2-.9 2-2V7c0-1.08.93-2 2-2zm14 0c1.07 0 2 .94 2 2.03V7c0 1.1.9 2 2 2v1c-1.1 0-2 .9-2 2v5.03c0 1.09-.93 2-2 2h-2v-2h2v-5c0-1.1.9-2 2-2V7c0-1.1-.9-2-2-2h-2V3h2z"/></svg>' },
+  { value:'html', label:'HTML', hint:'浏览器打开', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#e67e22"><path d="M12 18.177l-6.72-3.878-.9-8.12L12 2l7.62 4.179-.9 8.12L12 18.177zM4.86 6.556l.72 6.482L12 16.545l6.42-3.507.72-6.482L12 3.455 4.86 6.556zM11 13h2l-.3 3.5-1 .5-1-.5L11 13zm0-6h2l-.2 5H11.2L11 7z"/></svg>' },
+  { value:'png', label:'PNG 图片', hint:'截图导出', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#16a085"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>' },
+];
+const importText = ref('');
+const importFormat = ref('csv');
+const importing = ref(false);
 const formatHint = computed(() => {
-  const m = { pdf: 'PDF：打开打印预览，浏览器「另存为 PDF」保存', markdown: 'Markdown：下载 .md 文件，可用 Typora/VS Code 打开', csv: 'Excel/CSV：下载 .csv 文件，用 Excel/WPS 打开编辑', word: 'Word：下载 .doc 文件，用 Word/WPS 打开编辑' };
+  const m = { pdf: 'PDF：打开打印预览，浏览器「另存为 PDF」保存', markdown: 'Markdown：下载 .md 文件，可用 Typora/VS Code 打开', csv: 'Excel/CSV：下载 .csv 文件，用 Excel/WPS 打开编辑', word: 'Word：下载 .doc 文件，用 Word/WPS 打开编辑', json: 'JSON：下载 .json 文件，结构化数据，可程序化处理', html: 'HTML：下载 .html 文件，浏览器直接打开查看', png: 'PNG：将导出内容渲染为高清截图下载，多集全选时可能需几秒' };
   return m[exportFormat.value] || '';
 });
-const importText = ref('');
-const importing = ref(false);
 const shotPrompt = ref('');
 const selectedModel = ref('doubao_image');
 const selectedRefs = ref([]);
@@ -1747,7 +1790,7 @@ function openExport() {
 }
 
 async function handleExport() {
-  if (exportTypes.value.length === 0 || exportEpisodes.value.length === 0) return;
+  if (exportTypes.value.length === 0) return;
   const fmt = exportFormat.value;
   showExportDialog.value = false;
   try {
@@ -1757,7 +1800,7 @@ async function handleExport() {
         projectId: currentProjectId.value,
         episodeIds: exportEpisodes.value,
         types: exportTypes.value,
-        format: fmt,
+        format: fmt === 'png' ? 'html' : fmt,
       }),
     });
     const data = await res.json();
@@ -1767,24 +1810,69 @@ if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
       // PDF: 打开打印窗口
       const w = window.open('', '_blank', 'width=900,height=700');
       if (w) { w.document.write(data.html); w.document.close(); setTimeout(() => w.print(), 500); }
+    } else if (fmt === 'html') {
+      const blob = new Blob([data.html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = data.filename + '.html';
+      a.click(); URL.revokeObjectURL(url);
+      ElMessage.success('下载完成');
+    } else if (fmt === 'png') {
+      await exportAsPng(data.html, data.filename);
     } else {
-      // Markdown / CSV / Word: 下载文件
-      const ext = { markdown: 'md', csv: 'csv', word: 'doc' }[fmt] || 'txt';
-      const mime = { markdown: 'text/markdown', csv: 'text/csv', word: 'application/msword' }[fmt] || 'text/plain';
+      const ext = { markdown: 'md', csv: 'csv', word: 'doc', json: 'json' }[fmt] || 'txt';
+      const mime = { markdown: 'text/markdown', csv: 'text/csv', word: 'application/msword', json: 'application/json' }[fmt] || 'text/plain';
       const blob = new Blob([data.content], { type: mime + ';charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `${data.filename || 'export'}.${ext}`;
+      a.href = url; a.download = data.filename + '.' + ext;
       a.click(); URL.revokeObjectURL(url);
       ElMessage.success('下载完成');
     }
   } catch (e) { ElMessage.error('导出失败'); }
 }
+
+async function exportAsPng(html, filename) {
+  var iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:820px;height:0;border:0;';
+  document.body.appendChild(iframe);
+  var doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  await new Promise(function(r) { setTimeout(r, 600); });
+  try {
+    var canvas = await html2canvas(doc.body, {
+      scale: 2, useCORS: true, backgroundColor: '#FBF7F0',
+      windowWidth: 820, windowHeight: doc.body.scrollHeight,
+    });
+    canvas.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename + '.png';
+      a.click(); URL.revokeObjectURL(url);
+      ElMessage.success('PNG 导出完成');
+    }, 'image/png');
+  } catch (e) { ElMessage.error('PNG 截图失败'); }
+  finally { document.body.removeChild(iframe); }
+}
+
+function onImportFileChange(uploadFile) {
+  var file = uploadFile && uploadFile.raw;
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    importText.value = e.target.result || '';
+    var name = file.name.toLowerCase();
+    if (name.endsWith('.json')) importFormat.value = 'json';
+    else if (name.endsWith('.csv')) importFormat.value = 'csv';
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
 async function handleImport() {
   if (!currentStoryboard.value || !importText.value.trim()) return;
   importing.value = true;
   const text = importText.value.trim();
-  const format = text.startsWith('[') || text.startsWith('{') ? 'json' : 'csv';
+  const format = importFormat.value;
   try {
     const data = format === 'json' ? JSON.parse(text) : text;
     await storyboardAPI.importData(currentStoryboard.value._id, data, format);
@@ -2276,4 +2364,21 @@ async function handleImport() {
 
 /* ===== 面包屑 ===== */
 .breadcrumb { padding: 4px 0 8px; flex-shrink: 0; }
+</style>
+
+<style>
+/* ===== 导出/导入对话框 ===== */
+.export-dialog .el-dialog__header { padding-bottom: 8px; border-bottom: 1px solid var(--bg-300); }
+.export-body { display: flex; flex-direction: column; gap: 16px; }
+.export-section { padding: 12px 16px; background: var(--bg-100); border-radius: 10px; border: 1px solid var(--bg-300); }
+.export-section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--text-100); margin-bottom: 10px; }
+.export-format-cards { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+@media (max-width: 600px) { .export-format-cards { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 400px) { .export-format-cards { grid-template-columns: repeat(3, 1fr); } }
+.ef-card { display: flex; flex-direction: column; align-items: center; padding: 10px 4px 6px; border-radius: 10px; border: 2px solid var(--bg-300); cursor: pointer; transition: all 0.2s; background: var(--bg-200); }
+.ef-card:hover { border-color: var(--navy); background: var(--bg-100); transform: translateY(-1px); }
+.ef-card.active { border-color: var(--navy); background: rgba(26,35,50,0.05); box-shadow: 0 0 0 2px rgba(26,35,50,0.12); }
+.ef-card-icon { margin-bottom: 4px; line-height: 1; }
+.ef-card-label { font-size: 11px; font-weight: 700; color: var(--text-100); margin-bottom: 1px; }
+.ef-card-hint { font-size: 10px; color: var(--text-200); }
 </style>
