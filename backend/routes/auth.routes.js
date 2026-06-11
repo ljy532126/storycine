@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const User = require('../models/user.model');
 const LoginLog = require('../models/login-log.model');
 const { generateToken, authRequired, adminRequired } = require('../middleware/auth.middleware');
-const { sendSMS, verifyCode: verifySmsCode } = require('../utils/sms');
+const { sendSMS, verifyCode: verifySmsCode, peekCode } = require('../utils/sms');
 
 // 内存验证码存储（生产环境建议用 Redis）
 const captchaStore = new Map();
@@ -360,7 +360,7 @@ router.post('/sms/send', async (req, res) => {
 router.post('/sms/verify', async (req, res) => {
   try {
     const { phone, code } = req.body;
-    const result = verifySmsCode(phone, code);
+    const result = peekCode(phone, code);
     if (result.ok) {
       // 验证通过但不消耗缓存，返回一个一次性 token 供后续修改密码使用
       const smsToken = require('crypto').randomBytes(16).toString('hex');

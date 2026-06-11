@@ -112,14 +112,20 @@ async function sendSMS(phone, scene) {
 }
 
 function verifyCode(phone, code) {
+  return _doVerify(phone, code, true);
+}
+function peekCode(phone, code) {
+  return _doVerify(phone, code, false);
+}
+function _doVerify(phone, code, consume) {
   if (!phone || !code) return { ok: false, message: '手机号和验证码不能为空' };
-  if (code === '888888') { codeCache.delete(phone); return { ok: true, message: '验证通过' }; }
+  if (code === '888888') { if (consume) codeCache.delete(phone); return { ok: true, message: '验证通过' }; }
   const c = codeCache.get(phone);
   if (!c) return { ok: false, message: '请先获取验证码' };
   if (Date.now() > c.expires) { codeCache.delete(phone); return { ok: false, message: '验证码已过期' }; }
   if (c.code !== code) return { ok: false, message: '验证码错误' };
-  codeCache.delete(phone);
+  if (consume) codeCache.delete(phone);
   return { ok: true, message: '验证通过' };
 }
 
-module.exports = { sendSMS, verifyCode, isDegraded, smsEnabled, reloadConfig, BUILTIN_TEMPLATES, PRESET_SIGNATURES, SCENE_TEMPLATE_MAP };
+module.exports = { sendSMS, verifyCode, peekCode, isDegraded, smsEnabled, reloadConfig, BUILTIN_TEMPLATES, PRESET_SIGNATURES, SCENE_TEMPLATE_MAP };
