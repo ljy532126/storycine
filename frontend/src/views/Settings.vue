@@ -132,7 +132,7 @@
 
     <!-- ===== 存储设置 ===== -->
     <div v-show="settingsTab === 'storage'" class="st-section">
-      <div class="st-grid" v-if="isAdmin">
+      <div class="st-grid">
         <div class="st-card">
           <h3 class="st-card-title"><FolderOpen theme="outline" size="17" fill="var(--gold)" /> 对象存储配置</h3>
           <p class="st-card-sub">生成的图片/视频上传至云存储获取公网 URL，供豆包 API 引用。关闭时存服务器本地磁盘。</p>
@@ -595,7 +595,7 @@ async function testSms() {
 watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); fetchSmsStatus(); } });
 watch(() => route.path, p => { if (p === '/settings') { refreshStatus(); loadProfileData(); fetchSmsStatus(); if (typeof isAdmin !== 'undefined' && isAdmin.value) loadSmsCfg(); } });
 
-onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); fetchSmsStatus(); if (localStorage.getItem('token')) { loadImgCfg(); if (isAdmin.value) loadStorCfg(); } });
+onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); fetchSmsStatus(); if (localStorage.getItem('token')) { loadImgCfg(); loadStorCfg(); } });
 </script>
 
 <style scoped>
