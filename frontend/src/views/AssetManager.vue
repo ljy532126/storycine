@@ -36,6 +36,10 @@
               @click="selectAsset(c, 'character')"
             >
               <div class="card-overlay"></div>
+              <div v-if="cardLoadingId === c._id" class="card-loading-mask">
+                <span class="card-loading-spin"></span>
+                <span class="card-loading-text">生成中...</span>
+              </div>
               <div class="card-hover-actions">
                 <label class="card-hover-btn card-hover-upload" @click.stop title="上传图片">
                   <input type="file" accept="image/*" hidden @change="e => onCharAvatarUpload(c, e)" />
@@ -75,6 +79,10 @@
               @click="selectAsset(s, 'scene')"
             >
               <div class="card-overlay"></div>
+              <div v-if="cardLoadingId === s._id" class="card-loading-mask">
+                <span class="card-loading-spin"></span>
+                <span class="card-loading-text">生成中...</span>
+              </div>
               <div class="card-hover-actions">
                 <label class="card-hover-btn card-hover-upload" @click.stop title="上传场景图">
                   <input type="file" accept="image/*" hidden @change="e => onSceneImageUpload(s, e)" />
@@ -113,6 +121,10 @@
               @click="selectAsset(p, 'prop')"
             >
               <div class="card-overlay"></div>
+              <div v-if="cardLoadingId === p._id" class="card-loading-mask">
+                <span class="card-loading-spin"></span>
+                <span class="card-loading-text">生成中...</span>
+              </div>
               <div class="card-hover-actions">
                 <label class="card-hover-btn card-hover-upload" @click.stop title="上传道具图">
                   <input type="file" accept="image/*" hidden @change="e => onPropImageUpload(p, e)" />
@@ -253,18 +265,6 @@
             </div>
 <div class="model-section"><div class="section-label">画幅比例</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
             <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成角色图</el-button>
-            <!-- 音色选择 -->
-            <div style="margin-top:14px">
-              <div class="section-label">音色选择</div>
-              <el-select v-model="charVoice" size="small" style="width:100%">
-                <el-option label="温柔女声" value="gentle_female" />
-                <el-option label="沉稳男声" value="calm_male" />
-                <el-option label="活泼少女" value="lively_girl" />
-                <el-option label="磁性男声" value="magnetic_male" />
-                <el-option label="御姐音" value="mature_female" />
-                <el-option label="正太音" value="young_male" />
-              </el-select>
-            </div>
             <!-- 参考图预览 + 删除 -->
             <div v-if="activeTab === 'characters' && charMainImage" style="margin-top:14px">
               <div class="section-label">参考图预览</div>
@@ -359,6 +359,7 @@ const selectedModel = ref('doubao_image');
 const genRatio = ref('9:16');
 const generatingPrompt = ref(false);
 const generatingImage = ref(false);
+const cardLoadingId = ref(null);
 const batchGenning = ref(false);
 const saving = ref(false);
 const uploadUrl = '/api/v1/assets/upload-reference';
@@ -613,6 +614,7 @@ async function generateImage() {
   const targetAsset = selectedAsset.value;
   const targetType = selectedAssetType.value;
   generatingImage.value = true;
+  cardLoadingId.value = targetAsset._id;
   window.__assetGenning = true;
   window.__setLoading?.(true);
   try {
@@ -655,6 +657,7 @@ async function generateImage() {
     ElMessage.error('生图失败: ' + (e.response?.data?.message || e.message));
   } finally {
     generatingImage.value = false;
+    cardLoadingId.value = null;
     window.__assetGenning = false;
     window.__setLoading?.(false);
   }
@@ -779,6 +782,7 @@ async function batchGenerateAssets(type) {
     } catch (e) { console.error('batch gen fail:', e); }
   }
   batchGenning.value = false;
+  cardLoadingId.value = null;
   window.__assetGenning = false;
   window.__setLoading?.(false);
   ElMessage.success(`一键生图完成：${done}/${pending.length}`);
@@ -817,6 +821,26 @@ async function batchGenerateAssets(type) {
   background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.02) 55%, rgba(0,0,0,0.4) 100%);
 }
 .card-active .card-overlay { background: linear-gradient(to bottom, rgba(254,124,110,0.2) 0%, rgba(0,0,0,0.02) 55%, rgba(0,0,0,0.45) 100%); }
+
+/* 卡片生成中遮罩 */
+.card-loading-mask {
+  position: absolute; inset: 0; z-index: 4;
+  background: rgba(26,26,46,0.6); backdrop-filter: blur(4px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 12px;
+}
+.card-loading-spin {
+  width: 28px; height: 28px; border: 3px solid rgba(201,168,76,0.25);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: gen-spin 0.8s linear infinite;
+}
+@keyframes gen-spin { 100% { transform: rotate(360deg); } }
+.card-loading-text {
+  color: var(--gold); font-size: 12px; font-weight: 700;
+  letter-spacing: 2px;
+  animation: gen-pulse 1.2s ease-in-out infinite;
+}
+@keyframes gen-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* 卡片文字 */
 .card-text-top {
