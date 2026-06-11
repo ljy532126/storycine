@@ -316,7 +316,7 @@ function loadHistory(){
 const videoConfig=reactive({aspectRatio:'9:16',visualStyle:'写实',subStyle:''});
 const directorForm=reactive({qualityKeywords:'8K, 超写实, 电影级摄影, 高细节, HDR',atmosphereLighting:'',artStyleCommands:''});
 const realisticSubStyles=['邵氏风格','古风写实','古风明艳','古风唐朝','古风宋朝','古风明朝','古风清朝','真人写实','都市情感','玄幻修仙','历史战争','现代末日','悬疑恐怖','赛博朋克','未来科幻','纪实摄影','民国风格','乡土风格','职场商战','家庭伦理','医疗救援','80年代','律政法庭','北欧极简'];
-const animeSubStyles=['二次元','国风动漫','日系动漫','水墨风'];
+const animeSubStyles=['二次元','国风动漫','日系动漫','水墨风','吉卜力风','韩式漫画','像素复古'];
 const currentSubStyles=computed(()=>videoConfig.visualStyle==='动漫'?animeSubStyles:realisticSubStyles);
 
 const directorPresets={
@@ -347,7 +347,10 @@ const directorPresets={
   '二次元':{qualityKeywords:'8K, 赛璐珞风格, 日式动画质感',atmosphereLighting:'明亮通透，高饱和色彩，动画光影',artStyleCommands:'二次元, 赛璐珞风格, 日系动画, 明亮色彩, 清晰线条'},
   '国风动漫':{qualityKeywords:'4K, 国风动画质感, 赛璐珞风格, 手绘线条',atmosphereLighting:'明亮雅致，柔光散射，国风色彩搭配，适度留白',artStyleCommands:'国风动漫, 赛璐珞描线, 水墨晕染背景, 国风配色, 工笔细节, 动画光影'},
   '日系动漫':{qualityKeywords:'8K, 赛璐珞风格, 日式动画电影质感',atmosphereLighting:'清新明亮，柔和漫反射，新海诚式光影',artStyleCommands:'日系动漫, 赛璐珞风格, 新海诚式光影, 治愈系色调'},
-  '水墨风':{qualityKeywords:'4K, 中国传统水墨画, 水彩风格',atmosphereLighting:'宁静雅致，散射柔光，墨色浓淡晕染，虚实相生',artStyleCommands:'中国传统水墨画与水彩风格融合，墨线勾勒轮廓，水彩透明晕染着色，色彩清透淡雅，飞白留白，气韵生动'},
+  '水墨风':{qualityKeywords:'4K, 中国传统水墨画, 宣纸质感和水彩风格',atmosphereLighting:'墨色浓淡晕染，留白意境，虚实相生，散射柔光',artStyleCommands:'纯正水墨画风, 毛笔笔触, 浓淡干湿, 飞白皴擦, 气韵生动, 黑白为主点缀淡彩'},
+  '吉卜力风':{qualityKeywords:'4K, 吉卜力手绘质感, 水彩背景, 温暖治愈',atmosphereLighting:'柔和自然光，草地蓝天，温暖治愈系光影',artStyleCommands:'吉卜力风格, 宫崎骏美学, 手绘水彩背景, 细腻人物, 自然田园, 温暖治愈'},
+  '韩式漫画':{qualityKeywords:'8K, Webtoon数字绘画, 高饱和, 干净线条',atmosphereLighting:'清透高亮，柔光漫射，糖果色系',artStyleCommands:'韩式漫画, Webtoon风格, 精致线稿, 高饱和配色, 时尚造型, 清透感'},
+  '像素复古':{qualityKeywords:'像素风, 8-bit/16-bit美学, 复古游戏质感',atmosphereLighting:'高对比，像素格阴影，霓虹边缘光',artStyleCommands:'像素艺术, 8-bit复古, 点阵渲染, 块面构成, 霓虹光效, 街机美学'},
   '写实':{qualityKeywords:'8K, 超写实, 电影级摄影, 高细节, HDR',atmosphereLighting:'根据剧情情感动态调整',artStyleCommands:'写实风, 电影颗粒感, 低饱和调色'},
   '动漫':{qualityKeywords:'8K, 赛璐珞风格, 动画电影质感',atmosphereLighting:'明亮通透，动画光影',artStyleCommands:'二次元, 赛璐珞风格, 清晰线条, 高饱和色彩'},
 };

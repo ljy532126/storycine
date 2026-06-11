@@ -841,7 +841,10 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .el-radio-button__original-radio:checked+.el-radio-button__inner { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--navy) !important; }
 .el-switch__label { color: var(--text-200) !important; }
 .el-divider__text { background: var(--bg-200) !important; color: var(--text-200) !important; }
-.el-progress-bar__outer { background: var(--bg-300) !important; }
+@keyframes gold-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.55; filter: brightness(1.25) } }
+.el-progress-bar__outer { background: var(--bg-300) !important; border-radius: 3px !important; overflow: hidden }
+.el-progress-bar__inner { background: linear-gradient(90deg, var(--gold), var(--gold-dark)) !important; animation: gold-pulse 2s ease-in-out infinite; transition: width 0.6s ease }
+.el-progress-bar__innerText { color: var(--gold-dark) !important; font-weight: 700 !important; font-size: 11px !important }
 .el-empty__description p { color: var(--text-200) !important; }
 .el-alert--info { background: var(--bg-100) !important; border-color: var(--gold) !important; }
 .el-alert__title { color: var(--text-100) !important; }
