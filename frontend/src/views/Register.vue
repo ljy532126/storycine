@@ -9,16 +9,17 @@
 
       <h2>注册</h2>
 
-      <!-- 隐藏陷阱表单吸收浏览器自动填充 -->
-      <form style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true" tabindex="-1">
+      <!-- 陷阱输入吸收浏览器自动填充 -->
+      <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+        <input type="email" name="email" autocomplete="email" tabindex="-1" />
         <input type="text" name="username" autocomplete="username" tabindex="-1" />
-        <input type="password" name="password" autocomplete="new-password" tabindex="-1" />
-      </form>
+        <input type="password" name="password" autocomplete="current-password" tabindex="-1" />
+      </div>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large" @keyup.enter="handleRegister">
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large" autocomplete="off" @keyup.enter="handleRegister">
         <el-form-item label="账号" prop="username">
           <div class="input-counter-wrap">
-            <el-input :model-value="form.username" placeholder="字母开头英文+数字" maxlength="30" autocomplete="off" @update:model-value="v => form.username = String(v).replace(/[^a-zA-Z0-9_]/g, '')" />
+            <el-input :model-value="form.username" placeholder="字母开头英文+数字" maxlength="30" name="new-username" autocomplete="new-username" @update:model-value="v => form.username = String(v).replace(/[^a-zA-Z0-9_]/g, '')" />
             <span v-if="form.username" class="input-counter">{{ form.username.length }}/30</span>
           </div>
         </el-form-item>
@@ -64,6 +65,7 @@ const form = reactive({ username: '', password: '', confirmPwd: '', phone: '', s
 
 onMounted(async () => {
   try { const r = await fetch('/api/v1/auth/sms/status'); const d = await r.json(); smsEnabled.value = d.data?.enabled || false; } catch {}
+  setTimeout(() => { form.username = ''; form.password = ''; form.confirmPwd = ''; }, 200);
 });
 
 const rules = {
