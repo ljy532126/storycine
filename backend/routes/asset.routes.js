@@ -500,10 +500,34 @@ ${charListText}
     for (const loc of locSet) {
       const exists = await SceneAsset.findOne({ projectId, sceneName: loc });
       if (!exists) {
+        const { callLLM } = require('../utils/llm-client');
+        const scenesWithLoc = script.scenes.filter(s => s.location?.trim() === loc);
+        const contextTexts = scenesWithLoc.map(s => {
+          const parts = [];
+          if (s.timeOfDay) parts.push(s.timeOfDay);
+          if (s.atmosphere) parts.push(s.atmosphere);
+          if (s.sceneDescription) parts.push(s.sceneDescription);
+          return parts.join('，');
+        }).filter(Boolean);
+        const context = contextTexts.join('；').substring(0, 300) || loc;
+
+        let sceneDesc = '';
+        let stylePrompt = `8K画质，电影级广角摄影，${loc}，超写实风格`;
+        try {
+          const sp = `你是场景设计师。根据场景名和上下文，为场景生成中文环境描述（30-60字）和图片提示词（50-100字）。只输出JSON：{"description":"...","stylePrompt":"..."}`;
+          const up = `场景名：${loc}\n上下文：${context}`;
+          const r = await callLLM(sp, up, { temperature: 0.7, maxTokens: 600, responseFormat: 'json' });
+          const parsed = JSON.parse(r);
+          if (parsed.description) sceneDesc = parsed.description.substring(0, 200);
+          if (parsed.stylePrompt) stylePrompt = parsed.stylePrompt.substring(0, 500);
+        } catch (e) {
+          sceneDesc = context ? context.substring(0, 200) : loc;
+        }
+
         const created = await SceneAsset.create({
           projectId, sceneName: loc,
-          description: '',
-          stylePrompt: `8K画质，电影级广角摄影，${loc}场景，超写实风格`,
+          description: sceneDesc,
+          stylePrompt,
         });
         result.scenes.push({ _id: created._id, sceneName: loc });
       } else {
@@ -551,10 +575,22 @@ ${charListText}
     for (const propName of foundProps) {
       const exists = await Prop.findOne({ projectId, propName });
       if (!exists) {
+        const { callLLM } = require('../utils/llm-client');
+        let propDesc = '';
+        let propCat = '';
+        try {
+          const sp = `你是道具设计师。根据道具名推测类别和外观。只输出JSON：{"description":"一句话外观描述（15-30字）","category":"类别（武器/饰品/书籍/食物/药品/工具/衣物/电子/其他）"}`;
+          const up = `道具名：${propName}`;
+          const r = await callLLM(sp, up, { temperature: 0.5, maxTokens: 200, responseFormat: 'json' });
+          const parsed = JSON.parse(r);
+          if (parsed.description) propDesc = parsed.description.substring(0, 100);
+          if (parsed.category) propCat = parsed.category;
+        } catch (e) { /* use empty defaults */ }
+
         const created = await Prop.create({
           projectId, propName,
-          description: '',
-          category: '',
+          description: propDesc,
+          category: propCat,
         });
         result.props.push({ _id: created._id, propName });
       } else {
