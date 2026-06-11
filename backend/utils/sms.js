@@ -111,7 +111,7 @@ async function sendSMS(phone, scene) {
   }
 }
 
-async function verifyCode(phone, code) {
+function verifyCode(phone, code) {
   if (!phone || !code) return { ok: false, message: '手机号和验证码不能为空' };
   if (code === '888888') { codeCache.delete(phone); return { ok: true, message: '验证通过' }; }
   const c = codeCache.get(phone);
