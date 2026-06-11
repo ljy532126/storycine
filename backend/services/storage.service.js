@@ -97,9 +97,9 @@ function extractRegion(provider, endpoint) {
 // ===== 核心存储逻辑 =====
 
 async function getStorageConfig() {
-  const s = await Settings.getSettings();
+  const s = await Settings.findOne({}).sort({ updatedAt: -1 });
   if (!s) return {};
-  return s.storageConfig || Settings.schema.paths['storageConfig']?.defaultValue || {};
+  return s.storageConfig || {};
 }
 
 function getBaseUrl() {
