@@ -348,10 +348,15 @@ router.post('/sms/send', async (req, res) => {
     const { phone, scene } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
 
-    // 找回密码/修改密码等场景：手机号必须已注册
-    if (scene === 'resetPwd' || scene === 'changePhone' || scene === 'bindPhone') {
+    // 找回密码：手机号必须已注册
+    if (scene === 'resetPwd') {
       const existingUser = await User.findOne({ phone });
-      if (!existingUser) return res.status(404).json({ message: '该手机号未注册，请先注册账号' });
+      if (!existingUser) return res.status(400).json({ message: '该手机号未注册，请先注册账号' });
+    }
+    // 绑定/修改手机号：手机号不能被其他人已绑定
+    if (scene === 'bindPhone' || scene === 'changePhone') {
+      const existingUser = await User.findOne({ phone });
+      if (existingUser) return res.status(400).json({ message: '该手机号已被其他账号绑定' });
     }
     // 注册场景：手机号不能已被绑定
     if (scene === 'register') {
