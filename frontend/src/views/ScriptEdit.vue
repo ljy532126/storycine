@@ -359,7 +359,8 @@ onMounted(async()=>{
 window.__triggerSave=handleSave;
   await projectStore.fetchProjects();
   const qProjectId=route.query.projectId;
-  if(qProjectId){currentProjectId.value=qProjectId;onProjectChange(qProjectId)}
+  const qScriptId=route.query.scriptId;
+  if(qProjectId){currentProjectId.value=qProjectId;onProjectChange(qProjectId, qScriptId)}
   else{const restored=await projectStore.restoreLastProject();if(restored){currentProjectId.value=restored._id;onProjectChange(restored._id)}}
 });
 // keep-alive 缓存激活时：同步从片场列表或剧本工坊带入的项目
@@ -381,11 +382,17 @@ watch(() => route.path, (p) => {
   }
 });
 
-async function onProjectChange(val){
+async function onProjectChange(val, targetScriptId){
   currentScriptId.value='';currentScript.value=null;if(!val)return;
   try{const project=await projectStore.fetchProject(val);if(project.videoConfig){videoConfig.aspectRatio=project.videoConfig.aspectRatio||'9:16';videoConfig.visualStyle=project.videoConfig.visualStyle||'写实';videoConfig.subStyle=project.videoConfig.subStyle||''}
     if(project.directorSettings){directorForm.qualityKeywords=project.directorSettings.qualityKeywords||directorForm.qualityKeywords;directorForm.atmosphereLighting=project.directorSettings.atmosphereLighting||'';directorForm.artStyleCommands=project.directorSettings.artStyleCommands||''}}catch(e){}
-  scriptStore.fetchScripts(val).then(()=>{scripts.value=[...scriptStore.scripts];if(scripts.value.length>0)switchEpisode(scripts.value[0]._id)});
+  scriptStore.fetchScripts(val).then(()=>{
+    scripts.value=[...scriptStore.scripts];
+    if(scripts.value.length>0){
+      const target = targetScriptId ? scripts.value.find(s => s._id === targetScriptId) : null;
+      switchEpisode(target ? target._id : scripts.value[0]._id);
+    }
+  });
   loadAllAssets(val);
 }
 

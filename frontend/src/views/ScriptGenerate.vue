@@ -592,7 +592,9 @@ async function loadScripts(projectId) {
 }
 
 function openScript(row) {
-  router.push({ path: '/script-edit', query: { projectId: currentProjectId.value } });
+  const pid = row?.projectId || currentProjectId.value;
+  const sid = row?._id || '';
+  router.push({ path: '/script-edit', query: { projectId: pid, scriptId: sid } });
 }
 
 async function handleDeleteScript(row) {
