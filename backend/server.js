@@ -60,8 +60,8 @@ app.use('/api/v1', (req, res, next) => {
   apiStats.routes[key].last = new Date().toISOString();
   // AI 调用分类统计
   if (req.path.includes('generate-image') && req.body?.assetType === 'video') apiStats.ai.video.total++;
-  if (req.path.includes('generate-image') && req.body?.assetType !== 'video') apiStats.ai.image.total++;
-  if (req.path.includes('generate-prompt') || req.path.includes('/scripts/generate') || req.path.includes('/scripts/continue')) apiStats.ai.llm.total++;
+  else if (req.path.includes('generate-image')) apiStats.ai.image.total++;
+  if (req.path.includes('generate-prompt') || req.path.includes('ai-generate') || req.path.includes('auto-generate') || req.path.includes('/continue')) apiStats.ai.llm.total++;
 
   const orig = res.json.bind(res);
   res.json = function (body) {
@@ -71,8 +71,8 @@ app.use('/api/v1', (req, res, next) => {
     if (apiStats.recent.length > 50) apiStats.recent.length = 50;
     // AI 调用成功/失败统计
     if (req.path.includes('generate-image') && req.body?.assetType === 'video') { if (s < 400) apiStats.ai.video.success++; else apiStats.ai.video.fail++; }
-    if (req.path.includes('generate-image') && req.body?.assetType !== 'video') { if (s < 400) apiStats.ai.image.success++; else apiStats.ai.image.fail++; }
-    if (req.path.includes('generate-prompt') || req.path.includes('/scripts/generate') || req.path.includes('/scripts/continue')) { if (s < 400) apiStats.ai.llm.success++; else apiStats.ai.llm.fail++; }
+    else if (req.path.includes('generate-image')) { if (s < 400) apiStats.ai.image.success++; else apiStats.ai.image.fail++; }
+    if (req.path.includes('generate-prompt') || req.path.includes('ai-generate') || req.path.includes('auto-generate') || req.path.includes('/continue')) { if (s < 400) apiStats.ai.llm.success++; else apiStats.ai.llm.fail++; }
     return orig(body);
   };
   next();
