@@ -22,7 +22,23 @@ async function run(state) {
 
   try {
     const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.9, maxTokens: 16000, responseFormat: 'json' });
-    state.script = JSON.parse(res);
+    // 容错解析：LLM 可能返回截断/非标准 JSON
+    try {
+      state.script = JSON.parse(res);
+    } catch (parseErr) {
+      const m = res.match(/\{[\s\S]*\}/);
+      if (m) {
+        try { state.script = JSON.parse(m[0]); } catch {}
+      }
+      if (!state.script) {
+        // 回退：尝试提取 scenes 数组
+        const scenesMatch = res.match(/"scenes"\s*:\s*(\[[\s\S]*\])/);
+        if (scenesMatch) {
+          try { state.script = { scenes: JSON.parse(scenesMatch[1]) }; } catch {}
+        }
+        if (!state.script) throw parseErr;
+      }
+    }
     const sceneCount = state.script?.scenes?.length || 0;
     const dialogueCount = (state.script?.scenes || []).reduce((sum, s) => sum + (s.dialogues?.length || 0), 0);
     emitProgress(state, `剧本撰写完成：${sceneCount} 场次，${dialogueCount} 句台词`);
