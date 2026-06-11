@@ -72,8 +72,8 @@ const refUpload = multer({
 });
 const THREE_VIEW_SUFFIX = `左区：角色正脸特写，面部占满左区，五官/发型/配饰清晰，无身体入镜、无遮挡变形；右区：标准角色设定三视图，横向依次排列侧视图、正视图和背视图，三个视图严格呈现侧视、正视和背视，从头到脚完整无遮挡；核心约束：特写与三视图为同一角色，五官/服装/配饰/体态100%一致；右区尺寸：三视图角色高度画面高度的80%，三视图高度统一；无多余元素的浅灰色背景，角色无阴影；超高清分辨率，统一85mm焦距，无畸变，角色无动作，平视；中性表情（无喜怒哀乐），眼神平静，自然站立，双手自然下垂，空手（无手持物），身上无任何背负物（无背包/无武器背负）；严禁画面出现不相关的文字；古风/仙侠风格下严禁光腿、严禁腿部裸露、严禁服饰残缺暴露`;
 
-const STYLE_JSON_IMAGE = `{"艺术风格":{"主风格":"彩铅艺术插画","创作类型":"AI绘制角色设计图"},"色彩风格":{"色彩倾向":"柔和彩铅质感，低饱和古典配色，雅致中高饱和度"},"构图风格":{"景别":"组合式（面部特写+全身多视角）","视角":"正面/侧面多视角展示","元素布局":"分区域呈现角色整体形制"}}`;
-const STYLE_JSON_VIDEO = `{"艺术风格":{"主风格":"电影级写实人像摄影","创作类型":"AI生成超写实视频"},"纹理特征":{"皮肤纹理":"保留自然肌理，微瑕疵光泽感"},"色彩风格":{"主色调":"自然肤色系","色彩倾向":"低饱和高真实度，柔和漫射自然明暗过渡"},"构图风格":{"景别":"由导演设定自由决定","视角":"由导演设定自由决定","元素布局":"由导演设定自由决定"}}`;
+const STYLE_TEXT_IMAGE = `彩铅艺术插画风格，柔和彩铅质感，低饱和古典配色，雅致中高饱和度，组合式画面布局`;
+const STYLE_TEXT_VIDEO = `电影级超写实人像摄影风格，自然肤色系色调，低饱和高真实度，保留自然皮肤肌理与微瑕疵光泽感，柔和漫射自然明暗过渡，构图由导演设定自由决定`;
 
 const { buildCharacterMap, buildShotPrompt } = require('../services/asset.service');
 
@@ -784,7 +784,7 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
           const proj = await Project.findById(projectId);
           const vs = proj?.videoConfig?.visualStyle || '写实';
           if (vs !== '动漫') {
-            videoPrompt = STYLE_JSON_VIDEO + '\n' + prompt;
+            videoPrompt = `【${STYLE_TEXT_VIDEO}】 ` + prompt;
             console.log('[video-gen] 风格化模式：已注入写实质感提示词');
           }
         }
@@ -844,7 +844,7 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
         const proj = await Project.findById(projectId);
         const vs = proj?.videoConfig?.visualStyle || '写实';
         if (vs !== '动漫') {
-          finalPrompt = STYLE_JSON_IMAGE + '\n' + prompt;
+          finalPrompt = `【${STYLE_TEXT_IMAGE}】 ` + prompt;
           console.log('[generate-image] 风格化模式：已注入彩铅艺术提示词');
         }
       }
