@@ -251,7 +251,8 @@
               <div class="section-label">
                 生图提示词
                 <span class="char-count">{{ promptText.length }} / 5000</span>
-                <el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 生成提示词 ✨</el-button>
+                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" type="warning" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance">构建提示词</el-button></el-tooltip>
+                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 润色</el-button></el-tooltip>
               </div>
               <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit />
             </div>
@@ -526,8 +527,7 @@ function selectAsset(asset, type) {
     promptText.value = asset.description || '';
   }
   selectedModel.value = 'doubao_image';
-  const aiCfg = window.__aiConfig || {};
-  genRatio.value = type === 'character' ? (aiCfg.characterRatio || '16:9') : (projectAspectRatio.value || '9:16');
+  genRatio.value = type === 'character' ? '16:9' : (projectAspectRatio.value || '9:16');
 }
 
 function createNew(type) {
@@ -573,6 +573,37 @@ async function submitCreate() {
   } finally {
     creating.value = false;
   }
+}
+
+function buildCharSheetPrompt() {
+  const a = selectedAsset.value;
+  if (!a) return ElMessage.warning('请先选择一个角色');
+  const outfit = (a.appearance || '').replace(/外貌[：:]\s*/g, '').trim();
+  const personality = (a.personality || '').trim();
+  const bg = (a.background || '').trim().substring(0, 80);
+  const roleDesc = [a.roleType || '角色', a.gender || '', a.age ? a.age + '岁' : ''].filter(Boolean).join('，');
+
+  promptText.value = [
+    '【强约束】画面中严禁出现任何文字、字母、乱码、logo、水印、标题、字幕、签名、符号，纯画面，无任何额外元素',
+    '【画质/风格】8K超写实，角色设定卡风格，纯白色背景，工作室柔光，85mm镜头无畸变，角色设计参考图，高细节',
+    `【角色信息】${a.name}，${roleDesc}`,
+    `【外貌设定】${outfit}${personality ? '，' + personality : ''}${bg ? '。背景：' + bg : ''}`,
+    '【画面布局—4格角色设定卡】',
+    '┌──────────┬──────────────────────────┐',
+    '│ 左区     │ 右区（上排）             │',
+    '│ 特写图   │ 正视图：正面站立全身     │',
+    '│ 头部至   │                          │',
+    '│ 上半身   │ 侧视图：左侧全身         │',
+    '│ 五官清晰 │ 后视图：背面全身         │',
+    '│ 肤质可见 │                          │',
+    '└──────────┴──────────────────────────┘',
+    '左区（占画面约 35% 宽度）：角色头部到胸部近景特写，脸部占据左区 70% 面积，五官纹理清晰可见，中性表情，眼神平静，发丝细节丰富',
+    '右区（占画面约 65% 宽度）：横排三个等宽视图——正视图（正面直立）、侧视图（左侧90°）、后视图（背面直立），三个视图高度统一为画面高度的 75%，角色从头顶到脚尖完整可见',
+    '【一致性】特写与三视图为同一角色，五官、发型、服装、体态 100% 一致',
+    '【约束】纯白背景，无阴影，平视，正面光，角色直立无动作，双手自然垂放，中性表情，不戴墨镜/帽子等额外配饰，不露腿，服装完整无破损',
+  ].join('；\n');
+
+  ElMessage.success('提示词已构建，可点击「AI 润色」优化或将「16:9 横屏」后直接生图');
 }
 
 async function generatePrompt() {
