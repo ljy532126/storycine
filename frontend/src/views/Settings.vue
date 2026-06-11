@@ -16,7 +16,7 @@
       <span :class="['st-tab', { active: settingsTab === 'image' }]" @click="settingsTab = 'image'">
         <PictureOne theme="outline" size="15" fill="currentColor" /> 生图 & 风格
       </span>
-      <span v-if="isAdmin" :class="['st-tab', { active: settingsTab === 'storage' }]" @click="settingsTab = 'storage'">
+      <span :class="['st-tab', { active: settingsTab === 'storage' }]" @click="settingsTab = 'storage'">
         <FolderOpen theme="outline" size="15" fill="currentColor" /> 对象存储
       </span>
       <span :class="['st-tab', { active: settingsTab === 'tts' }]" @click="settingsTab = 'tts'">
