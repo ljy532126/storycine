@@ -517,7 +517,7 @@ function fallbackAutoStoryboard(){
     const t=(x.sceneDescription||'')+' '+(x.dialogues||[]).map(d=>d.text).join(' ');
     if(!x.shotType||x.shotType==='中景'){for(const[ty,ps]of Object.entries(rules)){if(ps.some(p=>p.test(t))){x.shotType=ty;localAmend++;break}}}
     if(!x.composition||!x.composition.trim()){x.composition='中心构图';localAmend++;}
-    if(!x.duration||x.duration===3){const dialogs=x.dialogues||[];const totalChars=dialogs.reduce((a,d)=>a+(d.text||'').length,0);const count=dialogs.length;
+    if(!x.duration||x.duration <= 6){const dialogs=x.dialogues||[];const totalChars=dialogs.reduce((a,d)=>a+(d.text||'').length,0);const count=dialogs.length;
       if(count===0)x.duration=Math.max(4,Math.min(6,Math.round(totalChars/10)+2));else if(count===1)x.duration=Math.max(5,Math.min(12,Math.round(totalChars/3)+3));else if(count<=3)x.duration=Math.max(8,Math.min(15,Math.round(totalChars/2)+4));else x.duration=Math.max(10,Math.min(15,Math.round(totalChars/2)+5));
       if(count<=1&&/(跑|追|打|冲|逃|摔|跳|飞|转)/.test(t))x.duration=Math.min(x.duration,6);if(/(哭|怒|吻|拥抱|转身|回头)/.test(t))x.duration=Math.max(x.duration,6);localAmend++;}
   });
