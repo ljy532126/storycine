@@ -86,6 +86,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     // 校验用户名密码
     if (username.length < 3 || username.length > 30) return res.status(400).json({ message: '账号长度3-30个字符' });
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{2,29}$/.test(username)) return res.status(400).json({ message: '账号格式：字母开头，3-30位英文/数字/下划线' });
     if (password.length < 8) return res.status(400).json({ message: '密码长度至少8位' });
 
     // 防重复注册
@@ -162,7 +163,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // ===== 短信验证码登录 =====
-router.post('/login-sms', async (req, res) => {
+router.post('/login-sms', loginLimiter, async (req, res) => {
   try {
     const { smsEnabled } = require('../utils/sms');
     if (!(await smsEnabled())) return res.status(403).json({ message: '短信认证服务未开启' });
@@ -374,7 +375,7 @@ router.post('/sms/verify', async (req, res) => {
 });
 
 // 短信验证码找回/重置密码（无需登录）
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', loginLimiter, async (req, res) => {
   try {
     const { phone, code, newPassword } = req.body;
     if (!phone || !code || !newPassword) return res.status(400).json({ message: '手机号、验证码和新密码不能为空' });

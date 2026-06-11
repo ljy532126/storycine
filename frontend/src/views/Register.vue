@@ -12,7 +12,7 @@
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large" @keyup.enter="handleRegister">
         <el-form-item label="账号" prop="username">
           <div class="input-counter-wrap">
-            <el-input v-model="form.username" placeholder="3-30个字符" maxlength="30" />
+            <el-input :model-value="form.username" placeholder="字母开头英文+数字" maxlength="30" @update:model-value="v => form.username = String(v).replace(/[^a-zA-Z0-9_]/g, '')" />
             <span v-if="form.username" class="input-counter">{{ form.username.length }}/30</span>
           </div>
         </el-form-item>
@@ -61,7 +61,10 @@ onMounted(async () => {
 });
 
 const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  username: [
+    { required: true, message: '请输入账号', trigger: 'blur' },
+    { pattern: /^[a-zA-Z][a-zA-Z0-9_]{2,29}$/, message: '字母开头，3-30位英文/数字/下划线', trigger: 'blur' },
+  ],
   password: [{ required: true, min: 8, message: '密码至少8位', trigger: 'blur' }],
   confirmPwd: [{ required: true, validator: (r, v, cb) => v !== form.password ? cb(new Error('两次密码不一致')) : cb(), trigger: 'blur' }],
 };

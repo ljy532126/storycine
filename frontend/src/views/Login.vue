@@ -19,7 +19,7 @@
       <el-form v-if="loginMode === 'password'" ref="formRef" :model="form" :rules="rules" label-position="top" size="large" @keyup.enter="handleLogin">
         <el-form-item label="账号" prop="username">
           <div class="input-counter-wrap">
-            <el-input v-model="form.username" placeholder="请输入账号" maxlength="30" />
+            <el-input :model-value="form.username" placeholder="字母开头英文+数字" maxlength="30" @update:model-value="v => form.username = String(v).replace(/[^a-zA-Z0-9_]/g, '')" />
             <span v-if="form.username" class="input-counter">{{ form.username.length }}/30</span>
           </div>
         </el-form-item>
@@ -94,8 +94,11 @@ const smsEnabled = ref(false);
 const form = reactive({ username: '', password: '' });
 
 const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, min: 6, message: '密码至少6位', trigger: 'blur' }],
+  username: [
+    { required: true, message: '请输入账号', trigger: 'blur' },
+    { pattern: /^[a-zA-Z][a-zA-Z0-9_]{2,29}$/, message: '字母开头，3-30位英文/数字/下划线', trigger: 'blur' },
+  ],
+  password: [{ required: true, min: 8, message: '密码至少8位', trigger: 'blur' }],
 };
 
 onMounted(async () => {
@@ -147,7 +150,14 @@ const forgotForm = reactive({ phone: '', code: '', newPassword: '', confirmPwd: 
 async function verifyForgotCode() {
   if (!forgotForm.phone) { ElMessage.warning('请输入手机号'); return; }
   if (!forgotForm.code) { ElMessage.warning('请输入验证码'); return; }
-  smsStep.value = 1; // 直接进第二步，重置密码时后端会校验验证码
+  smsVerifying.value = true;
+  try {
+    const res = await fetch('/api/v1/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: forgotForm.phone, code: forgotForm.code }) });
+    const data = await res.json();
+    if (!res.ok) { ElMessage.error(data.message || '验证码错误'); return; }
+    smsStep.value = 1;
+  } catch { ElMessage.error('验证失败'); }
+  finally { smsVerifying.value = false; }
 }
 
 async function resetPasswordBySms() {
