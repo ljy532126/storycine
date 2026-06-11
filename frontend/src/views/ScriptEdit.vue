@@ -414,7 +414,7 @@ function markDirty(){
   }
 }
 function onCharsChange(si){const names=charactersStr.value[si]?.split(/[,，、]/).map(s=>s.trim()).filter(Boolean)||[];currentScript.value.scenes[si].characters=names;markDirty()}
-function addScene(){const maxNum=(currentScript.value.scenes||[]).reduce((m,s)=>Math.max(m,s.sceneNumber),0);currentScript.value.scenes.push({sceneNumber:maxNum+1,timeOfDay:'白天',location:'',shotType:'中景',cameraAngle:'平视',composition:'',cameraMovement:'固定',lighting:'',soundEffect:'',duration:3,characters:[],atmosphere:'',sceneDescription:'',dialogues:[],boundSubjects:[]});charactersStr.value.push('');pushHistory('添加镜头');markDirty()}
+function addScene(){const maxNum=(currentScript.value.scenes||[]).reduce((m,s)=>Math.max(m,s.sceneNumber),0);currentScript.value.scenes.push({sceneNumber:maxNum+1,timeOfDay:'白天',location:'',shotType:'中景',cameraAngle:'平视',composition:'',cameraMovement:'固定',lighting:'',soundEffect:'',duration:4,characters:[],atmosphere:'',sceneDescription:'',dialogues:[],boundSubjects:[]});charactersStr.value.push('');pushHistory('添加镜头');markDirty()}
 function removeScene(i){currentScript.value.scenes.splice(i,1);charactersStr.value.splice(i,1);pushHistory('删除镜头');markDirty()}
 function addDialogue(scene){scene.dialogues.push({characterName:'',text:'',actionHint:'',innerThought:'',cameraHint:''});pushHistory('添加台词');markDirty()}
 function removeDialogue(scene,i){scene.dialogues.splice(i,1);pushHistory('删除台词');markDirty()}
@@ -518,8 +518,8 @@ function fallbackAutoStoryboard(){
     if(!x.shotType||x.shotType==='中景'){for(const[ty,ps]of Object.entries(rules)){if(ps.some(p=>p.test(t))){x.shotType=ty;localAmend++;break}}}
     if(!x.composition||!x.composition.trim()){x.composition='中心构图';localAmend++;}
     if(!x.duration||x.duration===3){const dialogs=x.dialogues||[];const totalChars=dialogs.reduce((a,d)=>a+(d.text||'').length,0);const count=dialogs.length;
-      if(count===0)x.duration=totalChars>20?4:2;else if(count===1)x.duration=Math.max(4,Math.min(8,Math.round(totalChars/4)+2));else if(count<=3)x.duration=Math.max(6,Math.min(12,Math.round(totalChars/3)+3));else x.duration=Math.max(8,Math.min(15,Math.round(totalChars/2)+4));
-      if(/(跑|追|打|冲|逃|摔|跳|飞|转)/.test(t))x.duration=Math.min(x.duration,6);if(/(哭|怒|吻|拥抱|转身|回头)/.test(t))x.duration=Math.max(x.duration,5);localAmend++;}
+      if(count===0)x.duration=Math.max(4,Math.min(6,Math.round(totalChars/10)+2));else if(count===1)x.duration=Math.max(5,Math.min(12,Math.round(totalChars/3)+3));else if(count<=3)x.duration=Math.max(8,Math.min(15,Math.round(totalChars/2)+4));else x.duration=Math.max(10,Math.min(15,Math.round(totalChars/2)+5));
+      if(count<=1&&/(跑|追|打|冲|逃|摔|跳|飞|转)/.test(t))x.duration=Math.min(x.duration,6);if(/(哭|怒|吻|拥抱|转身|回头)/.test(t))x.duration=Math.max(x.duration,6);localAmend++;}
   });
   pushHistory('本地规则补全');
   markDirty();ElMessage.success(`本地规则补全 ${localAmend} 处空白（AI 暂不可用，可回退）`);
