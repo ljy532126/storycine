@@ -1,11 +1,5 @@
 <template>
   <div class="sg-root">
-    <div class="sg-topbar">
-      <div class="topbar-right">
-          <el-button type="primary" link size="large" @click="showImportDialog = true" class="import-link">已有剧本？直接导入</el-button>
-      </div>
-    </div>
-
 	    <!-- 两栏布局 -->
 	    <div class="sg-layout" v-if="currentProjectId">
 	      <aside class="sg-palette">
@@ -14,6 +8,7 @@
 	            <MagicWand theme="outline" size="18" fill="var(--gold)" />
 	            <span>创作标签</span>
 	            <span class="sg-palette-badge" v-if="tags.genre">已配置</span>
+            <el-button size="small" plain @click="showImportDialog = true" class="sg-import-btn"><FolderUpload theme="outline" size="14" fill="currentColor" /> 导入剧本</el-button>
 	          </div>
 
 	          <el-alert v-if="scripts.length > 0" type="info" :closable="false" show-icon class="sg-continue-alert"><template #title>续写模式：标签仅作记录</template></el-alert>
@@ -69,11 +64,6 @@
             </div>
           </div>
 
-          <div class="sg-palette-group">
-            <el-button plain size="default" @click="showImportDialog = true" style="width:100%">
-              <FolderUpload theme="outline" size="16" fill="currentColor" /> 导入已有剧本
-            </el-button>
-          </div>
 	          </div>
 
 	          <div class="sg-palette-actions">
@@ -886,7 +876,8 @@ function applyQuickTemplate(t) {
 .sg-layout { display: flex; gap: 16px; align-items: flex-start; }
 .sg-palette { width: 268px; flex-shrink: 0; position: sticky; top: 12px; }
 .sg-palette-inner { background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
-.sg-palette-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-100); padding-bottom: 12px; border-bottom: 1px solid var(--bg-300); }
+.sg-palette-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-100); padding-bottom: 12px; border-bottom: 1px solid var(--bg-300);   }
+.sg-import-btn { margin-left: auto; font-size: 12px; }
 .sg-palette-badge { margin-left: auto; font-size: 10px; font-weight: 600; color: #67c23a; background: rgba(103,194,58,0.1); padding: 2px 8px; border-radius: 4px; }
 .sg-continue-alert { margin: -6px 0; }
 .sg-continue-alert :deep(.el-alert__title) { font-size: 11px !important; }
