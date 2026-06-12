@@ -77,8 +77,11 @@ function switchStep(key) {
 
 // 子页面切换项目时自动回到剧本工坊，避免新片场空跳转
 provide('resetToScriptGenerate', (projectId) => {
-  // 先存项目 ID，再切 tab，保证 ScriptGenerate mount 时能读到
-  if (projectId) projectStore.rememberProject(projectId);
+  if (!projectId) return;
+  // 同步设置 store.currentProject 为临时对象，保证 ScriptGenerate.onActivated 能立即检测到变化
+  projectStore.currentProject = { _id: projectId, name: '...' };
+  projectStore.lastProjectId = projectId;
+  try { localStorage.setItem('autodrama_last_project', projectId); } catch {}
   if (activeStep.value !== 'script-generate') {
     activeStep.value = 'script-generate';
     localStorage.setItem(STORAGE_KEY, 'script-generate');
