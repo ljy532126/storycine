@@ -7,7 +7,7 @@
     </div>
     <div class="top-bar">
       <div class="sg-project-pills">
-        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
+        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) resetToScriptGenerate(); currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
       </div>
     </div>
 
@@ -505,7 +505,7 @@ onMounted(async () => {
 
 const projectAspectRatio = ref('9:16');
 
-async function onProjectChange(val) { resetToScriptGenerate();
+async function onProjectChange(val) {
   if (val) {
     assetStore.fetchCharacters(val); assetStore.fetchScenes(val); assetStore.fetchProps(val);
     try {
