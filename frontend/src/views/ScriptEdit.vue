@@ -1,27 +1,5 @@
 <template>
   <div class="script-edit-root">
-    <div class="top-bar">
-      <el-button type="primary" size="large" style="margin-left:12px" @click="handleSave" :disabled="!currentScript">
- <Download size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 保存分镜
-      </el-button>
-      <div v-if="currentScript" class="word-count-bar">
- <span class="wc-label">{{ currentScript.wordCount || 0 }}<span style="font-size:11px;color:var(--text-200)"> / 2000 字</span></span>
- <el-progress :percentage="Number(Math.min((currentScript.wordCount||0)/2000*100,100).toFixed(2))" :stroke-width="6" class="wc-pulse" />
-      </div>
-    </div>
-
-    <!-- PC 端：剧集横排 -->
-    <div class="episode-row-wrap" v-if="currentProjectId && screenWidth >= 768">
-      <div class="er-header">
- <span class="er-label">剧集：</span>
- <el-button size="small" text @click="addEpisode" title="新建剧集">+ 新建</el-button>
- <el-button size="small" text @click="duplicateEpisode" :disabled="!currentScriptId" title="复制当前集">⧉ 复制</el-button>
-      </div>
-      <div class="episode-row">
- <div v-for="ep in scripts" :key="ep._id" :class="['er-chip',{active:currentScriptId===ep._id}]" @click="switchEpisode(ep._id)">第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}</div>
-      </div>
-    </div>
-
     <!-- 移动端 Tab 导航 -->
     <div class="mobile-tabs" v-if="currentProjectId && screenWidth < 768">
       <div :class="['mtab', { active: mobileTab === 'episodes' }]" @click="mobileTab = 'episodes'">📋 剧集</div>
