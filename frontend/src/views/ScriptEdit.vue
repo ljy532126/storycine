@@ -672,7 +672,7 @@ async function exportAsPng(html, filename) {
 .ep-num{color:var(--primary-200);font-size:13px;font-weight:bold}
 .ep-title{color:var(--text-100);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ep-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--bg-300)}
-.center-panel{flex:1;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:12px 16px 16px;overflow-y:auto;min-width:0}
+.center-panel{flex:1;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:0 16px 16px;overflow-y:auto;min-width:0}
 .center-empty{display:flex;align-items:center;justify-content:center}
 .ep-header{display:flex;align-items:center;gap:6px;font-size:12px;position:sticky;top:0;z-index:20;background:var(--bg-200);padding:8px 0 10px;border-bottom:1px solid var(--bg-300);margin-bottom:4px}
 .ep-header .el-button{font-size:11px}
