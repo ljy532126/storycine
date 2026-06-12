@@ -9,7 +9,7 @@
       <div class="tb-left">
         <div class="sg-scroll-area">
           <div class="sg-project-pills">
-            <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="resetToScriptGenerate(); currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
+            <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
           </div>
         </div>
         <div class="sg-script-wrap">
@@ -959,7 +959,7 @@ onActivated(() => {
   }
 });
 
-function onProjectChange(val) {
+function onProjectChange(val) { resetToScriptGenerate();
   currentScriptId.value = ''; currentStoryboard.value = null; currentShot.value = null;
   if (val) {
     scriptStore.fetchScripts(val).then(() => {
