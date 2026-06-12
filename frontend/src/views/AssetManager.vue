@@ -7,7 +7,7 @@
     </div>
     <div class="top-bar">
       <div class="sg-project-pills">
-        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
+        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="resetToScriptGenerate(); currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
       </div>
     </div>
 
@@ -339,7 +339,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, inject } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { PictureFilled } from '@element-plus/icons-vue';
 import { People, PictureOne, MagicWand, FolderDownload, Voice, Tool } from '@icon-park/vue-next';
@@ -348,6 +348,7 @@ import { useAssetStore } from '../stores/asset';
 import { assetAPI } from '../api';
 import ImageLightbox from '../components/ImageLightbox.vue';
 
+const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore = useProjectStore();
 const assetStore = useAssetStore();
 

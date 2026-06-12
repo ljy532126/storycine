@@ -9,7 +9,7 @@
     </div>
     <div class="top-bar">
       <div class="sg-project-pills">
- <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
+ <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="resetToScriptGenerate(); currentProjectId = p._id; onProjectChange(p._id)">{{ p.name }}</span>
       </div>
       <el-button type="primary" size="large" style="margin-left:12px" @click="handleSave" :disabled="!currentScript">
  <Download size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 保存分镜
@@ -219,7 +219,7 @@
 </template>
 
 <script setup>
-import { ref,reactive,computed,onMounted,onActivated,nextTick,watch } from 'vue';
+import { ref,reactive,computed,onMounted,onActivated,nextTick,watch, inject } from 'vue';
 import { useRoute,useRouter } from 'vue-router';
 
 const screenWidth = ref(window.innerWidth);
@@ -236,6 +236,7 @@ import html2canvas from 'html2canvas';
 import { MagicWand, Send, Download, Undo, Redo, Add, Delete, Camera, Edit, Film, FolderOpen, PictureOne, PlayTwo, PlusCross, Help, Local, Time, User, SunOne, LinkOne, Light, Config, Video, PreviewOpen } from '@icon-park/vue-next';
 
 const route=useRoute();const router=useRouter();
+const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore=useProjectStore();const scriptStore=useScriptStore();const assetStore=useAssetStore();
 
 const currentProjectId=ref('');const currentScriptId=ref('');const currentScript=ref(null);

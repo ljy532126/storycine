@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="comp-root">
     <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
@@ -95,6 +95,7 @@ import { useStoryboardStore } from '../stores/storyboard';
 import { useCompositionStore } from '../stores/composition';
 import { useSocket } from '../components/useSocket';
 
+const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore = useProjectStore();
 const storyboardStore = useStoryboardStore();
 const compositionStore = useCompositionStore();
@@ -114,6 +115,7 @@ onMounted(async () => {
 });
 
 function onProjectChange(val) {
+  resetToScriptGenerate();
   if (val) {
     storyboardStore.fetchStoryboards({ projectId: val }).then(() => { storyboards.value = storyboardStore.storyboards; });
     compositionStore.fetchCompositions(val);

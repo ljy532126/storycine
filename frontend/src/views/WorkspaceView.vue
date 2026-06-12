@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, markRaw, defineAsyncComponent } from 'vue';
+import { ref, computed, watch, onMounted, provide, markRaw, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
@@ -72,6 +72,14 @@ function switchStep(key) {
   activeStep.value = key;
   localStorage.setItem(STORAGE_KEY, key);
 }
+
+// 子页面切换项目时自动回到剧本工坊，避免新片场空跳转
+provide('resetToScriptGenerate', () => {
+  if (activeStep.value !== 'script-generate') {
+    activeStep.value = 'script-generate';
+    localStorage.setItem(STORAGE_KEY, 'script-generate');
+  }
+});
 
 watch(activeStep, (key) => {
   if (route.query.ws !== key) router.replace({ query: { ...route.query, ws: key } });
