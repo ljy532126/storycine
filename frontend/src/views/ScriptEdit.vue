@@ -481,11 +481,14 @@ async function handleAutoStoryboard(){
       const diCount = (s.dialogues || []).length;
       const diTotalChars = (s.dialogues || []).reduce((a, d) => a + (d.text || '').length, 0);
       const minDur = diCount >= 4 ? 10 : diCount >= 2 ? 8 : 4;
+      const calcDur = Math.min(15, Math.max(minDur, Math.round(diTotalChars / 2) + 2));
       const aiDur = Number(ai.duration) || 5;
-      const needsFix = !s.duration || Number(s.duration) <= 3 || (Number(s.duration) < minDur && aiDur >= minDur);
+      const curDur = Number(s.duration) || 0;
+      // 当前时长低于最低要求 → 强制修正，取 AI 值和计算值的较大者
+      const needsFix = !s.duration || curDur <= 3 || curDur < minDur;
       if (needsFix) {
-        const newDur = aiDur >= minDur ? aiDur : Math.min(15, Math.max(minDur, Math.round(diTotalChars / 2) + 2));
-        if (newDur !== Number(s.duration || 3)) { s.duration = newDur; newAmended[i].duration = true; totalAmended++; }
+        const newDur = Math.max(aiDur, calcDur);
+        if (newDur !== curDur) { s.duration = newDur; newAmended[i].duration = true; totalAmended++; }
       }
       // 兜底：AI未返回构图时，按景别推断
       if ((!s.composition || !s.composition.trim()) && !newAmended[i].composition) {
