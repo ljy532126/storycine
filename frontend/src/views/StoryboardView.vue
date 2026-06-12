@@ -5,24 +5,21 @@
         <div class="sg-scroll-area">
             </div>
         <div class="sg-script-wrap">
-          <el-select v-model="currentScriptId" placeholder="选择剧本" @change="onScriptChange" size="default" style="width:170px">
-            <el-option v-for="s in scripts" :key="s._id" :label="`第${s.episodeNumber}集`" :value="s._id" />
+          <el-select v-model="currentScriptId" placeholder="选择剧集" @change="onScriptChange" size="small" style="width:130px">
+            <el-option v-for="s in scripts" :key="s._id" :label="'第'+s.episodeNumber+'集 '+ (s.episodeTitle||'')" :value="s._id" />
           </el-select>
         </div>
       </div>
       <div class="tb-right">
-        <el-button type="primary" style="margin-left:8px" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating">生成故事板</el-button>
-        <el-button size="small" class="btn-danger-delete" style="margin-left:4px" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB">删除故事板</el-button>
-        <el-button size="small" style="margin-left:4px" @click="openExport" :disabled="!currentProjectId">导出</el-button>
-        <el-button size="small" style="margin-left:4px" @click="showImportDialog = true" :disabled="!currentStoryboard">导入</el-button>
-        <el-button size="small" type="warning" style="margin-left:4px" @click="openTTSDialog(null)" :disabled="!currentStoryboard || ttsBatchRunning" :loading="ttsBatchRunning">
-          {{ ttsBatchRunning ? '批量配音中...' : '' }}<Voice size="14" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/>批量配音
-        </el-button>
-        <el-divider direction="vertical" style="margin:0 8px" />
-        <span style="font-size:12px;color:var(--text-100)">关闭内嵌字幕</span>
+        <el-button size="small" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating" class="tb-btn tb-btn-refresh">刷新故事板</el-button>
+        <el-button size="small" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB" class="tb-btn tb-btn-delete">删除</el-button>
+        <el-tooltip content="导出" placement="bottom"><el-button size="small" @click="openExport" :disabled="!currentProjectId" class="tb-btn-icon"><Download size="14" fill="currentColor"/></el-button></el-tooltip>
+        <el-tooltip content="导入" placement="bottom"><el-button size="small" @click="showImportDialog = true" :disabled="!currentStoryboard" class="tb-btn-icon"><Upload size="14" fill="currentColor"/></el-button></el-tooltip>
+        <el-divider direction="vertical" style="margin:0 6px;height:20px" />
+        <span style="font-size:11px;color:var(--text-200);white-space:nowrap">无字幕</span>
         <el-switch v-model="noSubtitles" size="small" />
-        <el-tooltip content="开启后，生成的视频画面不会出现自动字幕、文字、水印，台词请在后期手动添加。" placement="bottom">
-          <Help size="16" fill="var(--text-100)" style="cursor:help;margin-left:4px"/>
+        <el-tooltip content="开启后，生成的视频画面不会出现自动字幕、文字、水印" placement="bottom">
+          <Help size="14" fill="var(--text-200)" style="cursor:help"/>
         </el-tooltip>
       </div>
     </div>
@@ -95,8 +92,8 @@
           <div class="tl-header">
             <span class="tl-label"><Film size="16" fill="var(--gold)"/> 分镜时间线 ({{ currentStoryboard.shots.length }} 镜头)</span>
             <div class="tl-batch-btns">
-              <el-button size="small" type="primary" @click="batchGenerateImages" :loading="batchGenning">批量生图</el-button>
-              <el-button size="small" type="success" @click="batchGenerateVideos" :loading="batchGenningVideo" style="margin-left:4px">批量生视频</el-button>
+              <el-button size="small" @click="batchGenerateImages" :loading="batchGenning" class="tb-btn tb-btn-gen">批量生图</el-button>
+              <el-button size="small" @click="batchGenerateVideos" :loading="batchGenningVideo" class="tb-btn tb-btn-gen">批量生视频</el-button>
             </div>
           </div>
           <div class="tl-track" ref="tlTrack">
@@ -493,7 +490,7 @@
 import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted, inject } from 'vue';
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock, Movie, MagicWand, Download, FolderOpen, Edit } from '@icon-park/vue-next';
+import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock, Movie, MagicWand, Download, FolderOpen, Edit, Upload } from '@icon-park/vue-next';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -1895,16 +1892,15 @@ async function handleImport() {
 /* ===== TOP BAR ===== */
 .sb-top {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px; flex-shrink: 0; gap: 12px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(26,26,46,0.03) 0%, rgba(201,168,76,0.06) 100%);
-  border-radius: 14px; border: 1px solid rgba(201,168,76,0.12);
-  backdrop-filter: blur(8px);
+  margin-bottom: 10px; flex-shrink: 0; gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-200); border: 1px solid var(--bg-300);
+  border-radius: 8px;
 }
 .tb-left {
   display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
 }
-.tb-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.tb-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
 
 /* 项目胶囊滚动区域 — 右侧渐变暗示可滚动 */
 .sg-scroll-area {
