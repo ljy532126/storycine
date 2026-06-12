@@ -201,6 +201,7 @@ sh deploy.sh
    - **推荐**：在 `backend/.env` 中设置 `ADMIN_PASSWORD=你的密码`，首次启动即用此密码
    - **没设置**：系统自动生成随机 6 位数字密码，启动日志会打印 `Password: XXXXXX`
    - 查看密码：`docker logs storycine-app 2>&1 | grep -A3 "Password:"`
+   - 如果命令无输出：说明 admin 已存在（不是首次启动），用下面「忘记密码」方法重置
    - 登录后**请立即修改密码**
 3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包 等 API Key，每个用户独立配置
 
