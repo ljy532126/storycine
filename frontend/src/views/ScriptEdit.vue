@@ -26,6 +26,7 @@
      <el-button :disabled="historyIndex>=historyStack.length-1" @click="redoHistory" title="前进"><Redo size="13" fill="currentColor"/></el-button>
    </el-button-group>
    <span v-if="historyStack.length>0" style="font-size:10px;color:var(--text-200)">{{ historyIndex+1 }}/{{ historyStack.length }}</span>
+   <el-button size="small" type="primary" @click="handleSave" :disabled="!currentScript">保存分镜</el-button>
    <el-button size="small" plain type="success" @click="syncToStoryboard" :loading="syncing">
      <Send size="13" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/> 同步至故事板
    </el-button>
