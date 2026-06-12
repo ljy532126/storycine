@@ -122,7 +122,7 @@ router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
       io,
       videoConfig,
       directorSettings,
-      showInnerThought: req.body.showInnerThought !== false,
+      showInnerThought: tags.showInnerThought !== false,
       status: 'started',
       retryCount: 0,
       episodeNumber: 1,
