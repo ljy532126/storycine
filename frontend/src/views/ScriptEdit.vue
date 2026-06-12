@@ -674,7 +674,7 @@ async function exportAsPng(html, filename) {
 .ep-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--bg-300)}
 .center-panel{flex:1;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:16px;overflow-y:auto;min-width:0}
 .center-empty{display:flex;align-items:center;justify-content:center}
-.ep-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px}
+.ep-header{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;position:sticky;top:0;z-index:10;background:var(--bg-100);padding:8px 0;border-bottom:1px solid var(--bg-300)}
 .ep-header .el-button{font-size:11px}
 .title-input{flex:1}
 .scene-count{color:var(--text-200);font-size:11px;white-space:nowrap}
