@@ -481,6 +481,20 @@ async function handleAutoStoryboard(){
         const aiDur = Number(ai.duration) || 5;
         if (aiDur !== (Number(s.duration) || 3)) { s.duration = aiDur; newAmended[i].duration = true; totalAmended++; }
       }
+      // 兜底：AI未返回构图时，按景别推断
+      if ((!s.composition || !s.composition.trim()) && !newAmended[i].composition) {
+        const compMap = { '远景': '留白', '全景': '引导线', '中景': '三分法', '近景': '中心构图', '特写': '中心构图', '大特写': '中心构图', '微距': '中心构图' };
+        s.composition = compMap[s.shotType] || '三分法';
+        newAmended[i].composition = true; totalAmended++;
+      }
+      // 兜底：AI未返回视角时，按场景情绪推断
+      if ((!s.cameraAngle || s.cameraAngle === '平视') && !newAmended[i].cameraAngle) {
+        const txt = (s.sceneDescription || '') + (s.atmosphere || '');
+        if (/对峙|冲突|吵架|压迫|恐惧|威胁|俯视/.test(txt)) { s.cameraAngle = '俯拍'; }
+        else if (/仰望|崇拜|敬仰|高大|宏伟|天空|仰/.test(txt)) { s.cameraAngle = '仰拍'; }
+        else { s.cameraAngle = '平视'; }
+        newAmended[i].cameraAngle = true; totalAmended++;
+      }
       // 自动绑定主体：匹配台词角色名 → assetId
       s.characters?.forEach(cName=>{
  const id=charNameToId[cName];
