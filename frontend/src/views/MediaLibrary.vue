@@ -1,7 +1,5 @@
 <template>
   <div class="ml-root">
-    <Breadcrumb title="素材库" />
-
     <!-- 项目 Pills -->
     <div class="ml-projects" v-if="projectStore.projects.length > 0">
       <span :class="['ml-pill', { active: currentProjectId === p._id }]" v-for="p in projectStore.projects" :key="p._id" @click="currentProjectId = p._id; loadMedia()">
@@ -109,7 +107,6 @@ import {
 } from '@icon-park/vue-next';
 import { Download, Delete, Select, Close } from '@element-plus/icons-vue';
 import ImageLightbox from '../components/ImageLightbox.vue';
-import Breadcrumb from '../components/Breadcrumb.vue';
 
 const projectStore = useProjectStore();
 const currentProjectId = ref('');

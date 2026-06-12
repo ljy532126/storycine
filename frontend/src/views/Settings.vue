@@ -349,7 +349,7 @@ import { Refresh } from '@element-plus/icons-vue';
 import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield, DocDetail, User, CheckOne, Lock, IdCard, EditTwo, MessageEmoji } from '@icon-park/vue-next';
 import { useRoute } from 'vue-router';
 import { configAPI } from '../api';
-import Breadcrumb from '../components/Breadcrumb.vue';
+
 
 const route = useRoute();
 const settingsTab = ref('llm');

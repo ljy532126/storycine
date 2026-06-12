@@ -1,7 +1,5 @@
 <template>
   <div class="ac-root">
-    <Breadcrumb title="存储设置" />
-
     <div class="ac-grid">
       <div class="ac-card">
         <h3 class="ac-card-title">对象存储配置</h3>
@@ -102,7 +100,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import Breadcrumb from '../components/Breadcrumb.vue';
 
 const stor = reactive({
   enabled: false, provider: 'minio', endpoint: '', accessKeyId: '',

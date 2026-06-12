@@ -1,6 +1,5 @@
 ﻿<template>
   <div class="sg-root">
-    <Breadcrumb title="剧本工坊" />
     <div class="sg-topbar">
       <div class="topbar-right">
         <div class="sg-project-pills">
@@ -292,7 +291,7 @@ import { useScriptStore } from '../stores/script';
 import { useSocket } from '../components/useSocket';
 import api, { scriptAPI } from '../api';
 import { FolderUpload, MagicWand, Film, Edit, Delete, Download, ImportAndExport, Time } from '@icon-park/vue-next';
-import Breadcrumb from '../components/Breadcrumb.vue';
+
 
 const router = useRouter();
 const projectStore = useProjectStore();

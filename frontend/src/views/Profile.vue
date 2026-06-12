@@ -1,7 +1,5 @@
 <template>
   <div class="pf-root">
-    <Breadcrumb title="个人中心" home="/dashboard" />
-
     <div class="pf-cards">
       <!-- 头像 & 昵称 -->
       <div class="pf-card">
@@ -66,7 +64,6 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import Breadcrumb from '../components/Breadcrumb.vue';
 
 const route = useRoute();
 

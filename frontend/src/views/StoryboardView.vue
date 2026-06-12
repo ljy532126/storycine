@@ -1,6 +1,5 @@
 ﻿<template>
   <div class="sb-root">
-    <Breadcrumb title="故事板" />
     <div class="sb-top">
       <div class="tb-left">
         <div class="sg-scroll-area">
@@ -506,7 +505,7 @@ import { storyboardAPI, assetAPI } from '../api';
 import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 import ImageLightbox from '../components/ImageLightbox.vue';
-import Breadcrumb from '../components/Breadcrumb.vue';
+
 
 const projectStore = useProjectStore();
 const scriptStore = useScriptStore();

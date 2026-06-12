@@ -1,7 +1,5 @@
 <template>
   <div class="ann-root">
-    <Breadcrumb title="公告管理" />
-
     <!-- 统计卡片 -->
     <div class="ann-stats">
       <div class="ann-stat-card ann-sc-active">
@@ -164,7 +162,6 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Edit, Delete } from '@element-plus/icons-vue';
 import { Announcement, DocDetail, Pin, People, PreviewOpen } from '@icon-park/vue-next';
 import { marked } from 'marked';
-import Breadcrumb from '../components/Breadcrumb.vue';
 
 function sanitizeMD(html) {
   return html

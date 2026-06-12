@@ -1,6 +1,5 @@
 ﻿<template>
   <div class="script-edit-root">
-    <Breadcrumb title="分镜台本" :parent="{ to: '/script-generate', label: '剧本工坊' }" />
     <div class="top-bar">
       <div class="sg-project-pills">
  <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
@@ -235,7 +234,7 @@ import { useScriptStore } from '../stores/script';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI,scriptAPI,storyboardAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
-import Breadcrumb from '../components/Breadcrumb.vue';
+
 import { MagicWand, Send, Download, Undo, Redo, Add, Delete, Camera, Edit, Film, FolderOpen, PictureOne, PlayTwo, PlusCross, Help, Local, Time, User, SunOne, LinkOne, Light, Config, Video, PreviewOpen } from '@icon-park/vue-next';
 
 const route=useRoute();const router=useRouter();

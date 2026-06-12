@@ -8,45 +8,78 @@
     </div>
     <!-- 移动端遮罩 -->
     <div v-if="!['Landing','Login','Register'].includes($route.name) && mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false"></div>
-    <el-container>
-      <el-aside v-if="!['Landing','Login','Register'].includes($route.name)" :width="collapsed ? '64px' : '220px'" :class="['app-sidebar', { 'mobile-open': mobileMenuOpen }]">
-        <div class="logo">
-          <div class="logo-row">
-            <div v-show="!collapsed" class="logo-full">
-              <h2>StoryCine</h2>
-              <p>全自动AI短剧生成</p>
+    
+    <!-- ===== 顶部栏 ===== -->
+    <header v-if="!['Landing','Login','Register'].includes($route.name)" class="app-topbar">
+      <div class="topbar-left">
+        <div class="topbar-breadcrumb">
+          <router-link to="/" class="tbc-link">导演台</router-link>
+          <span class="tbc-sep">/</span>
+          <router-link v-if="parentRoute" :to="parentRoute.to" class="tbc-link">{{ parentRoute.label }}</router-link>
+          <span v-if="parentRoute" class="tbc-sep">/</span>
+          <span class="tbc-current">{{ pageTitle }}</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <el-tooltip content="全局搜索 Ctrl+K" placement="bottom">
+          <div class="topbar-icon" @click="searchVisible = true"><el-icon :size="18"><Search /></el-icon></div>
+        </el-tooltip>
+        <el-popover placement="bottom-end" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
+          <template #reference>
+            <div class="topbar-icon bell" :class="{ 'bell-shake': bellShaking }">
+              <el-icon :size="18"><Bell /></el-icon>
+              <span v-if="unreadAnnounceCount > 0" class="topbar-badge">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
             </div>
-            <!-- 通知铃铛 + 提示文字 -->
-            <div class="bell-wrap">
-              <el-popover placement="right-start" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
-                <template #reference>
-                  <div class="bell-icon" :class="{ 'bell-collapsed': collapsed, 'bell-shake': bellShaking, 'bell-has-new': unreadAnnounceCount > 0 }">
-                    <el-icon :size="19"><Bell /></el-icon>
-                    <span v-if="unreadAnnounceCount > 0" class="bell-dot">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
-                  </div>
-                </template>
-                <div class="bell-pop">
-                  <div class="bell-pop-head">
-                    <span>公告 & 通知</span>
-                    <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
-                  </div>
-                  <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
-                  <div v-for="a in announcements.slice(0, 10)" :key="a._id"
-                    :class="['bell-item', a.type]"
-                    @click="openAnnounceDetail(a)">
-                    <span :class="['bell-item-dot', a.type]"></span>
-                    <div class="bell-item-body">
-                      <div class="bell-item-title">{{ a.title }}</div>
-                      <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
-                      <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
-                    </div>
-                  </div>
-                  <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
-                </div>
-              </el-popover>
-              <span v-if="bellHintVisible && !collapsed" class="bell-hint">有新公告啦！</span>
+          </template>
+          <div class="bell-pop">
+            <div class="bell-pop-head">
+              <span>公告 & 通知</span>
+              <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
+            </div>
+            <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
+            <div v-for="a in announcements.slice(0, 10)" :key="a._id"
+              :class="['bell-item', a.type]"
+              @click="openAnnounceDetail(a)">
+              <span :class="['bell-item-dot', a.type]"></span>
+              <div class="bell-item-body">
+                <div class="bell-item-title">{{ a.title }}</div>
+                <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
+                <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+              </div>
+            </div>
+            <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
+          </div>
+        </el-popover>
+        <el-popover placement="bottom-end" :width="220" trigger="click">
+          <template #reference>
+            <div class="topbar-user">
+              <div class="topbar-avatar" :style="{ backgroundImage: currentUser.avatar ? 'url(' + currentUser.avatar + ')' : '' }">
+                <span v-if="!currentUser.avatar">{{ avatarLetter }}</span>
+              </div>
+              <span class="topbar-username">{{ currentUser.nickname || currentUser.username }}</span>
+            </div>
+          </template>
+          <div class="user-pop">
+            <div class="user-pop-info">
+              <span class="user-pop-name">{{ currentUser.nickname || currentUser.username }}</span>
+              <span class="user-pop-role">{{ currentUser.role === 'admin' ? '管理员' : '用户' }}</span>
+            </div>
+            <div class="user-pop-actions">
+              <div class="user-pop-item" @click="$router.push('/settings')"><el-icon><Setting /></el-icon> 系统设置</div>
+              <div class="user-pop-item danger" @click="handleLogout"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> 退出登录</div>
             </div>
           </div>
+        </el-popover>
+      </div>
+    </header>
+<el-container>
+      <el-aside v-if="!['Landing','Login','Register'].includes($route.name)" :width="collapsed ? '64px' : '220px'" :class="['app-sidebar', { 'mobile-open': mobileMenuOpen }]">
+        <div class="logo">
+          <div v-show="!collapsed" class="logo-full">
+            <h2>StoryCine</h2>
+            <p>全自动AI短剧生成</p>
+          </div>
+          <div v-show="collapsed" class="logo-collapsed">S</div>
         </div>
 
         <el-menu
@@ -264,6 +297,27 @@ async function refreshUser() {
 
 const avatarLetter = computed(() => (currentUser.value.nickname || currentUser.value.username || '?')[0]?.toUpperCase());
 const isAdmin = computed(() => userRole.value === 'admin');
+
+// 面包屑：根据当前路由自动生成
+const PAGE_TITLES = {
+  Dashboard: '导演台', Statistics: '数据看板', ProjectList: '片场管理',
+  WorkspaceView: '工作台', MediaLibrary: '素材库', TTSLibrary: '配音素材库',
+  UserManagement: '用户管理', ErrorLog: '错误日志', Announcements: '公告管理',
+  Settings: '系统设置', AIStorageConfig: '存储设置',
+};
+const pageTitle = computed(() => {
+  const ws = route.query?.ws;
+  if (ws) {
+    const titles = { 'script-generate': '剧本工坊', 'script-edit': '分镜台本', 'assets': '角色场景库', 'storyboard': '故事板', 'composition': '成片合成' };
+    if (titles[ws]) return titles[ws];
+  }
+  return PAGE_TITLES[route.name] || '';
+});
+const parentRoute = computed(() => {
+  if (route.name === 'Settings' && route.query?.tab === 'profile') return { to: '/settings', label: '系统设置' };
+  if (route.query?.ws === 'script-edit') return { to: '/workspace?ws=script-generate', label: '剧本工坊' };
+  return null;
+});
 
 // 错误日志未读计数
 const errorUnreadCount = ref(0);
@@ -563,6 +617,62 @@ function stopAnnPoll() {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--bg-100); color: var(--text-200); }
 #app-container { height: 100vh; background: var(--bg-100); }
+#app-container { display: flex; flex-direction: column; }
+
+/* ===== 顶部栏 ===== */
+.app-topbar {
+  height: 48px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  background: #fff; border-bottom: 1px solid var(--bg-300);
+  z-index: 100;
+}
+.topbar-left { display: flex; align-items: center; }
+.topbar-breadcrumb { display: flex; align-items: center; gap: 0; font-size: 12px; }
+.tbc-link { color: var(--text-200); text-decoration: none; font-weight: 500; transition: color 0.15s; }
+.tbc-link:hover { color: var(--gold-dark); }
+.tbc-sep { color: var(--bg-300); margin: 0 8px; font-size: 11px; user-select: none; }
+.tbc-current { color: var(--text-100); font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 4px; }
+.topbar-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-200); position: relative;
+  transition: all 0.15s;
+}
+.topbar-icon:hover { background: var(--bg-100); color: var(--text-100); }
+.topbar-badge {
+  position: absolute; top: 2px; right: 2px;
+  min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
+  border-radius: 8px; background: #f56c6c; color: #fff;
+  font-size: 10px; font-weight: 700; text-align: center;
+}
+.topbar-user {
+  display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 8px;
+  cursor: pointer; transition: all 0.15s; margin-left: 4px;
+}
+.topbar-user:hover { background: var(--bg-100); }
+.topbar-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--gold); background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.topbar-username { font-size: 12px; color: var(--text-100); font-weight: 500; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 用户下拉 */
+.user-pop { padding: 4px 0; }
+.user-pop-info { padding: 12px 16px 8px; border-bottom: 1px solid var(--bg-300); }
+.user-pop-name { font-size: 14px; font-weight: 700; color: var(--text-100); display: block; }
+.user-pop-role { font-size: 11px; color: var(--text-200); margin-top: 2px; display: block; }
+.user-pop-actions { padding: 4px 0; }
+.user-pop-item {
+  display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+  font-size: 13px; color: var(--text-100); cursor: pointer; transition: background 0.1s;
+}
+.user-pop-item:hover { background: var(--bg-100); }
+.user-pop-item.danger { color: #c44545; }
+.user-pop-item.danger:hover { background: rgba(196,69,69,0.06); }
 #app-container { height: 100vh; }
 .app-sidebar {
   background: var(--navy); height: 100vh; overflow: hidden;
@@ -661,7 +771,7 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .bell-icon:hover { background: var(--gold); color: var(--navy); }
 .bell-icon .bell-dot { top: -3px; right: -4px; }
 .bell-collapsed { margin: 0 auto; }
-.app-main { background: var(--bg-100); min-height: 100vh; padding: 28px; transition: padding 0.3s; }
+.app-main { background: var(--bg-100); min-height: calc(100vh - 48px); padding: 28px; transition: padding 0.3s; }
 .app-main-landing { padding: 0 !important; min-height: 100vh; background: var(--bg-100); overflow-x: hidden; }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
 

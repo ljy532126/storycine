@@ -1,7 +1,5 @@
 <template>
   <div class="um-root">
-    <Breadcrumb title="用户管理" />
-
     <!-- 统计卡片 -->
     <div class="um-stats">
       <div class="um-stat-card" v-for="s in statCards" :key="s.label" :class="s.cssClass">
@@ -358,7 +356,6 @@ import { ref, reactive, computed, onMounted, markRaw } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
 import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload, Loading } from '@element-plus/icons-vue';
-import Breadcrumb from '../components/Breadcrumb.vue';
 
 const users = ref([]);
 const loading = ref(false);
