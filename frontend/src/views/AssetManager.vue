@@ -191,7 +191,7 @@
                 <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance" class="am-link-btn">构建提示词</el-button></el-tooltip>
                 <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 润色</el-button></el-tooltip>
               </div>
-              <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
+              <el-input v-model="promptText" type="textarea" :rows="16" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
             </div>
             <div class="model-row">
                 <el-select v-model="selectedModel" size="small">
