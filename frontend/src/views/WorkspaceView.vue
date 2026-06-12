@@ -16,11 +16,9 @@
       </div>
       <ProjectSwitcher v-model="currentProjectId" />
       <div v-if="activeStep === 'script-edit' && episodeBar.scripts.length && screenWidth >= 768" class="ws-episode-bar">
-        <div v-for="ep in episodeBar.scripts" :key="ep._id"
-          :class="['ws-ep-chip', { active: episodeBar.currentScriptId === ep._id }]"
-          @click="episodeBar.select?.(ep._id)">
-          第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}
-        </div>
+        <el-select :model-value="episodeBar.currentScriptId" @update:model-value="episodeBar.select" size="small" class="ws-ep-select" placeholder="选择剧集">
+          <el-option v-for="ep in episodeBar.scripts" :key="ep._id" :label="'第'+ep.episodeNumber+'集 '+ (ep.episodeTitle||'未命名')" :value="ep._id" />
+        </el-select>
         <el-button size="small" text @click="episodeBar.add?.()" title="新建剧集">+ 新建</el-button>
         <el-button size="small" text @click="episodeBar.dup?.()" title="复制当前集">⧉ 复制</el-button>
       </div>
@@ -185,11 +183,9 @@ onMounted(() => {
 
 .ws-content { flex: 1; min-height: 0; }
 .ws-project-pick { margin-left: auto; }
-.ws-episode-bar { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--bg-300); max-width: 360px; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
-.ws-episode-bar::-webkit-scrollbar { height: 0; }
-.ws-ep-chip { font-size: 11px; padding: 4px 10px; border-radius: 14px; cursor: pointer; background: var(--bg-100); border: 1px solid var(--bg-300); color: var(--text-200); font-weight: 500; white-space: nowrap; transition: all 0.15s; user-select: none; }
-.ws-ep-chip:hover { border-color: var(--gold); color: var(--text-100); }
-.ws-ep-chip.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.ws-episode-bar { display: flex; align-items: center; gap: 6px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--bg-300); flex-shrink: 0; }
+.ws-ep-select { width: 160px; }
+.ws-ep-select :deep(.el-input__wrapper) { background: var(--bg-200); border-color: var(--bg-300); box-shadow: none !important; border-radius: 6px; }
 
 @media (max-width: 768px) {
   .ws-steps { justify-content: flex-start; padding: 10px 14px; }
