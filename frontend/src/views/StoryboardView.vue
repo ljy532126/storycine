@@ -4,15 +4,10 @@
       <div class="tb-left">
         <div class="sg-scroll-area">
             </div>
-        <div class="sg-script-wrap">
-          <el-select v-model="currentScriptId" placeholder="选择剧集" @change="onScriptChange" size="small" style="width:130px">
-            <el-option v-for="s in scripts" :key="s._id" :label="'第'+s.episodeNumber+'集 '+ (s.episodeTitle||'')" :value="s._id" />
-          </el-select>
-        </div>
       </div>
       <div class="tb-right">
-        <el-button size="small" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating" class="tb-btn tb-btn-refresh">刷新故事板</el-button>
-        <el-button size="small" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB" class="tb-btn tb-btn-delete">删除</el-button>
+        <el-tooltip content="从剧本重新生成分镜" placement="bottom"><el-button size="small" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating" class="tb-btn tb-btn-refresh">刷新故事板</el-button></el-tooltip>
+        <el-tooltip content="删除当前故事板" placement="bottom"><el-button size="small" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB" class="tb-btn tb-btn-delete">删除</el-button></el-tooltip>
         <el-tooltip content="导出" placement="bottom"><el-button size="small" @click="openExport" :disabled="!currentProjectId" class="tb-btn-icon"><Download size="14" fill="currentColor"/></el-button></el-tooltip>
         <el-tooltip content="导入" placement="bottom"><el-button size="small" @click="showImportDialog = true" :disabled="!currentStoryboard" class="tb-btn-icon"><Upload size="14" fill="currentColor"/></el-button></el-tooltip>
         <el-divider direction="vertical" style="margin:0 6px;height:20px" />
@@ -92,8 +87,8 @@
           <div class="tl-header">
             <span class="tl-label"><Film size="16" fill="var(--gold)"/> 分镜时间线 ({{ currentStoryboard.shots.length }} 镜头)</span>
             <div class="tl-batch-btns">
-              <el-button size="small" @click="batchGenerateImages" :loading="batchGenning" class="tb-btn tb-btn-gen">批量生图</el-button>
-              <el-button size="small" @click="batchGenerateVideos" :loading="batchGenningVideo" class="tb-btn tb-btn-gen">批量生视频</el-button>
+              <el-tooltip content="为所有待定镜头批量生成图片" placement="bottom"><el-button size="small" @click="batchGenerateImages" :loading="batchGenning" class="tb-btn tb-btn-gen">批量生图</el-button></el-tooltip>
+              <el-tooltip content="为所有待定镜头批量生成视频" placement="bottom"><el-button size="small" @click="batchGenerateVideos" :loading="batchGenningVideo" class="tb-btn tb-btn-gen">批量生视频</el-button></el-tooltip>
             </div>
           </div>
           <div class="tl-track" ref="tlTrack">
@@ -500,6 +495,8 @@ import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 import ImageLightbox from '../components/ImageLightbox.vue';
 import ProjectSwitcher from '../components/ProjectSwitcher.vue';
+
+const episodeBar = inject('wsEpisodeBar', null);
 
 
 const projectStore = useProjectStore();
@@ -958,6 +955,7 @@ function onProjectChange(val) {
     scriptStore.fetchScripts(val).then(() => {
       scripts.value = [...scriptStore.scripts];
       if (scripts.value.length > 0) { currentScriptId.value = scripts.value[0]._id; onScriptChange(scripts.value[0]._id); }
+      syncEpisodeBar();
     });
     storyboardStore.fetchStoryboards({ projectId: val });
     assetStore.fetchCharacters(val);
@@ -970,8 +968,10 @@ function onScriptChange(val) {
     currentStoryboard.value = existing ? JSON.parse(JSON.stringify(existing)) : null;
     currentShot.value = currentStoryboard.value?.shots?.[0] || null;
     updatePrompt();
+    syncEpisodeBar();
   }
 }
+function syncEpisodeBar(){if(!episodeBar)return;episodeBar.scripts=scripts.value;episodeBar.currentScriptId=currentScriptId.value;episodeBar.select=onScriptChange;episodeBar.add=null;episodeBar.dup=null;}
 async function handleAutoGenerate() {
   if (!currentScriptId.value || !currentProjectId.value) return;
   generating.value = true;

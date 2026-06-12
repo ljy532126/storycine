@@ -15,12 +15,12 @@
         <div v-if="i < steps.length - 1" class="ws-step-line"></div>
       </div>
       <ProjectSwitcher v-model="currentProjectId" />
-      <div v-if="activeStep === 'script-edit' && episodeBar.scripts.length && screenWidth >= 768" class="ws-episode-bar">
+      <div v-if="(activeStep === 'script-edit' || activeStep === 'storyboard') && episodeBar.scripts.length && screenWidth >= 768" class="ws-episode-bar">
         <el-select :model-value="episodeBar.currentScriptId" @update:model-value="episodeBar.select" size="small" class="ws-ep-select" placeholder="选择剧集">
           <el-option v-for="ep in episodeBar.scripts" :key="ep._id" :label="'第'+ep.episodeNumber+'集 '+ (ep.episodeTitle||'未命名')" :value="ep._id" />
         </el-select>
-        <el-button size="small" text @click="episodeBar.add?.()" title="新建剧集">+ 新建</el-button>
-        <el-button size="small" text @click="episodeBar.dup?.()" title="复制当前集">⧉ 复制</el-button>
+        <el-button v-if="activeStep === 'script-edit'" size="small" text @click="episodeBar.add?.()" title="新建剧集">+ 新建</el-button>
+        <el-button v-if="activeStep === 'script-edit'" size="small" text @click="episodeBar.dup?.()" title="复制当前集">⧉ 复制</el-button>
       </div>
     </div>
 
