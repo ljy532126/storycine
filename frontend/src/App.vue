@@ -771,11 +771,11 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .bell-icon:hover { background: var(--gold); color: var(--navy); }
 .bell-icon .bell-dot { top: -3px; right: -4px; }
 .bell-collapsed { margin: 0 auto; }
-.app-main { background: var(--bg-100); overflow-y: auto; height: calc(100vh - 48px); padding: 0; transition: padding 0.3s; scrollbar-width: thin; scrollbar-color: var(--bg-300) transparent; }
+.app-main { background: var(--bg-100); overflow-y: auto; height: calc(100vh - 48px); padding: 0; transition: padding 0.3s; scrollbar-width: thin; scrollbar-color: rgba(139,115,85,0.12) transparent; }
 .app-main::-webkit-scrollbar { width: 5px; }
 .app-main::-webkit-scrollbar-track { background: transparent; }
-.app-main::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 10px; }
-.app-main::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+.app-main::-webkit-scrollbar-thumb { background: rgba(139,115,85,0.10); border-radius: 10px; }
+.app-main::-webkit-scrollbar-thumb:hover { background: rgba(139,115,85,0.25); }
 .app-main-landing { padding: 0 !important; min-height: 100vh; background: var(--bg-100); overflow-x: hidden; }
 .app-content { padding: 20px 28px 28px; }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
