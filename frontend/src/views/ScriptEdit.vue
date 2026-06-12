@@ -235,7 +235,6 @@ import { useScriptStore } from '../stores/script';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI,scriptAPI,storyboardAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
-import html2canvas from 'html2canvas';
 import Breadcrumb from '../components/Breadcrumb.vue';
 import { MagicWand, Send, Download, Undo, Redo, Add, Delete, Camera, Edit, Film, FolderOpen, PictureOne, PlayTwo, PlusCross, Help, Local, Time, User, SunOne, LinkOne, Light, Config, Video, PreviewOpen } from '@icon-park/vue-next';
 
@@ -658,6 +657,7 @@ async function exportAsPng(html, filename) {
   doc.open(); doc.write(html); doc.close();
   await new Promise(function(r) { setTimeout(r, 600); });
   try {
+    var html2canvas = (await import('html2canvas')).default;
     var canvas = await html2canvas(doc.body, {
       scale: 2, useCORS: true, backgroundColor: '#FBF7F0',
       windowWidth: 820, windowHeight: doc.body.scrollHeight,

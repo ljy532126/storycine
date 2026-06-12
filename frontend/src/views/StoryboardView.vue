@@ -507,7 +507,6 @@ import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 import ImageLightbox from '../components/ImageLightbox.vue';
 import Breadcrumb from '../components/Breadcrumb.vue';
-import html2canvas from 'html2canvas';
 
 const projectStore = useProjectStore();
 const scriptStore = useScriptStore();
@@ -1838,6 +1837,7 @@ async function exportAsPng(html, filename) {
   doc.open(); doc.write(html); doc.close();
   await new Promise(function(r) { setTimeout(r, 600); });
   try {
+    var html2canvas = (await import('html2canvas')).default;
     var canvas = await html2canvas(doc.body, {
       scale: 2, useCORS: true, backgroundColor: '#FBF7F0',
       windowWidth: 820, windowHeight: doc.body.scrollHeight,
