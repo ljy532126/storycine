@@ -142,6 +142,8 @@
           <!-- 资产信息 -->
           <div class="asset-info-header">
             <template v-if="activeTab === 'characters'">
+              <div class="detail-two-col">
+                <div class="detail-col-left">
               <el-form label-position="top" size="small">
                 <el-form-item label="角色名称">
                   <el-input v-model="selectedAsset.name" placeholder="角色名称" />
@@ -176,6 +178,40 @@
                 <el-form-item label="性格特征"><el-input v-model="selectedAsset.personality" placeholder="角色的性格特点..." /></el-form-item>
                 <el-form-item label="背景故事"><el-input v-model="selectedAsset.background" type="textarea" :rows="2" placeholder="角色的背景故事..." /></el-form-item>
               </el-form>
+              </div>
+              <div class="detail-col-right">
+            <div class="prompt-section" style="margin-top:0">
+              <div class="section-label">
+                生图提示词
+                <span class="char-count">{{ promptText.length }} / 5000</span>
+                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance" class="am-link-btn">构建提示词</el-button></el-tooltip>
+                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 润色</el-button></el-tooltip>
+              </div>
+              <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
+            </div>
+            <div class="model-row">
+                <el-select v-model="selectedModel" size="small">
+                <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
+                <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
+                <el-option label="gpt-image-2" value="openai_image" />
+              </el-select>
+              <el-select v-model="genRatio" size="small" style="width:100px">
+                <el-option label="9:16 竖屏" value="9:16" />
+                <el-option label="16:9 横屏" value="16:9" />
+                <el-option label="4:3" value="4:3" />
+                <el-option label="3:4" value="3:4" />
+              </el-select>
+            </div>
+            <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成角色图</el-button>
+            <div v-if="activeTab === 'characters' && charMainImage" style="margin-top:14px">
+              <div class="section-label">参考图预览</div>
+              <div style="position:relative;display:inline-block">
+                <img :src="charMainImage" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid var(--bg-300)" />
+                <el-button size="small" type="danger" circle style="position:absolute;top:-6px;right:-6px" @click="removeCharRefImage">×</el-button>
+              </div>
+            </div>
+              </div>
+            </div>
             </template>
             <template v-else-if="activeTab === 'scenes'">
               <el-form label-position="top" size="small">
@@ -208,41 +244,6 @@
               <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成道具图</el-button>
             </template>
           </div>
-
-          <!-- 生图提示词（仅角色） -->
-          <template v-if="activeTab === 'characters'">
-            <div class="prompt-section">
-              <div class="section-label">
-                生图提示词
-                <span class="char-count">{{ promptText.length }} / 5000</span>
-                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance" class="am-link-btn">构建提示词</el-button></el-tooltip>
-                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 润色</el-button></el-tooltip>
-              </div>
-              <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
-            </div>
-            <div class="model-row">
-                <el-select v-model="selectedModel" size="small">
-                <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
-                <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
-                <el-option label="gpt-image-2" value="openai_image" />
-              </el-select>
-              <el-select v-model="genRatio" size="small" style="width:100px">
-                <el-option label="9:16 竖屏" value="9:16" />
-                <el-option label="16:9 横屏" value="16:9" />
-                <el-option label="4:3" value="4:3" />
-                <el-option label="3:4" value="3:4" />
-              </el-select>
-            </div>
-            <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成角色图</el-button>
-            <!-- 参考图预览 + 删除 -->
-            <div v-if="activeTab === 'characters' && charMainImage" style="margin-top:14px">
-              <div class="section-label">参考图预览</div>
-              <div style="position:relative;display:inline-block">
-                <img :src="charMainImage" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid var(--bg-300)" />
-                <el-button size="small" type="danger" circle style="position:absolute;top:-6px;right:-6px" @click="removeCharRefImage">×</el-button>
-              </div>
-            </div>
-          </template>
 
           <!-- 底部操作 -->
           <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bg-300);display:flex;gap:8px">
@@ -918,12 +919,17 @@ async function batchGenerateAssets(type) {
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 }
 .right-empty { display: flex; align-items: center; justify-content: center; }
-.detail-scroll { padding: 28px; max-width: 620px; }
+.detail-scroll { padding: 20px 24px; max-width: none; }
 
 .asset-info-header { margin-bottom: 24px; }
 .asset-info-header :deep(.el-form-item__label) { color: var(--gold-dark) !important; font-weight: 600; }
 .asset-info-header :deep(.el-input__inner) { color: var(--gold-dark) !important; }
 .asset-info-header :deep(.el-textarea__inner) { color: var(--gold-dark) !important; }
+
+.detail-two-col { display: flex; gap: 24px; align-items: flex-start; }
+.detail-col-left { flex: 1; min-width: 260px; max-width: 400px; }
+.detail-col-right { flex: 1; min-width: 260px; }
+
 .info-title { font-size: 22px; font-weight: 700; color: var(--text-100); margin-bottom: 4px; }
 .info-sub { color: var(--text-200); font-size: 13px; display: flex; gap: 8px; align-items: center; }
 
