@@ -929,7 +929,7 @@ async function batchGenerateAssets(type) {
   margin-bottom: 18px; padding: 16px; background: var(--bg-100);
   border-radius: 10px; border: 1px solid var(--bg-300);
 }
-.model-section {
+.model-section-old {
   margin-bottom: 14px; padding: 14px; background: var(--bg-100);
   border-radius: 10px; border: 1px solid var(--bg-300);
 }
@@ -939,6 +939,20 @@ async function batchGenerateAssets(type) {
   margin-bottom: 10px;
 }
 .char-count { margin-left: auto; color: var(--text-200); font-size: 11px; font-weight: 400; }
+
+.model-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; padding: 10px; background: var(--bg-100); border-radius: 8px; border: 1px solid var(--bg-300); }
+.model-row :deep(.el-select) { flex: 1; }
+.model-row :deep(.el-input__wrapper) { background: var(--bg-200); }
+
+.am-btn-gen { color: var(--gold-dark) !important; border-color: var(--gold) !important; background: var(--bg-200) !important; font-weight: 600 !important; }
+.am-btn-gen:hover { background: var(--gold) !important; color: #fff !important; border-color: var(--gold) !important; }
+.am-btn-new { color: var(--text-200) !important; border-color: var(--bg-300) !important; }
+.am-btn-new:hover { color: var(--gold-dark) !important; border-color: var(--gold) !important; }
+.am-btn-delete { color: var(--text-200) !important; border-color: var(--bg-300) !important; }
+.am-btn-delete:hover { color: #c44545 !important; border-color: #c44545 !important; background: rgba(196,69,69,0.04) !important; }
+
+:deep(.prompt-textarea .el-textarea__inner) { font-size: 12px !important; line-height: 1.5 !important; color: var(--text-100) !important; }
+:deep(.prompt-textarea .el-textarea__inner):focus { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold) inset !important; }
 
 /* 图片查看器 */
 .viewer-toolbar {
