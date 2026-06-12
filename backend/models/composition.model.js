@@ -16,6 +16,7 @@ const compositionSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'rendering', 'completed', 'failed'], default: 'pending' },
   progress: { type: Number, default: 0 },
   errorMessage: { type: String, default: '' },
+  warnings: { type: [String], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Composition', compositionSchema);
