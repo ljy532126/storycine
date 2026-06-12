@@ -543,7 +543,7 @@ function fallbackAutoStoryboard(){
   markDirty();ElMessage.success(`本地规则补全 ${localAmend} 处空白（AI 暂不可用，可回退）`);
 }
 
-async function syncToStoryboard(){if(!currentProjectId.value||!currentScriptId.value||!currentScript.value)return;syncing.value=true;try{const scenes=currentScript.value.scenes;if(!scenes||scenes.length===0){ElMessage.warning('没有分镜可同步，请先添加镜头');syncing.value=false;return}const noSub=localStorage.getItem('ad_no_subtitles')==='true';const shots=buildShotsFromScenes(scenes, videoConfig, noSub, directorForm, allAssets.value);const rawRes=await fetch('/api/v1/storyboards/auto-generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({scriptId:currentScriptId.value,projectId:currentProjectId.value,batchShots:shots})});const data=await rawRes.json();ElMessage.success(`已同步 ${shots.length} 个分镜到故事板，图片/视频提示词已区分生成`);flowDoneSync.value=true}catch(e){ElMessage.error('同步失败: '+(e.message||''))}finally{syncing.value=false}}
+async function syncToStoryboard(){if(!currentProjectId.value||!currentScriptId.value||!currentScript.value)return;syncing.value=true;try{const scenes=currentScript.value.scenes;if(!scenes||scenes.length===0){ElMessage.warning('没有分镜可同步，请先添加镜头');syncing.value=false;return}const noSub=localStorage.getItem('ad_no_subtitles')==='true';const shots=buildShotsFromScenes(scenes, videoConfig, noSub, directorForm, allAssets.value);const rawRes=await fetch('/api/v1/storyboards/auto-generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('token')}`},body:JSON.stringify({scriptId:currentScriptId.value,projectId:currentProjectId.value,batchShots:shots})});const data=await rawRes.json();ElMessage.success({message:`已同步 ${shots.length} 个分镜 → 请切换到「镜头板」查看`,duration:5000});flowDoneSync.value=true}catch(e){ElMessage.error('同步失败: '+(e.message||''))}finally{syncing.value=false}}
 
 function selectSubStyle(s){videoConfig.subStyle=s;const preset=getStylePreset();if(preset){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}onVideoConfigChange();handleApplyDirectorSettings();}
 function openDirectorDialog(){const preset=getStylePreset();if(preset&&!directorForm.atmosphereLighting&&!directorForm.artStyleCommands){directorForm.qualityKeywords=preset.qualityKeywords;directorForm.atmosphereLighting=preset.atmosphereLighting;directorForm.artStyleCommands=preset.artStyleCommands}showDirectorDialog.value=true;}
@@ -684,7 +684,7 @@ async function exportAsPng(html, filename) {
 }
 </script>
 <style scoped>
-.script-edit-root{display:flex;flex-direction:column;height:calc(100vh - 48px)}
+.script-edit-root{display:flex;flex-direction:column;height:calc(100vh - 48px);overflow:hidden}
 .top-bar{display:flex;align-items:center;margin-bottom:12px;flex-shrink:0}
 .word-count{margin-left:auto;color:var(--primary-200);font-size:14px;font-weight:bold;display:flex;align-items:center;gap:8px}
 .three-column{display:flex;flex:1;gap:12px;overflow:hidden;min-height:0}
