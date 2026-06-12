@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useStoryboardStore } from '../stores/storyboard';
