@@ -749,8 +749,8 @@ async function exportAsPng(html, filename) {
 .dr-td-camera{width:120px;flex-shrink:0}
 .dr-td-inner{width:140px;flex-shrink:0}
 .dr-td-op{width:32px;flex-shrink:0;text-align:center}
-.dr-td-op .el-button{width:24px;height:24px;padding:0;border-radius:50%;font-size:14px;color:#C44545;border:1px solid #C44545;display:inline-flex;align-items:center;justify-content:center}
-.dr-td-op .el-button:hover{background:#C44545;color:#fff}
+.dr-td-op .el-button{width:24px;height:24px;padding:0;border-radius:50%;font-size:14px;color:var(--text-200);border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s}
+.dr-td-op .el-button:hover{color:#fff;background:#C44545;border-color:#C44545}
 .right-panel{width:250px;flex-shrink:0;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:12px;overflow-y:auto;transition:width 0.25s}
 .right-panel.collapsed{width:40px;padding:12px 8px;overflow:hidden}
 .right-panel.collapsed .right-panel-body{display:none}
