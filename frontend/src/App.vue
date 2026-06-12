@@ -1,4 +1,5 @@
 <template>
+  <el-config-provider :locale="zhCn">
   <div id="app-container">
     <!-- 移动端汉堡菜单按钮（仅后台页面，Landing/Login/Register 有自己的导航） -->
     <div v-if="!['Landing','Login','Register'].includes($route.name)" class="mobile-nav-bar" @click="mobileMenuOpen = !mobileMenuOpen">
@@ -208,11 +209,13 @@
       <el-button type="primary" size="large" style="width:100%;margin-top:20px" @click="dismissOnboarding">开始创作</el-button>
     </div>
   </div>
+  </el-config-provider>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
 import {
   HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset, WarningFilled, Bell,
   ArrowLeft, ArrowRight, Menu as MenuIcon, Close,
