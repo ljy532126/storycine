@@ -50,8 +50,15 @@ if (require('fs').existsSync(frontendDist)) {
   console.log('[static] Frontend dist served from:', frontendDist);
 }
 
-// API 监控中间件
-const apiStats = { total: 0, routes: {}, recent: [], ai: { image: { total: 0, success: 0, fail: 0 }, video: { total: 0, success: 0, fail: 0 }, llm: { total: 0, success: 0, fail: 0 } } };
+// API 监控中间件（启动时从文件恢复，重启不丢失）
+const fs = require('fs');
+const STATS_FILE = path.join(__dirname, 'api_stats.json');
+function loadStats() { try { if (fs.existsSync(STATS_FILE)) return JSON.parse(fs.readFileSync(STATS_FILE, 'utf-8')); } catch {} return { total: 0, routes: {}, recent: [], ai: { image: { total: 0, success: 0, fail: 0 }, video: { total: 0, success: 0, fail: 0 }, llm: { total: 0, success: 0, fail: 0 } } }; }
+function saveStats() { try { fs.writeFileSync(STATS_FILE, JSON.stringify(apiStats)); } catch {} }
+const apiStats = loadStats();
+setInterval(saveStats, 60000); // 每分钟持久化
+process.on('SIGINT', () => { saveStats(); process.exit(); });
+process.on('SIGTERM', () => { saveStats(); process.exit(); });
 app.use('/api/v1', (req, res, next) => {
   const key = req.method + ' ' + req.path;
   apiStats.total++;
