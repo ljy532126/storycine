@@ -144,7 +144,7 @@ onMounted(() => {
   display: flex; align-items: center; justify-content: center;
   padding: 8px 16px; margin-bottom: 8px;
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
-  flex-shrink: 0; overflow: hidden; gap: 0; flex-wrap: wrap;
+  flex-shrink: 0; overflow-x: auto; gap: 0; flex-wrap: nowrap;
 }
 .ws-steps :deep(.ps-root) { margin-left: auto; }
 .ws-step {
