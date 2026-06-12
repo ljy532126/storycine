@@ -188,7 +188,7 @@
               </el-form>
               <div class="prompt-section" style="margin-top:12px">
                 <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
-                  <el-button size="small" link @click="generatePrompt" :loading="generatingPrompt">AI 生成</el-button>
+                  <el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 生成</el-button>
                 </div>
                 <el-input v-model="promptText" type="textarea" :rows="4" placeholder="输入场景提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
               </div>
@@ -215,8 +215,8 @@
               <div class="section-label">
                 生图提示词
                 <span class="char-count">{{ promptText.length }} / 5000</span>
-                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance">构建提示词</el-button></el-tooltip>
-                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" link @click="generatePrompt" :loading="generatingPrompt">AI 润色</el-button></el-tooltip>
+                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance" class="am-link-btn">构建提示词</el-button></el-tooltip>
+                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 润色</el-button></el-tooltip>
               </div>
               <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
             </div>
@@ -951,8 +951,10 @@ async function batchGenerateAssets(type) {
 .am-btn-delete { color: var(--text-200) !important; border-color: var(--bg-300) !important; }
 .am-btn-delete:hover { color: #c44545 !important; border-color: #c44545 !important; background: rgba(196,69,69,0.04) !important; }
 
-:deep(.prompt-textarea .el-textarea__inner) { font-size: 12px !important; line-height: 1.5 !important; color: var(--text-100) !important; }
+:deep(.prompt-textarea .el-textarea__inner) { font-size: 12px !important; line-height: 1.5 !important; color: var(--gold-dark) !important; }
 :deep(.prompt-textarea .el-textarea__inner):focus { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold) inset !important; }
+.am-link-btn { color: var(--gold-dark) !important; font-weight: 600; }
+.am-link-btn:hover { color: var(--navy) !important; }
 
 /* 图片查看器 */
 .viewer-toolbar {
