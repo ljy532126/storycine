@@ -1,15 +1,8 @@
-﻿<template>
+<template>
   <div class="sg-root">
     <div class="sg-topbar">
       <div class="topbar-right">
-        <div class="sg-project-pills">
-          <span v-if="projectStore.projects.length === 0" style="color:var(--text-200);font-size:14px">还没有片场哦~</span>
-          <span v-for="p in projectStore.projects" :key="p._id"
-            :class="['sg-pill', { active: currentProjectId === p._id }]"
-            @click="currentProjectId = p._id; onProjectChange(p._id)">
-            {{ p.name }}
-          </span>
-        </div>
+        <ProjectSwitcher v-model="currentProjectId" />
         <el-button type="primary" link size="large" @click="showImportDialog = true" class="import-link">已有剧本？直接导入</el-button>
       </div>
     </div>
@@ -289,6 +282,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
 import { useSocket } from '../components/useSocket';
+import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 import api, { scriptAPI } from '../api';
 import { FolderUpload, MagicWand, Film, Edit, Delete, Download, ImportAndExport, Time } from '@icon-park/vue-next';
 
@@ -851,12 +845,6 @@ function applyQuickTemplate(t) {
 
 .sg-root { display: flex; flex-direction: column; height: calc(100vh - 48px); }
 .sg-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-shrink: 0; }
-.sg-project-pills { display: flex; gap: 8px; flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--bg-300) transparent; padding-bottom: 4px; }
-.sg-pill { font-size: 13px; padding: 6px 16px; border-radius: 18px; cursor: pointer; background: var(--bg-200); border: 1px solid var(--bg-300); color: var(--text-200); font-weight: 500; white-space: nowrap; transition: all 0.15s; user-select: none; }
-.sg-pill:hover { border-color: var(--gold); color: var(--text-100); }
-.sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
-.sg-project-pills::-webkit-scrollbar { height: 4px; }
-.sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 .import-link { font-size: 14px; color: var(--gold-dark) !important; font-weight: 600; letter-spacing: 0.5px; background: transparent !important; border: none !important; }
 .import-link:hover { color: var(--navy) !important; }

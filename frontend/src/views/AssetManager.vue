@@ -1,9 +1,7 @@
-﻿<template>
+<template>
   <div class="asset-root">
     <div class="top-bar">
-      <div class="sg-project-pills">
-        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
-      </div>
+            <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
     </div>
 
     <div class="master-detail" v-if="currentProjectId">
@@ -342,6 +340,7 @@ import { useProjectStore } from '../stores/project';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI } from '../api';
 import ImageLightbox from '../components/ImageLightbox.vue';
+import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
 
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
@@ -980,12 +979,6 @@ async function batchGenerateAssets(type) {
 :deep(.el-tabs__nav-wrap::after) { height: 1px; }
 .left-list { overflow-y: auto !important; max-height: calc(100vh - 160px); }
 
-.sg-project-pills { display: flex; gap: 8px; flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--bg-300) transparent; padding-bottom: 4px; }
-.sg-pill { font-size: 13px; padding: 6px 16px; border-radius: 18px; cursor: pointer; background: var(--bg-200); border: 1px solid var(--bg-300); color: var(--text-200); font-weight: 500; white-space: nowrap; transition: all 0.15s; user-select: none; }
-.sg-pill:hover { border-color: var(--gold); color: var(--text-100); }
-.sg-pill.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
-.sg-project-pills::-webkit-scrollbar { height: 4px; }
-.sg-project-pills::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
 @media (max-width: 768px) {
   .detail-panel { padding: 12px; }
   .model-section .el-select { width: 100% !important; }

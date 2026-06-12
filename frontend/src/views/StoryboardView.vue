@@ -1,11 +1,9 @@
-﻿<template>
+<template>
   <div class="sb-root">
     <div class="sb-top">
       <div class="tb-left">
         <div class="sg-scroll-area">
-          <div class="sg-project-pills">
-            <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
-          </div>
+          <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
         </div>
         <div class="sg-script-wrap">
           <el-select v-model="currentScriptId" placeholder="选择剧本" @change="onScriptChange" size="default" style="width:170px">
@@ -505,6 +503,7 @@ import { storyboardAPI, assetAPI } from '../api';
 import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 import ImageLightbox from '../components/ImageLightbox.vue';
+import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
 
 const projectStore = useProjectStore();
@@ -1920,30 +1919,6 @@ async function handleImport() {
 .sg-scroll-area:has(.sg-project-pills:hover)::after,
 .sg-scroll-area:focus-within::after { opacity: 1; }
 .sg-script-wrap { flex-shrink: 0; }
-
-.sg-project-pills {
-  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
-  padding-bottom: 6px; scroll-behavior: smooth;
-  /* 始终显示滚动条轨道，暗示可滚动 */
-  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.25) transparent;
-}
-.sg-project-pills::-webkit-scrollbar { height: 4px; display: block; }
-.sg-project-pills::-webkit-scrollbar-track { background: rgba(201,168,76,0.06); border-radius: 2px; }
-.sg-project-pills::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; min-width: 30px; }
-.sg-project-pills::-webkit-scrollbar-thumb:hover { background: var(--gold); }
-.sg-pill {
-  font-size: 12px; padding: 7px 18px; border-radius: 20px; cursor: pointer;
-  background: rgba(255,253,249,0.7); border: 1.5px solid var(--bg-300);
-  color: var(--text-200); font-weight: 500; white-space: nowrap;
-  transition: all 0.25s cubic-bezier(0.22,0.61,0.36,1); user-select: none;
-  backdrop-filter: blur(4px);
-}
-.sg-pill:hover { border-color: var(--gold); color: var(--text-100); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,168,76,0.12); }
-.sg-pill.active {
-  background: linear-gradient(135deg, var(--navy) 0%, #252540 100%);
-  border-color: var(--gold); color: var(--gold); font-weight: 700;
-  box-shadow: 0 0 18px rgba(201,168,76,0.3), 0 2px 6px rgba(0,0,0,0.15);
-}
 
 /* ===== BODY ===== */
 .sb-body { display: flex; flex: 1; gap: 14px; overflow: hidden; min-height: 0; }

@@ -1,9 +1,7 @@
-﻿<template>
+<template>
   <div class="comp-root">
     <div class="comp-top">
-      <div class="sg-project-pills">
-        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
-      </div>
+            <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
     </div>
 
     <el-row :gutter="16" class="comp-body" v-if="currentProjectId">
@@ -89,6 +87,7 @@ import { useProjectStore } from '../stores/project';
 import { useStoryboardStore } from '../stores/storyboard';
 import { useCompositionStore } from '../stores/composition';
 import { useSocket } from '../components/useSocket';
+import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
 
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
@@ -152,28 +151,6 @@ function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
 .comp-top { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 12px; flex-shrink: 0; }
 
 /* 片场胶囊 */
-.sg-project-pills {
-  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
-  padding-bottom: 6px; scroll-behavior: smooth;
-  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.25) transparent;
-}
-.sg-project-pills::-webkit-scrollbar { height: 4px; display: block; }
-.sg-project-pills::-webkit-scrollbar-track { background: rgba(201,168,76,0.06); border-radius: 2px; }
-.sg-project-pills::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; min-width: 30px; }
-.sg-project-pills::-webkit-scrollbar-thumb:hover { background: var(--gold); }
-.sg-pill {
-  font-size: 12px; padding: 7px 18px; border-radius: 20px; cursor: pointer;
-  background: rgba(255,253,249,0.7); border: 1.5px solid var(--bg-300);
-  color: var(--text-200); font-weight: 500; white-space: nowrap;
-  transition: all 0.25s cubic-bezier(0.22,0.61,0.36,1); user-select: none;
-  backdrop-filter: blur(4px);
-}
-.sg-pill:hover { border-color: var(--gold); color: var(--text-100); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,168,76,0.12); }
-.sg-pill.active {
-  background: linear-gradient(135deg, var(--navy) 0%, #252540 100%);
-  border-color: var(--gold); color: var(--gold); font-weight: 700;
-  box-shadow: 0 0 18px rgba(201,168,76,0.3), 0 2px 6px rgba(0,0,0,0.15);
-}
 .comp-body { flex: 1; overflow-y: auto; min-height: 0; }
 
 .panel { background: var(--bg-200); border-radius: 8px; border: 1px solid var(--bg-300); padding: 20px; }
