@@ -14,8 +14,16 @@ async function run(state) {
 
   try {
     const res = await callLLM(systemPrompt, userPrompt, { temperature: 0.85, maxTokens: 4000, responseFormat: 'json' });
-    state.characters = JSON.parse(res);
-    const names = (state.characters || []).map(c => c.name).join('、');
+    let parsed = JSON.parse(res);
+    // 兼容 AI 返回 { characters: [...] } 包裹格式的情况
+    if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.characters)) {
+      parsed = parsed.characters;
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error('AI 返回的角色数据不是数组');
+    }
+    state.characters = parsed;
+    const names = state.characters.map(c => c.name).join('、');
     emitProgress(state, `角色塑造完成：${names || '未提取到角色'}`);
   } catch (e) {
     emitProgress(state, '角色塑造失败: ' + e.message, 'error');

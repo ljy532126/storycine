@@ -157,7 +157,16 @@
       <template #footer><el-button @click="showDirectorDialog=false">取消</el-button><el-button type="primary" @click="handleAIUnderstand" :loading="aiUnderstanding"><MagicWand size="14" fill="currentColor" style="margin-right:4px"/> AI 理解并润色</el-button><el-button type="success" @click="handleApplyDirectorSettings"><Send size="14" fill="currentColor" style="margin-right:4px"/> 应用到全剧</el-button></template>
     </el-dialog>
     <el-dialog v-model="showExtractDialog" title="提取结果 👥" :width="screenWidth < 768 ? '94%' : '650px'" destroy-on-close>
-      <div v-if="extracting" style="text-align:center;padding:40px"><p style="color:var(--text-100)">AI 正在识别剧本中的角色、场景、道具...</p></div>
+      <div v-if="extracting" class="extract-loading">
+        <div class="extract-spinner"><span class="extract-dot"></span><span class="extract-dot"></span><span class="extract-dot"></span></div>
+        <p class="extract-loading-text">AI 正在识别剧本中的角色、场景、道具...</p>
+        <div class="extract-skeleton">
+          <div class="extract-sk-item" v-for="i in 3" :key="i">
+            <div class="extract-sk-bar"></div>
+            <div class="extract-sk-tags"><span class="extract-sk-tag"></span><span class="extract-sk-tag"></span><span class="extract-sk-tag w2"></span></div>
+          </div>
+        </div>
+      </div>
       <div v-else-if="extractResult">
  <el-divider content-position="left"><strong>角色 ({{extractResult.characters?.length||0}})</strong></el-divider>
  <div v-if="extractResult.characters?.length" class="extract-tags"><el-tag v-for="c in extractResult.characters" :key="c.name" :type="c.existed?'info':'success'" size="default" style="margin:4px">{{c.name}}{{c.existed?'(已存在)':' ✓ 新建'}}</el-tag></div>
@@ -766,6 +775,23 @@ async function exportAsPng(html, filename) {
 .flow-step.done{background:#E8F5E9;color:#2E7D32;font-weight:600}
 .flow-arrow{color:var(--gold-dark);font-weight:700}
 .extract-tags{display:flex;flex-wrap:wrap;min-height:32px}
+/* 提取加载动画 */
+.extract-loading{text-align:center;padding:32px 20px}
+.extract-spinner{display:flex;justify-content:center;gap:10px;margin-bottom:20px}
+.extract-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);animation:extractBounce 1.4s ease-in-out infinite}
+.extract-dot:nth-child(2){animation-delay:0.2s}
+.extract-dot:nth-child(3){animation-delay:0.4s}
+@keyframes extractBounce{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+.extract-loading-text{font-size:14px;color:var(--text-100);font-weight:600;margin-bottom:24px}
+.extract-skeleton{display:flex;flex-direction:column;gap:16px}
+.extract-sk-item{display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:var(--bg-200);border-radius:10px;border:1px solid var(--bg-300)}
+.extract-sk-bar{height:14px;width:80px;border-radius:4px;background:linear-gradient(90deg,var(--bg-300) 25%,var(--bg-200) 50%,var(--bg-300) 75%);background-size:200% 100%;animation:extractShimmer 1.8s ease-in-out infinite}
+.extract-sk-tags{display:flex;gap:8px}
+.extract-sk-tag{height:28px;width:72px;border-radius:14px;background:linear-gradient(90deg,var(--bg-300) 25%,var(--bg-200) 50%,var(--bg-300) 75%);background-size:200% 100%;animation:extractShimmer 1.8s ease-in-out infinite}
+.extract-sk-tag.w2{width:96px}
+.extract-sk-tag:nth-child(2){animation-delay:0.15s}
+.extract-sk-tag:nth-child(3){animation-delay:0.3s}
+@keyframes extractShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .diff-item{animation:fadeIn 0.3s ease-out}
 .diff-header{font-weight:700;color:var(--text-100);margin-bottom:8px;font-size:14px}
 .diff-row{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px;padding:4px 8px;background:var(--bg-200);border-radius:4px}

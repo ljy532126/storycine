@@ -201,16 +201,17 @@ async function initAdmin() {
         console.log('══════════════════════════════════════════');
         console.log('  🔄 Admin password reset');
         console.log('  Username: admin');
-        console.log('  ⚠️  New password saved. Find it in startup log or reset via RESET_ADMIN_PWD=true');
+        console.log(`  Password: ${defaultPassword}`);
+        console.log('══════════════════════════════════════════');
       } else {
         adminUser = await User.create({ username: 'admin', password: hashed, role: 'admin', status: 'active' });
         console.log('══════════════════════════════════════════');
         console.log('  🔐 Default admin created');
         console.log('  Username: admin');
-        console.log('  ⚠️  Random password generated. See startup log or reset with RESET_ADMIN_PWD=true');
+        console.log(`  Password: ${defaultPassword}`);
+        console.log('══════════════════════════════════════════');
       }
       console.log('  ⚠️  Please change password after login!');
-      console.log('══════════════════════════════════════════');
     }
 
     // 确保 admin 有 settings + 迁移旧全局配置 + 从 .env 种子 API Key

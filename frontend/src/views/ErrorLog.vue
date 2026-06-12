@@ -69,7 +69,6 @@
         :class="['err-card', { unresolved: !log.resolved }]"
         @click="showDetail(log)"
       >
-        <div :class="['err-card-stripe', log.statusCode >= 500 ? 'stripe-500' : 'stripe-400']"></div>
         <div class="err-card-check" @click.stop>
           <el-checkbox :model-value="selectedIds.includes(log._id)" @change="(v) => toggleSelect(log._id, v)" />
         </div>
@@ -229,7 +228,7 @@ onUnmounted(() => { clearInterval(refreshTimer); });
 </script>
 
 <style scoped>
-.err-root { display: flex; flex-direction: column; height: calc(100vh - 100px); padding: 0; }
+.err-root { display: flex; flex-direction: column; height: calc(100vh - 60px); padding: 0; }
 
 /* ===== 顶栏 ===== */
 .err-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -263,25 +262,34 @@ onUnmounted(() => { clearInterval(refreshTimer); });
 .err-search :deep(.el-input__wrapper) { background: var(--bg-200); border-color: var(--bg-300); }
 
 /* ===== 列表 ===== */
-.err-list { flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 3px; }
-.err-card { display: flex; align-items: flex-start; gap: 0; padding: 14px 16px; border-radius: 10px; background: var(--bg-200); border: 1px solid var(--bg-300); cursor: pointer; transition: all 0.18s; overflow: hidden; }
-.err-card:hover { border-color: var(--gold); background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
-.err-card-stripe { width: 4px; border-radius: 2px; align-self: stretch; flex-shrink: 0; margin-right: 12px; }
-.stripe-500 { background: #f56c6c; }
-.stripe-400 { background: #e6a23c; }
-.err-card-check { display: flex; align-items: flex-start; padding-top: 2px; margin-right: 10px; flex-shrink: 0; }
+.err-list { flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
+.err-list::-webkit-scrollbar { width: 5px; }
+.err-list::-webkit-scrollbar-track { background: transparent; }
+.err-list::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 10px; }
+.err-list::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+.err-card { display: flex; align-items: flex-start; gap: 0; padding: 12px 14px; border-radius: 8px; background: #fff; border: 1px solid var(--bg-300); cursor: pointer; transition: all 0.2s cubic-bezier(0.22,0.61,0.36,1); position: relative; }
+.err-card::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; transition: all 0.2s; }
+.err-card.unresolved::before { background: #f56c6c; }
+.err-card.resolved::before { background: #67c23a; }
+.err-card:hover { border-color: var(--gold); box-shadow: 0 4px 20px rgba(201,168,76,0.08), 0 1px 3px rgba(0,0,0,0.04); transform: translateX(2px); }
+.err-card:hover::before { width: 4px; }
+.err-card.unresolved { background: linear-gradient(135deg, #fff 0%, rgba(245,108,108,0.015) 100%); }
+.err-card.resolved { background: linear-gradient(135deg, #fff 0%, rgba(103,194,58,0.01) 100%); opacity: 0.75; }
+
+.err-card-check { display: flex; align-items: flex-start; padding-top: 1px; margin-right: 10px; margin-left: 8px; flex-shrink: 0; }
 .err-card-main { flex: 1; min-width: 0; }
-.err-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; overflow: hidden; }
-.err-code { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', monospace; }
-.code-500 { background: rgba(245,108,108,0.1); color: #f56c6c; }
-.code-400 { background: rgba(230,162,60,0.1); color: #e6a23c; }
-.err-method { font-size: 11px; font-weight: 600; color: var(--text-200); background: var(--bg-100); padding: 2px 7px; border-radius: 4px; text-transform: uppercase; }
-.err-path { font-size: 13px; font-weight: 600; color: var(--text-100); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Courier New', monospace; }
-.err-new-badge { font-size: 9px; font-weight: 700; color: #f56c6c; background: rgba(245,108,108,0.1); padding: 1px 5px; border-radius: 3px; flex-shrink: 0; letter-spacing: 0.5px; }
-.err-time { margin-left: auto; font-size: 11px; color: var(--text-200); white-space: nowrap; flex-shrink: 0; }
-.err-card-msg { font-size: 12px; color: var(--text-200); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; max-width: 680px; }
-.err-card-meta { display: flex; gap: 14px; font-size: 11px; color: var(--text-200); }
-.err-meta-item { display: flex; align-items: center; gap: 4px; }
+.err-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; overflow: hidden; }
+.err-code { padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: 'DM Sans', monospace; letter-spacing: 0.3px; }
+.code-500 { background: rgba(245,108,108,0.08); color: #e04545; }
+.code-400 { background: rgba(230,162,60,0.08); color: #d4880f; }
+.err-method { font-size: 10px; font-weight: 600; color: var(--text-200); background: var(--bg-100); padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+.err-path { font-size: 12.5px; font-weight: 600; color: var(--text-100); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Courier New', monospace; }
+.err-new-badge { font-size: 9px; font-weight: 700; color: #e04545; background: rgba(245,108,108,0.08); padding: 1px 6px; border-radius: 3px; flex-shrink: 0; letter-spacing: 0.5px; }
+.err-time { margin-left: auto; font-size: 11px; color: var(--text-200); white-space: nowrap; flex-shrink: 0; opacity: 0.8; }
+.err-card-msg { font-size: 12px; color: var(--text-200); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 4px; line-height: 1.5; max-width: 720px; }
+.err-card-meta { display: flex; gap: 14px; font-size: 10.5px; color: var(--text-200); opacity: 0.75; }
+.err-meta-item { display: flex; align-items: center; gap: 3px; }
 
 /* 空状态 */
 .err-empty { text-align: center; padding: 80px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
