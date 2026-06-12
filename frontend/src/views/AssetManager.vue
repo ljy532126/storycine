@@ -193,7 +193,7 @@
                 <el-input v-model="promptText" type="textarea" :rows="4" placeholder="输入场景提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
               </div>
               <div class="model-row">
-              <el-select v-model="selectedModel" size="small" style="flex:1">
+                <el-select v-model="selectedModel" size="small">
                 <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
                 <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
                 <el-option label="gpt-image-2" value="openai_image" />
@@ -221,7 +221,7 @@
               <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
             </div>
             <div class="model-row">
-              <el-select v-model="selectedModel" size="small" style="flex:1">
+                <el-select v-model="selectedModel" size="small">
                 <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
                 <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
                 <el-option label="gpt-image-2" value="openai_image" />
