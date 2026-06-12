@@ -208,10 +208,7 @@ sh deploy.sh
 ### 🔑 忘记管理员密码怎么办
 
 **方法一：通过环境变量重置（推荐）**
-在 `docker-compose.yml` 的 `app` 服务 `environment` 中添加一行，然后重建容器：
-```yaml
-- RESET_ADMIN_PWD=true
-```
+在 `docker-compose.yml` 中找到 `RESET_ADMIN_PWD=false`，改为 `true`，然后重建容器：
 ```bash
 docker compose up -d --build
 ```
@@ -219,7 +216,7 @@ docker compose up -d --build
 ```bash
 docker logs storycine-app 2>&1 | grep -A3 "Password:"
 ```
-重置完成后**删除 `RESET_ADMIN_PWD=true` 这行**，否则每次启动都会重置密码。
+重置完成后**改回 `false`**，否则每次启动都会换一个新密码。
 
 **方法二：进入 MongoDB 直接修改**
 ```bash
