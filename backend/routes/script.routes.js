@@ -309,6 +309,7 @@ router.post('/import', async (req, res, next) => {
 // 故事导入 → AI 改编为剧本
 router.post('/story-to-script', async (req, res, next) => {
   try {
+    await appConfig.loadUserConfig(req.user._id);
     const { projectId, storyContent, episodeTitle } = req.body;
 
     if (!projectId || !storyContent) {
@@ -341,11 +342,16 @@ router.post('/story-to-script', async (req, res, next) => {
       "location": "具体地点",
       "characters": ["人物1", "人物2"],
       "atmosphere": "氛围描述（温馨/紧张/悲伤等）",
-      "sceneDescription": "场景环境简述",
+      "shotType": "中景/近景/特写等",
+      "cameraMovement": "固定/推镜/拉镜等",
+      "lighting": "光影描述",
+      "duration": 5,
+      "composition": "中心构图/三分法等",
+      "sceneDescription": "场景环境简述（不少于30字）",
       "dialogues": [
-        { "characterName": "人物名", "text": "台词内容", "actionHint": "动作/表情提示" },
-        { "characterName": "人物名", "text": "台词", "actionHint": "" }
-      ]
+        { "characterName": "人物名", "text": "台词内容", "actionHint": "动作/表情提示", "cameraHint": "镜头提示", "innerThought": "内心独白" }
+      ],
+      "notes": "环境音/BGM/转场备注"
     }
   ]
 }`;
@@ -353,7 +359,7 @@ router.post('/story-to-script', async (req, res, next) => {
     const userPrompt = `请将以下故事改编为短剧剧本：\n\n${storyContent}`;
 
     const result = await callLLM(systemPrompt, userPrompt, {
-      response_format: 'json_object',
+      responseFormat: 'json',
       temperature: 0.7,
       maxTokens: 4096,
     });
