@@ -625,7 +625,7 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px;
   background: #fff; border-bottom: 1px solid var(--bg-300);
-  z-index: 100;
+  position: sticky; top: 0; z-index: 100;
 }
 .topbar-left { display: flex; align-items: center; }
 .topbar-breadcrumb { display: flex; align-items: center; gap: 0; font-size: 12px; }
