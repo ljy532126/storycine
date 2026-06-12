@@ -36,7 +36,7 @@
  </div>
  <div class="scenes-area">
    <div v-for="(scene,si) in currentScript.scenes" :key="si" :class="['scene-card',{'shot-invalid':!scene.sceneDescription},{'shot-amended': amendedFields[si] && Object.keys(amendedFields[si]||{}).length>0}]">
-     <div class="scene-top-row"><span class="scene-num"><Film size="14" fill="#C9A84C"/> 镜号 {{ scene.sceneNumber }}</span><el-button size="small" type="danger" text @click="removeScene(si)">移除此镜</el-button></div>
+     <div class="scene-top-row"><span class="scene-num"><Film size="14" fill="#C9A84C"/> 镜号 {{ scene.sceneNumber }}</span><el-button size="small" text @click="removeScene(si)" class="btn-remove-shot">移除此镜</el-button></div>
      <div class="scene-meta-row">
 <div class="meta-item"><label><Local size="12" fill="var(--text-200)"/> 场景</label><el-input v-model="scene.location" size="small" placeholder="如：咖啡厅、街道..." @change="markDirty" /></div>
 <div class="meta-item"><label><Time size="12" fill="var(--text-200)"/> 时间</label><el-select v-model="scene.timeOfDay" size="small" @change="markDirty"><el-option v-for="t in timeOptions" :key="t" :label="t" :value="t" /></el-select></div>
@@ -72,7 +72,7 @@
     <div class="dr-td dr-td-action"><el-input v-model="d.actionHint" size="small" placeholder="动作/表情" @change="markDirty" /></div>
     <div class="dr-td dr-td-camera"><el-input v-model="d.cameraHint" size="small" placeholder="镜头提示" @change="markDirty" /></div>
     <div class="dr-td dr-td-inner"><el-input v-model="d.innerThought" size="small" placeholder="内心独白" @change="markDirty" /></div>
-    <div class="dr-td dr-td-op"><el-button size="small" text type="danger" @click="removeDialogue(scene,di)">×</el-button></div>
+    <div class="dr-td dr-td-op"><el-button size="small" text @click="removeDialogue(scene,di)">×</el-button></div>
   </div>
 </div>
 <el-button size="small" text type="primary" @click="addDialogue(scene)" style="margin-top:4px">+ 加句台词</el-button>
@@ -722,6 +722,8 @@ async function exportAsPng(html, filename) {
 :deep(.field-amended .el-select .el-input__wrapper){background:rgba(230,162,60,0.10);box-shadow:0 0 0 1px rgba(230,162,60,0.4) inset}
 :deep(.field-amended .el-input-number .el-input__wrapper){background:rgba(230,162,60,0.10);box-shadow:0 0 0 1px rgba(230,162,60,0.4) inset}
 .scene-top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bg-300)}
+.btn-remove-shot{color:var(--text-200)!important;font-size:11px;transition:color 0.15s}
+.btn-remove-shot:hover{color:#C44545!important}
 .scene-num{color:var(--text-100);font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
 .scene-meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .meta-item{display:flex;flex-direction:column;gap:2px;min-width:90px}
