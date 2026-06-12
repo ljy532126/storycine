@@ -367,12 +367,15 @@ window.__triggerSave=handleSave;
 onActivated(() => {
   const storeProject = projectStore.currentProject;
   const qProjectId = route.query.projectId;
+  const qScriptId = route.query.scriptId;
   if (qProjectId && qProjectId !== currentProjectId.value) {
     currentProjectId.value = qProjectId;
-    onProjectChange(qProjectId);
+    onProjectChange(qProjectId, qScriptId);
   } else if (storeProject && storeProject._id !== currentProjectId.value) {
     currentProjectId.value = storeProject._id;
     onProjectChange(storeProject._id);
+  } else if (qScriptId && qScriptId !== currentScriptId.value && scripts.value.length > 0) {
+    switchEpisode(qScriptId);
   }
 });
 // keep-alive 缓存后，每次进入页面重新拉取剧集列表
