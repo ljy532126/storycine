@@ -853,11 +853,11 @@ async function batchGenerateAssets(type) {
   display: flex; justify-content: space-between; align-items: baseline; z-index: 2;
 }
 .card-name {
-  color: #fff; font-size: 15px; font-weight: 700;
+  color: var(--gold); font-size: 15px; font-weight: 700;
   text-shadow: 0 1px 6px rgba(0,0,0,0.7);
 }
 .card-meta {
-  color: rgba(255,255,255,0.82); font-size: 10px;
+  color: var(--gold-light); font-size: 10px;
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 
@@ -922,6 +922,8 @@ async function batchGenerateAssets(type) {
 
 .asset-info-header { margin-bottom: 24px; }
 .asset-info-header :deep(.el-form-item__label) { color: var(--gold-dark) !important; font-weight: 600; }
+.asset-info-header :deep(.el-input__inner) { color: var(--gold-dark) !important; }
+.asset-info-header :deep(.el-textarea__inner) { color: var(--gold-dark) !important; }
 .info-title { font-size: 22px; font-weight: 700; color: var(--text-100); margin-bottom: 4px; }
 .info-sub { color: var(--text-200); font-size: 13px; display: flex; gap: 8px; align-items: center; }
 
