@@ -6,9 +6,9 @@
       <span class="bc-current">成片合成</span>
     </div>
     <div class="comp-top">
-      <el-select v-model="currentProjectId" placeholder="选择片场" @change="(v) => { resetToScriptGenerate(v); onProjectChange(v) }" style="width:200px">
-        <el-option v-for="p in projectStore.projects" :key="p._id" :label="p.name" :value="p._id" />
-      </el-select>
+      <div class="sg-project-pills">
+        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; resetToScriptGenerate(p._id); onProjectChange(p._id)">{{ p.name }}</span>
+      </div>
     </div>
 
     <el-row :gutter="16" class="comp-body" v-if="currentProjectId">
@@ -153,7 +153,31 @@ function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
 
 <style scoped>
 .comp-root { display: flex; flex-direction: column; height: calc(100vh - 48px); }
-.comp-top { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; flex-shrink: 0; }
+.comp-top { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 12px; flex-shrink: 0; }
+
+/* 片场胶囊 */
+.sg-project-pills {
+  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
+  padding-bottom: 6px; scroll-behavior: smooth;
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.25) transparent;
+}
+.sg-project-pills::-webkit-scrollbar { height: 4px; display: block; }
+.sg-project-pills::-webkit-scrollbar-track { background: rgba(201,168,76,0.06); border-radius: 2px; }
+.sg-project-pills::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; min-width: 30px; }
+.sg-project-pills::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+.sg-pill {
+  font-size: 12px; padding: 7px 18px; border-radius: 20px; cursor: pointer;
+  background: rgba(255,253,249,0.7); border: 1.5px solid var(--bg-300);
+  color: var(--text-200); font-weight: 500; white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.22,0.61,0.36,1); user-select: none;
+  backdrop-filter: blur(4px);
+}
+.sg-pill:hover { border-color: var(--gold); color: var(--text-100); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,168,76,0.12); }
+.sg-pill.active {
+  background: linear-gradient(135deg, var(--navy) 0%, #252540 100%);
+  border-color: var(--gold); color: var(--gold); font-weight: 700;
+  box-shadow: 0 0 18px rgba(201,168,76,0.3), 0 2px 6px rgba(0,0,0,0.15);
+}
 .comp-body { flex: 1; overflow-y: auto; min-height: 0; }
 
 .panel { background: var(--bg-200); border-radius: 8px; border: 1px solid var(--bg-300); padding: 20px; }
