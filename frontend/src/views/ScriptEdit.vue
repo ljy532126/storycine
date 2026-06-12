@@ -26,8 +26,8 @@
      <el-button :disabled="historyIndex>=historyStack.length-1" @click="redoHistory" title="前进"><Redo size="13" fill="currentColor"/></el-button>
    </el-button-group>
    <span v-if="historyStack.length>0" style="font-size:10px;color:var(--text-200)">{{ historyIndex+1 }}/{{ historyStack.length }}</span>
-   <el-button size="small" type="primary" @click="handleSave" :disabled="!currentScript">保存分镜</el-button>
-   <el-button size="small" plain type="success" @click="syncToStoryboard" :loading="syncing">
+   <el-button size="small" @click="handleSave" :disabled="!currentScript" class="btn-save">保存分镜</el-button>
+   <el-button size="small" @click="syncToStoryboard" :loading="syncing" class="btn-sync">
      <Send size="13" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/> 同步至故事板
    </el-button>
    <el-button size="small" plain @click="showExportDialog = true">
@@ -726,6 +726,10 @@ async function exportAsPng(html, filename) {
 .center-empty{display:flex;align-items:center;justify-content:center}
 .ep-header{display:flex;align-items:center;gap:6px;font-size:12px;position:sticky;top:0;z-index:20;background:var(--bg-200);padding:8px 0 10px;border-bottom:1px solid var(--bg-300);margin-bottom:4px}
 .ep-header .el-button{font-size:11px}
+.btn-save{background:var(--gold)!important;border-color:var(--gold)!important;color:#fff!important;font-weight:600}
+.btn-save:hover{background:var(--gold-dark)!important;border-color:var(--gold-dark)!important}
+.btn-sync{border-color:var(--gold)!important;color:var(--gold-dark)!important;font-weight:600}
+.btn-sync:hover{background:var(--gold-light)!important;color:var(--navy)!important}
 .title-input{flex:1}
 .scene-count{color:var(--text-200);font-size:11px;white-space:nowrap}
 .scenes-area{display:flex;flex-direction:column;gap:12px}
