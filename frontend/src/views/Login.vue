@@ -101,10 +101,7 @@ const smsEnabled = ref(false);
 const form = reactive({ username: '', password: '' });
 
 const rules = {
-  username: [
-    { required: true, message: '请输入账号', trigger: 'blur' },
-    { pattern: /^[a-zA-Z][a-zA-Z0-9_]{2,29}$/, message: '字母开头，3-30位英文/数字/下划线', trigger: 'blur' },
-  ],
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [{ required: true, min: 6, message: '密码至少6位', trigger: 'blur' }],
 };
 
