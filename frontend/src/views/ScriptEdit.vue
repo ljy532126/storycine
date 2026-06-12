@@ -684,7 +684,7 @@ async function exportAsPng(html, filename) {
 }
 </script>
 <style scoped>
-.script-edit-root{display:flex;flex-direction:column;height:calc(100vh - 48px);overflow:hidden}
+.script-edit-root{display:flex;flex-direction:column;height:calc(100vh - 48px)}
 .top-bar{display:flex;align-items:center;margin-bottom:12px;flex-shrink:0}
 .word-count{margin-left:auto;color:var(--primary-200);font-size:14px;font-weight:bold;display:flex;align-items:center;gap:8px}
 .three-column{display:flex;flex:1;gap:12px;overflow:hidden;min-height:0}
