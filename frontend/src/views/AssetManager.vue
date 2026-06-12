@@ -178,6 +178,10 @@
                 <el-form-item label="性格特征"><el-input v-model="selectedAsset.personality" placeholder="角色的性格特点..." /></el-form-item>
                 <el-form-item label="背景故事"><el-input v-model="selectedAsset.background" type="textarea" :rows="2" placeholder="角色的背景故事..." /></el-form-item>
               </el-form>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <el-button size="small" @click="handleDelete" class="am-btn-delete">移除</el-button>
+                <el-button size="small" @click="saveAssetDetails" :loading="saving" class="am-btn-gen">保存修改</el-button>
+              </div>
               </div>
               <div class="detail-col-right">
             <div class="prompt-section" style="margin-top:0">
@@ -207,7 +211,7 @@
               <div class="section-label">参考图预览</div>
               <div style="position:relative;display:inline-block">
                 <img :src="charMainImage" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid var(--bg-300)" />
-                <el-button size="small" type="danger" circle style="position:absolute;top:-6px;right:-6px" @click="removeCharRefImage">×</el-button>
+                <el-button size="small" class="am-btn-delete" circle style="position:absolute;top:-6px;right:-6px" @click="removeCharRefImage">×</el-button>
               </div>
             </div>
               </div>
@@ -243,12 +247,6 @@
             </div>
               <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成道具图</el-button>
             </template>
-          </div>
-
-          <!-- 底部操作 -->
-          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bg-300);display:flex;gap:8px">
-            <el-button type="danger" size="small" @click="handleDelete">移除</el-button>
-            <el-button size="small" @click="saveAssetDetails" :loading="saving">保存修改</el-button>
           </div>
         </div>
       </div>
