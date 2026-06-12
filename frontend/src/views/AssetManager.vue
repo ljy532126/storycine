@@ -12,14 +12,14 @@
             <div class="list-header">
               <span>{{ assetStore.characters.length }} 位角色</span>
               <div style="display:flex;gap:6px">
-                <el-button size="small" type="success" @click="batchGenerateAssets('characters')" :loading="batchGenning"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
-                <el-button size="small" type="primary" @click="createNew('character')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
+                <el-button size="small" @click="batchGenerateAssets('characters')" :loading="batchGenning" class="am-btn-gen"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
+                <el-button size="small" @click="createNew('character')" class="am-btn-new"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
               </div>
             </div>
             <div v-if="assetStore.characters.length > 0" class="batch-bar">
               <el-button size="small" link @click="toggleSelectAll('characters')">{{ selectedCharIds.length === assetStore.characters.length ? '取消全选' : '全选' }}</el-button>
               <span v-if="selectedCharIds.length > 0">已选 {{ selectedCharIds.length }}</span>
-              <el-button v-if="selectedCharIds.length > 0" size="small" type="danger" @click="batchDeleteAssets('characters')">批量移除</el-button>
+              <el-button v-if="selectedCharIds.length > 0" size="small" @click="batchDeleteAssets('characters')" class="am-btn-delete">批量移除</el-button>
             </div>
             <div
               v-for="c in assetStore.characters" :key="c._id"
@@ -55,14 +55,14 @@
             <div class="list-header">
               <span>{{ assetStore.scenes.length }} 处场景</span>
               <div style="display:flex;gap:6px">
-                <el-button size="small" type="success" @click="batchGenerateAssets('scenes')" :loading="batchGenning"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
-                <el-button size="small" type="primary" @click="createNew('scene')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
+                <el-button size="small" @click="batchGenerateAssets('scenes')" :loading="batchGenning" class="am-btn-gen"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
+                <el-button size="small" @click="createNew('scene')" class="am-btn-new"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
               </div>
             </div>
             <div v-if="assetStore.scenes.length > 0" class="batch-bar">
               <el-button size="small" link @click="toggleSelectAll('scenes')">{{ selectedSceneIds.length === assetStore.scenes.length ? '取消全选' : '全选' }}</el-button>
               <span v-if="selectedSceneIds.length > 0">已选 {{ selectedSceneIds.length }}</span>
-              <el-button v-if="selectedSceneIds.length > 0" size="small" type="danger" @click="batchDeleteAssets('scenes')">批量移除</el-button>
+              <el-button v-if="selectedSceneIds.length > 0" size="small" @click="batchDeleteAssets('scenes')" class="am-btn-delete">批量移除</el-button>
             </div>
             <div
               v-for="s in assetStore.scenes" :key="s._id"
@@ -97,14 +97,14 @@
             <div class="list-header">
               <span>{{ assetStore.props.length }} 件道具</span>
               <div style="display:flex;gap:6px">
-                <el-button size="small" type="success" @click="batchGenerateAssets('props')" :loading="batchGenning"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
-                <el-button size="small" type="primary" @click="createNew('prop')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
+                <el-button size="small" @click="batchGenerateAssets('props')" :loading="batchGenning" class="am-btn-gen"><MagicWand size="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/> 一键生图</el-button>
+                <el-button size="small" @click="createNew('prop')" class="am-btn-new"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 新建</el-button>
               </div>
             </div>
             <div v-if="assetStore.props.length > 0" class="batch-bar">
               <el-button size="small" link @click="toggleSelectAll('props')">{{ selectedPropIds.length === assetStore.props.length ? '取消全选' : '全选' }}</el-button>
               <span v-if="selectedPropIds.length > 0">已选 {{ selectedPropIds.length }}</span>
-              <el-button v-if="selectedPropIds.length > 0" size="small" type="danger" @click="batchDeleteAssets('props')">批量移除</el-button>
+              <el-button v-if="selectedPropIds.length > 0" size="small" @click="batchDeleteAssets('props')" class="am-btn-delete">批量移除</el-button>
             </div>
             <div
               v-for="p in assetStore.props" :key="p._id"
@@ -188,52 +188,24 @@
               </el-form>
               <div class="prompt-section" style="margin-top:12px">
                 <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
-                  <el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 生成</el-button>
+                  <el-button size="small" link @click="generatePrompt" :loading="generatingPrompt">AI 生成</el-button>
                 </div>
-                <el-input v-model="promptText" type="textarea" :rows="4" placeholder="输入场景提示词..." maxlength="5000" show-word-limit />
+                <el-input v-model="promptText" type="textarea" :rows="4" placeholder="输入场景提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
               </div>
-              <div class="model-section">
-                <div class="section-label">模型选择</div>
-                <el-select v-model="selectedModel" style="width:100%">
-                  <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
-                  <el-option label="gpt-image-2" value="openai_image" />
-                </el-select>
-              </div>
-              <div class="model-section">
-                <div class="section-label">画幅比例</div>
-                <el-select v-model="genRatio" size="small" style="width:100%">
-                  <el-option label="9:16 竖屏" value="9:16" />
-                  <el-option label="16:9 横屏" value="16:9" />
-                  <el-option label="4:3" value="4:3" />
-                  <el-option label="3:4" value="3:4" />
-                </el-select>
-              </div>
-              <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成场景图</el-button>
-            </template>
-            <template v-else>
-              <el-form label-position="top" size="small">
-                <el-form-item label="道具名称">
-                  <el-input v-model="selectedAsset.propName" placeholder="道具名称" />
-                </el-form-item>
-                <el-form-item label="道具描述">
-                  <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
-                </el-form-item>
-              </el-form>
-              <div class="prompt-section" style="margin-top:12px">
-                <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
-                  <el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 生成</el-button>
-                </div>
-                <el-input v-model="promptText" type="textarea" :rows="4" placeholder="输入道具提示词..." maxlength="5000" show-word-limit />
-              </div>
-              <div class="model-section">
-                <div class="section-label">模型选择</div>
-                <el-select v-model="selectedModel" style="width:100%">
-                  <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
-                  <el-option label="gpt-image-2" value="openai_image" />
-                </el-select>
-              </div>
-<div class="model-section"><div class="section-label">画幅比例</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
-              <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成道具图</el-button>
+              <div class="model-row">
+              <el-select v-model="selectedModel" size="small" style="flex:1">
+                <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
+                <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
+                <el-option label="gpt-image-2" value="openai_image" />
+              </el-select>
+              <el-select v-model="genRatio" size="small" style="width:100px">
+                <el-option label="9:16 竖屏" value="9:16" />
+                <el-option label="16:9 横屏" value="16:9" />
+                <el-option label="4:3" value="4:3" />
+                <el-option label="3:4" value="3:4" />
+              </el-select>
+            </div>
+              <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成道具图</el-button>
             </template>
           </div>
 
@@ -243,21 +215,25 @@
               <div class="section-label">
                 生图提示词
                 <span class="char-count">{{ promptText.length }} / 5000</span>
-                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" type="warning" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance">构建提示词</el-button></el-tooltip>
-                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" type="primary" link @click="generatePrompt" :loading="generatingPrompt">AI 润色</el-button></el-tooltip>
+                <el-tooltip content="一键拼接标准四格角色设定卡提示词（左区特写 + 右区正/侧/后三视图），白色背景，16:9 横屏适用" placement="top" :show-after="300"><el-button size="small" link @click="buildCharSheetPrompt" :disabled="!selectedAsset?.appearance">构建提示词</el-button></el-tooltip>
+                <el-tooltip content="AI 读懂角色信息，智能润色优化提示词的细节、光影、构图，让生图质量更高" placement="top" :show-after="300"><el-button size="small" link @click="generatePrompt" :loading="generatingPrompt">AI 润色</el-button></el-tooltip>
               </div>
-              <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit />
+              <el-input v-model="promptText" type="textarea" :rows="5" placeholder="输入或生成生图提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
             </div>
-            <div class="model-section">
-              <div class="section-label">模型选择</div>
-              <el-select v-model="selectedModel" style="width:100%">
+            <div class="model-row">
+              <el-select v-model="selectedModel" size="small" style="flex:1">
                 <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
                 <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
                 <el-option label="gpt-image-2" value="openai_image" />
               </el-select>
+              <el-select v-model="genRatio" size="small" style="width:100px">
+                <el-option label="9:16 竖屏" value="9:16" />
+                <el-option label="16:9 横屏" value="16:9" />
+                <el-option label="4:3" value="4:3" />
+                <el-option label="3:4" value="3:4" />
+              </el-select>
             </div>
-<div class="model-section"><div class="section-label">画幅比例</div><el-select v-model="genRatio" size="small" style="width:100%"><el-option label="9:16 竖屏" value="9:16" /><el-option label="16:9 横屏" value="16:9" /><el-option label="4:3" value="4:3" /><el-option label="3:4" value="3:4" /></el-select></div>
-            <el-button type="primary" size="large" style="width:100%;margin-top:12px" @click="generateImage" :loading="generatingImage">生成角色图</el-button>
+            <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成角色图</el-button>
             <!-- 参考图预览 + 删除 -->
             <div v-if="activeTab === 'characters' && charMainImage" style="margin-top:14px">
               <div class="section-label">参考图预览</div>
