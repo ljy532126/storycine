@@ -921,6 +921,7 @@ async function batchGenerateAssets(type) {
 .detail-scroll { padding: 28px; max-width: 620px; }
 
 .asset-info-header { margin-bottom: 24px; }
+.asset-info-header :deep(.el-form-item__label) { color: var(--gold-dark) !important; font-weight: 600; }
 .info-title { font-size: 22px; font-weight: 700; color: var(--text-100); margin-bottom: 4px; }
 .info-sub { color: var(--text-200); font-size: 13px; display: flex; gap: 8px; align-items: center; }
 
