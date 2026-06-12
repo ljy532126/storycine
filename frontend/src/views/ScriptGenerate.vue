@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sg-root">
     <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
       <router-link to="/" class="bc-link">导演台</router-link>
@@ -131,8 +131,10 @@
 	          <template #header>
 	            <div class="card-header-row"><span class="card-title">创作记录 ({{ scripts.length }} 集)</span>
 	              <div class="card-header-btns">
+	                <span class="ep-counter" :class="{ 'ep-final': scripts.length >= totalEpisodes }">{{ scripts.length }}/{{ totalEpisodes }} 集</span>
 	                <el-button type="warning" @click="showStoryline"><Film theme="outline" size="14" fill="currentColor" /> 故事线总览</el-button>
-	                <el-button type="success" @click="handleContinue" :loading="scriptStore.generating"><MagicWand theme="outline" size="14" fill="currentColor" /> 续写下一集</el-button>
+	                <el-button v-if="scripts.length < totalEpisodes" type="success" @click="handleContinue" :loading="scriptStore.generating"><MagicWand theme="outline" size="14" fill="currentColor" /> 续写下一集</el-button>
+	                <el-button v-else type="danger" disabled> 全剧已完结</el-button>
 	              </div>
 	            </div>
 	          </template>
@@ -345,6 +347,7 @@ const screenWidth = ref(window.innerWidth);
 window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 const generationResult = ref(null);
 const scripts = ref([]);
+const totalEpisodes = ref(15);
 const logBody = ref(null);
 
 const currentStep = ref(scriptStore.progressStep || 0);
@@ -583,7 +586,20 @@ watch(() => projectStore.projects, (newList) => {
 }, { deep: false });
 
 function onProjectChange(val) {
-  if (val) { projectStore.rememberProject(val); loadScripts(val); socket.joinProject(val); }
+  if (val) {
+    projectStore.rememberProject(val);
+    loadScripts(val);
+    socket.joinProject(val);
+    loadProjectMeta(val);
+  }
+}
+
+async function loadProjectMeta(projectId) {
+  try {
+    const r = await fetch('/api/v1/projects/' + projectId, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const d = await r.json();
+    if (d.data) totalEpisodes.value = d.data.totalEpisodes || 15;
+  } catch {}
 }
 
 async function loadScripts(projectId) {
@@ -855,7 +871,9 @@ function applyQuickTemplate(t) {
 .sg-main { display: flex; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; }
 .card-title { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--text-100); font-size: 15px; letter-spacing: 0.5px; }
 .card-header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.card-header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.card-header-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ep-counter { font-size: 13px; font-weight: 700; color: var(--text-100); padding: 4px 12px; background: var(--bg-100); border-radius: 6px; border: 1px solid var(--bg-300); white-space: nowrap; }
+.ep-counter.ep-final { color: #67c23a; border-color: #67c23a; background: rgba(103,194,58,0.06); }
 .history-fill { margin-top: 14px; flex: 1; display: flex; flex-direction: column; overflow: visible; min-height: 0; }
 .history-fill :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; overflow: visible; }
 

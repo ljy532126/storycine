@@ -201,15 +201,15 @@ router.post('/continue', aiContinueLimiter, async (req, res, next) => {
     const lastScript = historyScripts[historyScripts.length - 1];
     const targetEpisode = (lastScript?.episodeNumber || 0) + 1;
 
-    // 读取项目的视觉配置
+    // 读取项目的视觉配置 + 完结控制
     const project = await Project.findById(projectId);
+    const totalEpisodes = project?.totalEpisodes || 15;
     const videoConfig = project?.videoConfig || {};
     const directorSettings = project?.directorSettings || {};
-    console.log(`[script] 读取项目视觉配置: 比例=${videoConfig.aspectRatio} 风格=${videoConfig.visualStyle}/${videoConfig.subStyle} 导演设定=${directorSettings.qualityKeywords ? '已设置' : '未设置'} 画风=${directorSettings.artStyleCommands ? '已设置' : '未设置'}`);
+    console.log(`[script] 集数控制: 第${targetEpisode}/${totalEpisodes}集 风格=${videoConfig.visualStyle}/${videoConfig.subStyle}`);
 
     const graph = buildScriptContinueGraph();
 
-    // 设置全局 io 引用（LangGraph 状态序列化会丢失 io 对象）
     global.__io = io;
     global.__projectId = projectId;
 
@@ -224,6 +224,7 @@ router.post('/continue', aiContinueLimiter, async (req, res, next) => {
       status: 'continuing',
       historyScripts,
       characters: [],
+      totalEpisodes,
     };
 
     res.status(202).json({ message: '续写任务已提交', targetEpisode });
@@ -241,6 +242,12 @@ router.post('/continue', aiContinueLimiter, async (req, res, next) => {
       });
 
       io.to(`project-${projectId}`).emit('script-continue-complete', { status: 'completed', data: script });
+
+      // 最后一集：自动标记项目为已完成
+      if (targetEpisode >= totalEpisodes) {
+        await Project.updateOne({ _id: projectId }, { $set: { status: 'completed' } });
+        io.to(`project-${projectId}`).emit('project-completed', { projectId, message: '全剧已完结！总集数：' + targetEpisode + ' 集' });
+      }
     }).catch((err) => {
       console.error('Script continue error:', err);
       let msg = err.message || '未知错误';

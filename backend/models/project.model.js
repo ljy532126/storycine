@@ -6,6 +6,8 @@ const projectSchema = new mongoose.Schema({
   coverImage: { type: String, default: '' },
   status: { type: String, enum: ['draft', 'in_progress', 'completed', 'archived'], default: 'draft' },
   scriptSource: { type: String, enum: ['ai_generated', 'manual_import', 'none'], default: 'none' },
+  totalEpisodes: { type: Number, default: 15 },
+  copyrightDeclaration: { type: String, default: '本作品由 StoryCine AI 辅助生成，用户拥有二次创作版权，请遵守平台内容规范' },
   videoConfig: {
     aspectRatio: { type: String, default: '9:16', enum: ['9:16', '16:9', '4:3', '3:4'] },
     visualStyle: { type: String, default: '写实', enum: ['写实', '动漫', '真人', '古风', '电影感'] },

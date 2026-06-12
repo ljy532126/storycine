@@ -9,10 +9,18 @@ async function run(state) {
 
   const historyScripts = state.historyScripts || [];
   const targetEpisode = state.targetEpisode || state.episodeNumber;
+  const totalEpisodes = state.totalEpisodes || 30;
 
   // 检测剧集间隙
   const gapInfo = detectGaps(historyScripts, targetEpisode);
-  if (gapInfo) {
+  const isFinalEpisode = targetEpisode >= totalEpisodes;
+  const remainingEpisodes = Math.max(0, totalEpisodes - targetEpisode);
+
+  if (isFinalEpisode) {
+    emitProgress(state, `正在续写最终结局（第${targetEpisode}/${totalEpisodes}集）...`);
+  } else if (remainingEpisodes <= 3) {
+    emitProgress(state, `正在续写（还剩${remainingEpisodes}集完结）...`);
+  } else if (gapInfo) {
     emitProgress(state, `检测到剧集间隙: ${gapInfo}，AI 将自动补全衔接`, 'warning');
   } else {
     emitProgress(state, '正在续写剧本，承接前文剧情...');
@@ -28,9 +36,17 @@ async function run(state) {
     styleInfo
   );
 
-  // 如果有间隙，注入衔接提示
+  // 间隙衔接
   if (gapInfo) {
     userPrompt += `\n\n【重要】${gapInfo}\n请在本集中自然过渡，通过角色对话或内心独白简要交代跳过的剧情，确保观众理解故事发展。`;
+  }
+
+  // 完结控制：最后3集注入收敛提示
+  if (remainingEpisodes <= 3 || isFinalEpisode) {
+    const endingGuidance = isFinalEpisode
+      ? '【大结局】这是全剧最后一集！必须：1）所有主线伏笔回收 2）角色命运交代清楚 3）主题升华点题 4）情感高潮后给一个有力且余味悠长的结尾 5）可选：隐藏反转/开放式结局增加传播性'
+      : `【接近尾声】还剩${remainingEpisodes}集完结。本集需：1）收束至少一条副线 2）为最终结局铺垫情感高潮 3）减少新人物/新事件引入 4）整体节奏加快`;
+    userPrompt += `\n\n${endingGuidance}`;
   }
 
   try {
