@@ -541,7 +541,7 @@ async function drawBarChart() {
 }
 
 function onResize() {
-  if (uaBarInstance) uaBarInstance.resize();
+  try { if (uaBarInstance) uaBarInstance.resize(); } catch {}
 }
 
 // Tab switch
