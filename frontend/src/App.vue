@@ -771,9 +771,9 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .bell-icon:hover { background: var(--gold); color: var(--navy); }
 .bell-icon .bell-dot { top: -3px; right: -4px; }
 .bell-collapsed { margin: 0 auto; }
-.app-main { background: var(--bg-100); min-height: calc(100vh - 48px); padding: 0; transition: padding 0.3s; }
+.app-main { background: var(--bg-100); overflow-y: auto; height: calc(100vh - 48px); padding: 0; transition: padding 0.3s; }
 .app-main-landing { padding: 0 !important; min-height: 100vh; background: var(--bg-100); overflow-x: hidden; }
-.app-content { padding: 20px 28px 28px; min-height: calc(100vh - 48px - 48px); }
+.app-content { padding: 20px 28px 28px; }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
 
 .sidebar-user-row { display: flex; align-items: center; }
