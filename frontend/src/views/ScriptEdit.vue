@@ -457,15 +457,30 @@ async function handleAutoStoryboard(){
       const ai=aiShots[i];
       if(!ai)return;
       newAmended[i]={};
-      if(!s.shotType||s.shotType==='中景'){s.shotType=ai.shotType||'中景';newAmended[i].shotType=true;totalAmended++;}
-      if(!s.cameraAngle||s.cameraAngle==='平视'){s.cameraAngle=ai.cameraAngle||'平视';newAmended[i].cameraAngle=true;totalAmended++;}
-      if(!s.composition||!s.composition.trim()){s.composition=ai.composition||'';newAmended[i].composition=true;totalAmended++;}
-      if(!s.cameraMovement||s.cameraMovement==='固定'){s.cameraMovement=ai.cameraMovement||'固定';newAmended[i].cameraMovement=true;totalAmended++;}
-      if(!s.lighting||!s.lighting.trim()){s.lighting=ai.lighting||'';newAmended[i].lighting=true;totalAmended++;}
-      if(!s.soundEffect||!s.soundEffect.trim()){s.soundEffect=ai.soundEffect||'';newAmended[i].soundEffect=true;totalAmended++;}
-      if(!s.atmosphere||!s.atmosphere.trim()){s.atmosphere=ai.characterEmotion||'';newAmended[i].atmosphere=true;totalAmended++;}
-      if(!s.sceneDescription||!s.sceneDescription.trim()){s.sceneDescription=ai._imagePrompt||ai.imageDescription||'';newAmended[i].sceneDescription=true;totalAmended++;}
-      if(!s.duration||s.duration===3){s.duration=ai.duration||5;newAmended[i].duration=true;totalAmended++;}
+      // 只在实际有变化时标记：旧值为空/默认值 且 AI返回了不同值
+      const tryAmend = (oldVal, aiVal, defaultVal, field) => {
+        const isEmpty = !oldVal || !String(oldVal).trim() || oldVal === defaultVal;
+        const newVal = aiVal || defaultVal;
+        if (isEmpty && String(newVal) !== String(oldVal || defaultVal)) {
+          s[field] = newVal;
+          newAmended[i][field] = true;
+          totalAmended++;
+          return true;
+        }
+        return false;
+      };
+      tryAmend(s.shotType, ai.shotType, '中景', 'shotType');
+      tryAmend(s.cameraAngle, ai.cameraAngle, '平视', 'cameraAngle');
+      tryAmend(s.composition, ai.composition, '', 'composition');
+      tryAmend(s.cameraMovement, ai.cameraMovement, '固定', 'cameraMovement');
+      tryAmend(s.lighting, ai.lighting, '', 'lighting');
+      tryAmend(s.soundEffect, ai.soundEffect, '', 'soundEffect');
+      tryAmend(s.atmosphere, ai.characterEmotion || ai.atmosphere, '', 'atmosphere');
+      tryAmend(s.sceneDescription, ai._imagePrompt || ai.imageDescription || ai.sceneDescription, '', 'sceneDescription');
+      if (Number(s.duration) <= 3 || !s.duration) {
+        const aiDur = Number(ai.duration) || 5;
+        if (aiDur !== (Number(s.duration) || 3)) { s.duration = aiDur; newAmended[i].duration = true; totalAmended++; }
+      }
       // 自动绑定主体：匹配台词角色名 → assetId
       s.characters?.forEach(cName=>{
  const id=charNameToId[cName];
