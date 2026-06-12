@@ -22,7 +22,7 @@ const routes = [
   { path: '/dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
   { path: '/projects', name: 'ProjectList', component: ProjectList, meta: { requiresAuth: true } },
   { path: '/script-generate', redirect: '/workspace?ws=script-generate' },
-  { path: '/script-edit', redirect: '/workspace?ws=script-edit' },
+  { path: '/script-edit', redirect: to => ({ path: '/workspace', query: { ...to.query, ws: 'script-edit' } }) },
   { path: '/assets', redirect: '/workspace?ws=assets' },
   { path: '/storyboard', redirect: '/workspace?ws=storyboard' },
   { path: '/composition', redirect: '/workspace?ws=composition' },
