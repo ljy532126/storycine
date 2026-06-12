@@ -9,69 +9,6 @@
     <!-- 移动端遮罩 -->
     <div v-if="!['Landing','Login','Register'].includes($route.name) && mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false"></div>
     
-    <!-- ===== 顶部栏 ===== -->
-    <header v-if="!['Landing','Login','Register'].includes($route.name)" class="app-topbar">
-      <div class="topbar-left">
-        <div class="topbar-breadcrumb">
-          <router-link to="/" class="tbc-link">导演台</router-link>
-          <span class="tbc-sep">/</span>
-          <router-link v-if="parentRoute" :to="parentRoute.to" class="tbc-link">{{ parentRoute.label }}</router-link>
-          <span v-if="parentRoute" class="tbc-sep">/</span>
-          <span class="tbc-current">{{ pageTitle }}</span>
-        </div>
-      </div>
-      <div class="topbar-right">
-        <el-tooltip content="全局搜索 Ctrl+K" placement="bottom">
-          <div class="topbar-icon" @click="searchVisible = true"><el-icon :size="18"><Search /></el-icon></div>
-        </el-tooltip>
-        <el-popover placement="bottom-end" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
-          <template #reference>
-            <div class="topbar-icon bell" :class="{ 'bell-shake': bellShaking }">
-              <el-icon :size="18"><Bell /></el-icon>
-              <span v-if="unreadAnnounceCount > 0" class="topbar-badge">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
-            </div>
-          </template>
-          <div class="bell-pop">
-            <div class="bell-pop-head">
-              <span>公告 & 通知</span>
-              <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
-            </div>
-            <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
-            <div v-for="a in announcements.slice(0, 10)" :key="a._id"
-              :class="['bell-item', a.type]"
-              @click="openAnnounceDetail(a)">
-              <span :class="['bell-item-dot', a.type]"></span>
-              <div class="bell-item-body">
-                <div class="bell-item-title">{{ a.title }}</div>
-                <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
-                <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
-              </div>
-            </div>
-            <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
-          </div>
-        </el-popover>
-        <el-popover placement="bottom-end" :width="220" trigger="click">
-          <template #reference>
-            <div class="topbar-user">
-              <div class="topbar-avatar" :style="{ backgroundImage: currentUser.avatar ? 'url(' + currentUser.avatar + ')' : '' }">
-                <span v-if="!currentUser.avatar">{{ avatarLetter }}</span>
-              </div>
-              <span class="topbar-username">{{ currentUser.nickname || currentUser.username }}</span>
-            </div>
-          </template>
-          <div class="user-pop">
-            <div class="user-pop-info">
-              <span class="user-pop-name">{{ currentUser.nickname || currentUser.username }}</span>
-              <span class="user-pop-role">{{ currentUser.role === 'admin' ? '管理员' : '用户' }}</span>
-            </div>
-            <div class="user-pop-actions">
-              <div class="user-pop-item" @click="$router.push('/settings')"><el-icon><Setting /></el-icon> 系统设置</div>
-              <div class="user-pop-item danger" @click="handleLogout"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> 退出登录</div>
-            </div>
-          </div>
-        </el-popover>
-      </div>
-    </header>
 <el-container>
       <el-aside v-if="!['Landing','Login','Register'].includes($route.name)" :width="collapsed ? '64px' : '220px'" :class="['app-sidebar', { 'mobile-open': mobileMenuOpen }]">
         <div class="logo">
@@ -166,10 +103,76 @@
         </div>
       </el-aside>
       <el-main :class="['Landing','Login','Register'].includes($route.name) ? 'app-main-landing' : 'app-main'">
+        <!-- ===== 顶部栏 ===== -->
+    <header v-if="!['Landing','Login','Register'].includes($route.name)" class="app-topbar">
+      <div class="topbar-left">
+        <div class="topbar-breadcrumb">
+          <router-link to="/" class="tbc-link">导演台</router-link>
+          <span class="tbc-sep">/</span>
+          <router-link v-if="parentRoute" :to="parentRoute.to" class="tbc-link">{{ parentRoute.label }}</router-link>
+          <span v-if="parentRoute" class="tbc-sep">/</span>
+          <span class="tbc-current">{{ pageTitle }}</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <el-tooltip content="全局搜索 Ctrl+K" placement="bottom">
+          <div class="topbar-icon" @click="searchVisible = true"><el-icon :size="18"><Search /></el-icon></div>
+        </el-tooltip>
+        <el-popover placement="bottom-end" :width="340" trigger="click" :visible="bellPopVisible" @update:visible="onBellToggle">
+          <template #reference>
+            <div class="topbar-icon bell" :class="{ 'bell-shake': bellShaking }">
+              <el-icon :size="18"><Bell /></el-icon>
+              <span v-if="unreadAnnounceCount > 0" class="topbar-badge">{{ unreadAnnounceCount > 99 ? '99+' : unreadAnnounceCount }}</span>
+            </div>
+          </template>
+          <div class="bell-pop">
+            <div class="bell-pop-head">
+              <span>公告 & 通知</span>
+              <span v-if="unreadAnnounceCount > 0" class="bell-pop-badge">{{ unreadAnnounceCount }} 条未读</span>
+            </div>
+            <div v-if="announcements.length === 0" class="bell-pop-empty">暂无公告</div>
+            <div v-for="a in announcements.slice(0, 10)" :key="a._id"
+              :class="['bell-item', a.type]"
+              @click="openAnnounceDetail(a)">
+              <span :class="['bell-item-dot', a.type]"></span>
+              <div class="bell-item-body">
+                <div class="bell-item-title">{{ a.title }}</div>
+                <div class="bell-item-content" v-if="a.content">{{ stripMd(a.enableMarkdown ? a.content : '').substring(0, 80) }}{{ a.content.length > 80 ? '...' : '' }}</div>
+                <div class="bell-item-time">{{ formatAnnTime(a.createdAt) }}</div>
+              </div>
+            </div>
+            <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
+          </div>
+        </el-popover>
+        <el-popover placement="bottom-end" :width="220" trigger="click">
+          <template #reference>
+            <div class="topbar-user">
+              <div class="topbar-avatar" :style="{ backgroundImage: currentUser.avatar ? 'url(' + currentUser.avatar + ')' : '' }">
+                <span v-if="!currentUser.avatar">{{ avatarLetter }}</span>
+              </div>
+              <span class="topbar-username">{{ currentUser.nickname || currentUser.username }}</span>
+            </div>
+          </template>
+          <div class="user-pop">
+            <div class="user-pop-info">
+              <span class="user-pop-name">{{ currentUser.nickname || currentUser.username }}</span>
+              <span class="user-pop-role">{{ currentUser.role === 'admin' ? '管理员' : '用户' }}</span>
+            </div>
+            <div class="user-pop-actions">
+              <div class="user-pop-item" @click="$router.push('/settings')"><el-icon><Setting /></el-icon> 系统设置</div>
+              <div class="user-pop-item danger" @click="handleLogout"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> 退出登录</div>
+            </div>
+          </div>
+        </el-popover>
+      </div>
+    </header>
+
         <router-view v-slot="{ Component }">
           <transition name="page-fade" mode="out-in">
             <keep-alive exclude="Landing,Login,Register">
+              <div class="app-content">
               <component :is="Component" />
+              </div>
             </keep-alive>
           </transition>
         </router-view>
@@ -616,12 +619,9 @@ function stopAnnPoll() {
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--bg-100); color: var(--text-200); }
-#app-container { height: 100vh; background: var(--bg-100); }
-#app-container { display: flex; flex-direction: column; }
-
 /* ===== 顶部栏 ===== */
 .app-topbar {
-  height: 48px; flex-shrink: 0;
+  height: 48px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px;
   background: #fff; border-bottom: 1px solid var(--bg-300);
@@ -771,8 +771,9 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .bell-icon:hover { background: var(--gold); color: var(--navy); }
 .bell-icon .bell-dot { top: -3px; right: -4px; }
 .bell-collapsed { margin: 0 auto; }
-.app-main { background: var(--bg-100); min-height: calc(100vh - 48px); padding: 28px; transition: padding 0.3s; }
+.app-main { background: var(--bg-100); min-height: calc(100vh - 48px); padding: 0; transition: padding 0.3s; }
 .app-main-landing { padding: 0 !important; min-height: 100vh; background: var(--bg-100); overflow-x: hidden; }
+.app-content { padding: 20px 28px 28px; min-height: calc(100vh - 48px - 48px); }
 .el-menu-vertical:not(.el-menu--collapse) { width: 100%; }
 
 .sidebar-user-row { display: flex; align-items: center; }
@@ -990,7 +991,8 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   }
   .app-sidebar.mobile-open { left: 0 !important; }
   .app-sidebar .logo { display: none !important; }
-  .app-main { padding: 56px 12px 24px !important; padding-top: 56px !important; margin-top: 0 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+  .app-main { padding: 0 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+  .app-content { padding: 56px 12px 24px !important; }
   #app-container { padding-top: 48px; }
   .el-menu--collapse { width: 240px !important; }
   .el-menu--collapse .el-menu-item { width: auto !important; margin: 4px 10px !important; padding: 0 16px !important; justify-content: flex-start !important; }
