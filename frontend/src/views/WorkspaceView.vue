@@ -15,6 +15,15 @@
         <div v-if="i < steps.length - 1" class="ws-step-line"></div>
       </div>
       <ProjectSwitcher v-model="currentProjectId" />
+      <div v-if="activeStep === 'script-edit' && episodeBar.scripts.length && screenWidth >= 768" class="ws-episode-bar">
+        <div v-for="ep in episodeBar.scripts" :key="ep._id"
+          :class="['ws-ep-chip', { active: episodeBar.currentScriptId === ep._id }]"
+          @click="episodeBar.select?.(ep._id)">
+          第{{ ep.episodeNumber }}集 {{ ep.episodeTitle||'未命名' }}
+        </div>
+        <el-button size="small" text @click="episodeBar.add?.()" title="新建剧集">+ 新建</el-button>
+        <el-button size="small" text @click="episodeBar.dup?.()" title="复制当前集">⧉ 复制</el-button>
+      </div>
     </div>
 
     <div class="ws-content">
@@ -26,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, provide, markRaw, defineAsyncComponent } from 'vue';
+import { ref, reactive, computed, watch, onMounted, provide, markRaw, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/project';
 import ProjectSwitcher from '../components/ProjectSwitcher.vue';
@@ -36,6 +45,8 @@ const router = useRouter();
 const projectStore = useProjectStore();
 
 const currentProjectId = ref('');
+const screenWidth = ref(window.innerWidth);
+window.addEventListener('resize', () => { screenWidth.value = window.innerWidth; });
 
 // 初始化：恢复上次项目
 onMounted(async () => {
@@ -46,6 +57,10 @@ onMounted(async () => {
 
 // 提供给子页面使用
 provide('currentProjectId', currentProjectId);
+
+// 分镜台本的剧集栏（由 ScriptEdit 填充）
+const episodeBar = reactive({ scripts: [], currentScriptId: '', add: null, dup: null, select: null });
+provide('wsEpisodeBar', episodeBar);
 
 const steps = [
   { key: 'script-generate', label: '剧本工坊' },
@@ -131,7 +146,7 @@ onMounted(() => {
   display: flex; align-items: center; justify-content: center;
   padding: 8px 16px; margin-bottom: 8px;
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
-  flex-shrink: 0; overflow: hidden; gap: 0;
+  flex-shrink: 0; overflow: hidden; gap: 0; flex-wrap: wrap;
 }
 .ws-steps :deep(.ps-root) { margin-left: auto; }
 .ws-step {
@@ -170,6 +185,10 @@ onMounted(() => {
 
 .ws-content { flex: 1; min-height: 0; }
 .ws-project-pick { margin-left: auto; }
+.ws-episode-bar { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--bg-300); overflow-x: auto; }
+.ws-ep-chip { font-size: 11px; padding: 4px 10px; border-radius: 14px; cursor: pointer; background: var(--bg-100); border: 1px solid var(--bg-300); color: var(--text-200); font-weight: 500; white-space: nowrap; transition: all 0.15s; user-select: none; }
+.ws-ep-chip:hover { border-color: var(--gold); color: var(--text-100); }
+.ws-ep-chip.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }
 
 @media (max-width: 768px) {
   .ws-steps { justify-content: flex-start; padding: 10px 14px; }

@@ -216,6 +216,7 @@ import { MagicWand, Send, Download, Undo, Redo, Add, Delete, Camera, Edit, Film,
 const route=useRoute();const router=useRouter();
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore=useProjectStore();const scriptStore=useScriptStore();const assetStore=useAssetStore();
+const episodeBar = inject('wsEpisodeBar', null);
 
 const currentProjectId=inject('currentProjectId');const currentScriptId=ref('');const currentScript=ref(null);
 const scripts=ref([]);const showDirectorDialog=ref(false);const showExtractDialog=ref(false);
@@ -360,7 +361,7 @@ onActivated(() => {
 // keep-alive 缓存后，每次进入页面重新拉取剧集列表
 watch(() => route.path, (p) => {
   if (p === '/script-edit' && currentProjectId.value) {
-    scriptStore.fetchScripts(currentProjectId.value).then(() => { scripts.value = [...scriptStore.scripts]; });
+    scriptStore.fetchScripts(currentProjectId.value).then(() => { scripts.value = [...scriptStore.scripts]; syncEpisodeBar(); });
   }
 });
 
@@ -371,6 +372,7 @@ async function onProjectChange(val, targetScriptId){
     if(project.directorSettings){directorForm.qualityKeywords=project.directorSettings.qualityKeywords||directorForm.qualityKeywords;directorForm.atmosphereLighting=project.directorSettings.atmosphereLighting||'';directorForm.artStyleCommands=project.directorSettings.artStyleCommands||''}}catch(e){}
   scriptStore.fetchScripts(val).then(()=>{
     scripts.value=[...scriptStore.scripts];
+    syncEpisodeBar();
     if(scripts.value.length>0){
       const target = targetScriptId ? scripts.value.find(s => s._id === targetScriptId) : null;
       switchEpisode(target ? target._id : scripts.value[0]._id);
@@ -381,7 +383,8 @@ async function onProjectChange(val, targetScriptId){
 
 async function loadAllAssets(pid){try{await assetStore.fetchCharacters(pid);await assetStore.fetchScenes(pid);await assetStore.fetchProps(pid);allAssets.value=[...assetStore.characters,...assetStore.scenes,...assetStore.props]}catch(e){}}
 
-async function switchEpisode(scriptId){if(dirty.value)await handleSave();currentScriptId.value=scriptId;const s=await scriptStore.fetchScript(scriptId);currentScript.value=JSON.parse(JSON.stringify(s));charactersStr.value=(currentScript.value.scenes||[]).map(x=>(x.characters||[]).join(', '));dirty.value=false;loadHistory();}
+async function switchEpisode(scriptId){if(dirty.value)await handleSave();currentScriptId.value=scriptId;const s=await scriptStore.fetchScript(scriptId);currentScript.value=JSON.parse(JSON.stringify(s));charactersStr.value=(currentScript.value.scenes||[]).map(x=>(x.characters||[]).join(', '));dirty.value=false;loadHistory();syncEpisodeBar();}
+function syncEpisodeBar(){if(!episodeBar)return;episodeBar.scripts=scripts.value;episodeBar.currentScriptId=currentScriptId.value;episodeBar.add=addEpisode;episodeBar.dup=duplicateEpisode;episodeBar.select=switchEpisode;}
 async function addEpisode(){if(!currentProjectId.value)return;const maxNum=scripts.value.reduce((m,s)=>Math.max(m,s.episodeNumber),0);try{const res=await scriptAPI.createEmpty({projectId:currentProjectId.value,episodeNumber:maxNum+1,episodeTitle:''});await scriptStore.fetchScripts(currentProjectId.value);scripts.value=[...scriptStore.scripts];currentScriptId.value=res.data._id;await switchEpisode(res.data._id);ElMessage.success(`第${maxNum+1}集已创建 🎉`)}catch(e){ElMessage.error('哎呀，创建出错啦，再试一次哦')}}
 async function duplicateEpisode(){if(!currentScript.value)return;const maxNum=scripts.value.reduce((m,s)=>Math.max(m,s.episodeNumber),0);try{const res=await scriptAPI.createEmpty({projectId:currentProjectId.value,episodeNumber:maxNum+1,episodeTitle:(currentScript.value.episodeTitle||'')+' (副本)',scenes:JSON.parse(JSON.stringify(currentScript.value.scenes||[]))});await scriptStore.fetchScripts(currentProjectId.value);scripts.value=[...scriptStore.scripts];const ns=scripts.value.find(s=>s._id===res.data._id);if(ns){currentScriptId.value=ns._id;await switchEpisode(ns._id)}ElMessage.success(`已复制为第${maxNum+1}集 📋`)}catch(e){ElMessage.error('复制失败')}}
 
