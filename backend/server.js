@@ -50,36 +50,78 @@ if (require('fs').existsSync(frontendDist)) {
   console.log('[static] Frontend dist served from:', frontendDist);
 }
 
-// API 监控中间件（启动时从文件恢复，重启不丢失）
-const fs = require('fs');
-const STATS_FILE = path.join(__dirname, 'api_stats.json');
-function loadStats() { try { if (fs.existsSync(STATS_FILE)) return JSON.parse(fs.readFileSync(STATS_FILE, 'utf-8')); } catch {} return { total: 0, routes: {}, recent: [], ai: { image: { total: 0, success: 0, fail: 0 }, video: { total: 0, success: 0, fail: 0 }, llm: { total: 0, success: 0, fail: 0 } } }; }
-function saveStats() { try { fs.writeFileSync(STATS_FILE, JSON.stringify(apiStats)); } catch {} }
-const apiStats = loadStats();
-setInterval(saveStats, 60000); // 每分钟持久化
-process.on('SIGINT', () => { saveStats(); process.exit(); });
-process.on('SIGTERM', () => { saveStats(); process.exit(); });
+// API 监控中间件（内存聚合 + MongoDB 持久化）
+const ApiCallStats = require('./models/api-call-stats.model');
+
+function initStats() {
+  return { total: 0, routes: {}, recent: [], ai: { image: { total: 0, success: 0, fail: 0 }, video: { total: 0, success: 0, fail: 0 }, llm: { total: 0, success: 0, fail: 0 } } };
+}
+
+// 启动时从 MongoDB 恢复统计
+let apiStatsLoaded = false;
+async function loadStatsFromDB() {
+  try {
+    const [all, img, vid, llm] = await Promise.all([
+      ApiCallStats.countDocuments(),
+      ApiCallStats.countDocuments({ category: 'image' }),
+      ApiCallStats.countDocuments({ category: 'video' }),
+      ApiCallStats.countDocuments({ category: 'llm' }),
+    ]);
+    const [imgOk, vidOk, llmOk] = await Promise.all([
+      ApiCallStats.countDocuments({ category: 'image', statusCode: { $lt: 400 } }),
+      ApiCallStats.countDocuments({ category: 'video', statusCode: { $lt: 400 } }),
+      ApiCallStats.countDocuments({ category: 'llm', statusCode: { $lt: 400 } }),
+    ]);
+    apiStats.total = all;
+    apiStats.ai.image = { total: img, success: imgOk, fail: img - imgOk };
+    apiStats.ai.video = { total: vid, success: vidOk, fail: vid - vidOk };
+    apiStats.ai.llm = { total: llm, success: llmOk, fail: llm - llmOk };
+    apiStatsLoaded = true;
+    console.log(`[stats] 从数据库恢复: 总${all}次, 生图${img}, 生视频${vid}, LLM${llm}`);
+  } catch (e) { console.warn('[stats] 数据库恢复失败，使用空统计:', e.message); }
+}
+
+const apiStats = initStats();
+// 异步恢复，不阻塞启动
+loadStatsFromDB();
+
 app.use('/api/v1', (req, res, next) => {
+  const startTime = Date.now();
   const key = req.method + ' ' + req.path;
   apiStats.total++;
   if (!apiStats.routes[key]) apiStats.routes[key] = { count: 0, last: '', statuses: {} };
   apiStats.routes[key].count++;
   apiStats.routes[key].last = new Date().toISOString();
-  // AI 调用分类统计
-  if (req.path.includes('generate-image') && req.body?.assetType === 'video') apiStats.ai.video.total++;
-  else if (req.path.includes('generate-image')) apiStats.ai.image.total++;
-  if (req.path.includes('generate-prompt') || req.path.includes('ai-generate') || req.path.includes('auto-generate') || req.path.includes('/continue')) apiStats.ai.llm.total++;
+
+  // AI 调用分类
+  let category = 'other';
+  if (req.path.includes('generate-image') && req.body?.assetType === 'video') { category = 'video'; apiStats.ai.video.total++; }
+  else if (req.path.includes('generate-image')) { category = 'image'; apiStats.ai.image.total++; }
+  else if (req.path.includes('generate-prompt') || req.path.includes('ai-generate') || req.path.includes('auto-generate') || req.path.includes('/continue')) { category = 'llm'; apiStats.ai.llm.total++; }
 
   const orig = res.json.bind(res);
   res.json = function (body) {
     const s = res.statusCode;
+    const success = s < 400;
     apiStats.routes[key].statuses[s] = (apiStats.routes[key].statuses[s] || 0) + 1;
     apiStats.recent.unshift({ route: key, status: s, time: new Date().toISOString() });
     if (apiStats.recent.length > 50) apiStats.recent.length = 50;
-    // AI 调用成功/失败统计
-    if (req.path.includes('generate-image') && req.body?.assetType === 'video') { if (s < 400) apiStats.ai.video.success++; else apiStats.ai.video.fail++; }
-    else if (req.path.includes('generate-image')) { if (s < 400) apiStats.ai.image.success++; else apiStats.ai.image.fail++; }
-    if (req.path.includes('generate-prompt') || req.path.includes('ai-generate') || req.path.includes('auto-generate') || req.path.includes('/continue')) { if (s < 400) apiStats.ai.llm.success++; else apiStats.ai.llm.fail++; }
+
+    // 内存计数
+    if (category === 'video') { if (success) apiStats.ai.video.success++; else apiStats.ai.video.fail++; }
+    else if (category === 'image') { if (success) apiStats.ai.image.success++; else apiStats.ai.image.fail++; }
+    else if (category === 'llm') { if (success) apiStats.ai.llm.success++; else apiStats.ai.llm.fail++; }
+
+    // 异步写入 MongoDB（不阻塞响应）
+    if (category !== 'other' && apiStatsLoaded) {
+      ApiCallStats.create({
+        route: key, method: req.method, statusCode: s, category,
+        projectId: req.body?.projectId || undefined,
+        userId: req.user?._id || undefined,
+        duration: Date.now() - startTime,
+      }).catch(() => {});
+    }
+
     return orig(body);
   };
   next();
@@ -89,7 +131,6 @@ app.get('/api/v1/monitor/endpoints', require('./middleware/auth.middleware').aut
   const list = Object.entries(apiStats.routes).map(([k, v]) => ({ route: k, ...v }));
   list.sort((a, b) => b.count - a.count);
   const okCount = apiStats.recent.filter(r => r.status < 400).length;
-  // 始终展示真实数据
   res.json({ data: { total: apiStats.total, routes: list, recent: apiStats.recent.slice(0, 10), health: apiStats.recent.length > 0 ? Math.round(okCount / apiStats.recent.length * 100) : 100, ai: apiStats.ai } });
 });
 
