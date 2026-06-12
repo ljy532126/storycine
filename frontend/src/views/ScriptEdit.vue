@@ -9,7 +9,7 @@
     </div>
     <div class="top-bar">
       <div class="sg-project-pills">
- <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; resetToScriptGenerate(p._id); onProjectChange(p._id)">{{ p.name }}</span>
+ <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
       </div>
       <el-button type="primary" size="large" style="margin-left:12px" @click="handleSave" :disabled="!currentScript">
  <Download size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 保存分镜

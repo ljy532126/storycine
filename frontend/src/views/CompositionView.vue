@@ -7,7 +7,7 @@
     </div>
     <div class="comp-top">
       <div class="sg-project-pills">
-        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="currentProjectId = p._id; resetToScriptGenerate(p._id); onProjectChange(p._id)">{{ p.name }}</span>
+        <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
       </div>
     </div>
 

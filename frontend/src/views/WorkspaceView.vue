@@ -16,8 +16,10 @@
       </div>
     </div>
 
-    <div class="ws-content" :key="activeStep">
-      <component :is="currentComponent" />
+    <div class="ws-content">
+      <KeepAlive>
+        <component :is="currentComponent" />
+      </KeepAlive>
     </div>
   </div>
 </template>
