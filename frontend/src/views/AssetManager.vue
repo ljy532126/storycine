@@ -1,8 +1,7 @@
 <template>
   <div class="asset-root">
     <div class="top-bar">
-            <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
-    </div>
+          </div>
 
     <div class="master-detail" v-if="currentProjectId">
       <!-- ===== 左侧：资产列表 ===== -->
@@ -347,7 +346,7 @@ const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore = useProjectStore();
 const assetStore = useAssetStore();
 
-const currentProjectId = ref('');
+const currentProjectId = inject('currentProjectId');
 const activeTab = ref('characters');
 const selectedAsset = ref(null);
 const selectedAssetType = ref('');

@@ -1,7 +1,6 @@
 <template>
   <div class="script-edit-root">
     <div class="top-bar">
-      <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
       <el-button type="primary" size="large" style="margin-left:12px" @click="handleSave" :disabled="!currentScript">
  <Download size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 保存分镜
       </el-button>
@@ -240,7 +239,7 @@ const route=useRoute();const router=useRouter();
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore=useProjectStore();const scriptStore=useScriptStore();const assetStore=useAssetStore();
 
-const currentProjectId=ref('');const currentScriptId=ref('');const currentScript=ref(null);
+const currentProjectId=inject('currentProjectId');const currentScriptId=ref('');const currentScript=ref(null);
 const scripts=ref([]);const showDirectorDialog=ref(false);const showExtractDialog=ref(false);
 const extractResult=ref(null);const extracting=ref(false);const aiUnderstanding=ref(false);
 const dirty=ref(false);const timeOptions=['白天','夜晚','黄昏','傍晚','清晨','黎明','正午','深夜','雨天','雪天','不限'];

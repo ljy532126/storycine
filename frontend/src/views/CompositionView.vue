@@ -1,8 +1,7 @@
 <template>
   <div class="comp-root">
     <div class="comp-top">
-            <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
-    </div>
+          </div>
 
     <el-row :gutter="16" class="comp-body" v-if="currentProjectId">
       <!-- 左侧：合成配置 -->
@@ -96,7 +95,7 @@ const storyboardStore = useStoryboardStore();
 const compositionStore = useCompositionStore();
 const socket = useSocket();
 
-const currentProjectId = ref('');
+const currentProjectId = inject('currentProjectId');
 const selectedStoryboardId = ref('');
 const composing = ref(false);
 const storyboards = ref([]);

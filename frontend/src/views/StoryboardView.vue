@@ -3,8 +3,7 @@
     <div class="sb-top">
       <div class="tb-left">
         <div class="sg-scroll-area">
-          <ProjectSwitcher v-model="currentProjectId" :auto-reset="false" />
-        </div>
+            </div>
         <div class="sg-script-wrap">
           <el-select v-model="currentScriptId" placeholder="选择剧本" @change="onScriptChange" size="default" style="width:170px">
             <el-option v-for="s in scripts" :key="s._id" :label="`第${s.episodeNumber}集`" :value="s._id" />
@@ -511,7 +510,7 @@ const scriptStore = useScriptStore();
 const storyboardStore = useStoryboardStore();
 const assetStore = useAssetStore();
 
-const currentProjectId = ref('');
+const currentProjectId = inject('currentProjectId');
 const currentScriptId = ref('');
 const currentStoryboard = ref(null);
 const currentShot = ref(null);

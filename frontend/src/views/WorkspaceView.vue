@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="ws-root">
     <div class="ws-steps">
       <div
@@ -14,6 +14,7 @@
         <span class="ws-step-label">{{ s.label }}</span>
         <div v-if="i < steps.length - 1" class="ws-step-line"></div>
       </div>
+      <ProjectSwitcher v-model="currentProjectId" />
     </div>
 
     <div class="ws-content">
@@ -28,10 +29,23 @@
 import { ref, computed, watch, onMounted, provide, markRaw, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/project';
+import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
 const route = useRoute();
 const router = useRouter();
 const projectStore = useProjectStore();
+
+const currentProjectId = ref('');
+
+// 初始化：恢复上次项目
+onMounted(async () => {
+  await projectStore.fetchProjects();
+  const restored = await projectStore.restoreLastProject();
+  if (restored) currentProjectId.value = restored._id;
+});
+
+// 提供给子页面使用
+provide('currentProjectId', currentProjectId);
 
 const steps = [
   { key: 'script-generate', label: '剧本工坊' },
@@ -115,10 +129,11 @@ onMounted(() => {
 
 .ws-steps {
   display: flex; align-items: center; justify-content: center;
-  padding: 16px 24px; margin-bottom: 8px;
+  padding: 8px 16px; margin-bottom: 8px;
   background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 12px;
-  flex-shrink: 0; overflow-x: auto;
+  flex-shrink: 0; overflow: hidden; gap: 0;
 }
+.ws-steps :deep(.ps-root) { margin-left: auto; }
 .ws-step {
   display: flex; align-items: center; gap: 0;
   cursor: pointer; user-select: none; position: relative; flex-shrink: 0;
@@ -154,6 +169,7 @@ onMounted(() => {
 .ws-step:hover .ws-step-circle { border-color: var(--gold); }
 
 .ws-content { flex: 1; min-height: 0; }
+.ws-project-pick { margin-left: auto; }
 
 @media (max-width: 768px) {
   .ws-steps { justify-content: flex-start; padding: 10px 14px; }

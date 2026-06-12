@@ -2,8 +2,7 @@
   <div class="sg-root">
     <div class="sg-topbar">
       <div class="topbar-right">
-        <ProjectSwitcher v-model="currentProjectId" />
-        <el-button type="primary" link size="large" @click="showImportDialog = true" class="import-link">已有剧本？直接导入</el-button>
+          <el-button type="primary" link size="large" @click="showImportDialog = true" class="import-link">已有剧本？直接导入</el-button>
       </div>
     </div>
 
@@ -276,7 +275,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onActivated, nextTick, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
@@ -292,7 +291,7 @@ const projectStore = useProjectStore();
 const scriptStore = useScriptStore();
 const socket = useSocket();
 
-const currentProjectId = ref('');
+const currentProjectId = inject('currentProjectId');
 const importContent = ref('');
 const importTitle = ref('');
 const importMode = ref('format'); // 'format' | 'story'
