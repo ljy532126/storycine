@@ -335,6 +335,9 @@ const directorPresets={
   '动漫':{qualityKeywords:'8K, 赛璐珞风格, 动画电影质感',atmosphereLighting:'明亮通透，动画光影',artStyleCommands:'二次元, 赛璐珞风格, 清晰线条, 高饱和色彩'},
 };
 
+
+// 监听顶栏切片场
+watch(currentProjectId, (n, o) => { if (n && n !== o) onProjectChange(n); });
 onMounted(async()=>{
 window.__triggerSave=handleSave;
   await projectStore.fetchProjects();

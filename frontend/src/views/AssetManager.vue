@@ -331,7 +331,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, inject } from 'vue';
+import { ref, reactive, computed, onMounted, inject, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { PictureFilled } from '@element-plus/icons-vue';
 import { People, PictureOne, MagicWand, FolderDownload, Voice, Tool } from '@icon-park/vue-next';
@@ -490,6 +490,9 @@ async function onCharAvatarUpload(c, e) {
   e.target.value = '';
 }
 
+
+// 监听顶栏切片场
+watch(currentProjectId, (n, o) => { if (n && n !== o) { currentProjectId.value = n; onProjectChange(n); } });
 onMounted(async () => {
   await projectStore.fetchProjects();
   const restored = await projectStore.restoreLastProject();

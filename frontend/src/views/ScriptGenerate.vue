@@ -471,6 +471,9 @@ function addCustomOption(key, value) {
   }
 }
 
+
+// 监听顶栏切片场
+watch(currentProjectId, (n, o) => { if (n && n !== o) onProjectChange(n); });
 onMounted(async () => {
   window.__triggerGenerate = handleGenerate;
   await projectStore.fetchProjects();

@@ -185,7 +185,8 @@ onMounted(() => {
 
 .ws-content { flex: 1; min-height: 0; }
 .ws-project-pick { margin-left: auto; }
-.ws-episode-bar { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--bg-300); overflow-x: auto; }
+.ws-episode-bar { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--bg-300); max-width: 360px; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+.ws-episode-bar::-webkit-scrollbar { height: 0; }
 .ws-ep-chip { font-size: 11px; padding: 4px 10px; border-radius: 14px; cursor: pointer; background: var(--bg-100); border: 1px solid var(--bg-300); color: var(--text-200); font-weight: 500; white-space: nowrap; transition: all 0.15s; user-select: none; }
 .ws-ep-chip:hover { border-color: var(--gold); color: var(--text-100); }
 .ws-ep-chip.active { background: var(--navy); border-color: var(--gold); color: var(--gold); font-weight: 700; }

@@ -932,6 +932,9 @@ function renderEditor(text) {
 
 watch(noSubtitles, saveNoSubtitles);
 
+
+// 监听顶栏切片场
+watch(currentProjectId, (n, o) => { if (n && n !== o) { currentProjectId.value = n; onProjectChange(n); } });
 onMounted(async () => {
   await projectStore.fetchProjects();
   const restored = await projectStore.restoreLastProject();

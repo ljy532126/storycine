@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject } from 'vue';
+import { ref, reactive, onMounted, inject, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -101,6 +101,9 @@ const composing = ref(false);
 const storyboards = ref([]);
 const composeOptions = reactive({ outputFormat: 'mp4', resolution: '1080x1920', frameRate: 24, transitions: 'fade', backgroundMusic: '', subtitlesEnabled: true });
 
+
+// 监听顶栏切片场
+watch(currentProjectId, (n, o) => { if (n && n !== o) { currentProjectId.value = n; onProjectChange(n); } });
 onMounted(async () => {
   await projectStore.fetchProjects();
   const restored = await projectStore.restoreLastProject();
