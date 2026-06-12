@@ -197,11 +197,11 @@ sh deploy.sh
 ### ⚠️ 首次部署必读
 
 1. **JWT_SECRET**：在 `backend/.env` 中设置 `JWT_SECRET=你的随机字符串`（至少 32 位），不设置则服务无法启动
-2. **管理员密码**：首次启动时系统自动创建 admin 账号并生成随机 6 位数字密码，查看 Docker 日志获取：
-   ```bash
-   docker logs storycine-app 2>&1 | grep -A3 "Password:"
-   ```
-   初始账号：`admin`，密码在启动日志中（每次部署随机生成，非固定值）
+2. **管理员密码**：首次启动时系统自动创建 `admin` 账号
+   - **推荐**：在 `backend/.env` 中设置 `ADMIN_PASSWORD=你的密码`，首次启动即用此密码
+   - **没设置**：系统自动生成随机 6 位数字密码，启动日志会打印 `Password: XXXXXX`
+   - 查看密码：`docker logs storycine-app 2>&1 | grep -A3 "Password:"`
+   - 登录后**请立即修改密码**
 3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包 等 API Key，每个用户独立配置
 
 ### 🔑 忘记管理员密码怎么办

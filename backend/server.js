@@ -192,9 +192,13 @@ async function initAdmin() {
     const exists = await User.findOne({ username: 'admin' });
     let adminUser = exists;
     const RESET_ADMIN = process.env.RESET_ADMIN_PWD === 'true';
+    const ENV_PASSWORD = process.env.ADMIN_PASSWORD || '';  // 用户主动设置的已知密码
+
     if (!adminUser || RESET_ADMIN) {
-      const defaultPassword = String(Math.floor(100000 + Math.random() * 900000));
+      // 优先用环境变量 ADMIN_PASSWORD，没设则随机 6 位
+      const defaultPassword = ENV_PASSWORD || String(Math.floor(100000 + Math.random() * 900000));
       const hashed = await bcrypt.hash(defaultPassword, 12);
+
       if (adminUser && RESET_ADMIN) {
         adminUser.password = hashed;
         await adminUser.save();
@@ -202,16 +206,19 @@ async function initAdmin() {
         console.log('  🔄 Admin password reset');
         console.log('  Username: admin');
         console.log(`  Password: ${defaultPassword}`);
-        console.log('══════════════════════════════════════════');
       } else {
         adminUser = await User.create({ username: 'admin', password: hashed, role: 'admin', status: 'active' });
         console.log('══════════════════════════════════════════');
         console.log('  🔐 Default admin created');
         console.log('  Username: admin');
         console.log(`  Password: ${defaultPassword}`);
-        console.log('══════════════════════════════════════════');
+      }
+
+      if (!ENV_PASSWORD) {
+        console.log('  ⚠️  This is a random password. Set ADMIN_PASSWORD in .env to use your own.');
       }
       console.log('  ⚠️  Please change password after login!');
+      console.log('══════════════════════════════════════════');
     }
 
     // 确保 admin 有 settings + 迁移旧全局配置 + 从 .env 种子 API Key
