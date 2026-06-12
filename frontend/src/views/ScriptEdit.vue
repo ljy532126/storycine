@@ -15,22 +15,22 @@
       </div>
       <div class="center-panel" v-if="currentScript && (screenWidth >= 768 || mobileTab === 'scenes')">
  <div class="ep-header">
-   <el-input v-model="currentScript.episodeTitle" placeholder="给这集起个名字..." size="large" class="title-input" @change="markDirty" />
+   <el-input v-model="currentScript.episodeTitle" placeholder="给这集起个名字..." size="default" class="title-input" @change="markDirty" />
    <el-tooltip content="AI 分析剧本后智能补全空白字段，不覆盖已有数据，支持撤消/重做" placement="bottom">
-     <el-button type="primary" @click="handleAutoStoryboard" :loading="autoStoryboarding" style="margin-left:12px">
-<MagicWand v-if="!autoStoryboarding" size="16" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> AI 智能补全
+     <el-button size="small" plain @click="handleAutoStoryboard" :loading="autoStoryboarding">
+<MagicWand v-if="!autoStoryboarding" size="14" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/> AI 智能补全
      </el-button>
    </el-tooltip>
-   <el-button-group v-if="historyStack.length>0" size="small" style="margin-left:6px">
-     <el-button :disabled="historyIndex<=0" @click="undoHistory" title="回退"><Undo size="14" fill="currentColor"/></el-button>
-     <el-button :disabled="historyIndex>=historyStack.length-1" @click="redoHistory" title="前进"><Redo size="14" fill="currentColor"/></el-button>
+   <el-button-group v-if="historyStack.length>0" size="small">
+     <el-button :disabled="historyIndex<=0" @click="undoHistory" title="回退"><Undo size="13" fill="currentColor"/></el-button>
+     <el-button :disabled="historyIndex>=historyStack.length-1" @click="redoHistory" title="前进"><Redo size="13" fill="currentColor"/></el-button>
    </el-button-group>
-   <span v-if="historyStack.length>0" style="font-size:11px;color:var(--text-200);margin-left:4px">{{ historyIndex+1 }}/{{ historyStack.length }}</span>
-   <el-button type="success" @click="syncToStoryboard" :loading="syncing" style="margin-left:8px">
-     <Send size="15" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 同步至故事板
+   <span v-if="historyStack.length>0" style="font-size:10px;color:var(--text-200)">{{ historyIndex+1 }}/{{ historyStack.length }}</span>
+   <el-button size="small" plain type="success" @click="syncToStoryboard" :loading="syncing">
+     <Send size="13" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/> 同步至故事板
    </el-button>
-   <el-button @click="showExportDialog = true" style="margin-left:8px">
-     <Download size="15" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导出
+   <el-button size="small" plain @click="showExportDialog = true">
+     <Download size="13" fill="currentColor" style="margin-right:3px;vertical-align:text-bottom"/> 导出
    </el-button>
    <span class="scene-count">{{ currentScript.scenes?.length||0 }} 个镜头</span>
  </div>
@@ -674,9 +674,10 @@ async function exportAsPng(html, filename) {
 .ep-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--bg-300)}
 .center-panel{flex:1;background:var(--bg-200);border-radius:8px;border:1px solid var(--bg-300);padding:16px;overflow-y:auto;min-width:0}
 .center-empty{display:flex;align-items:center;justify-content:center}
-.ep-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ep-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px}
+.ep-header .el-button{font-size:11px}
 .title-input{flex:1}
-.scene-count{color:var(--text-100);font-size:13px;white-space:nowrap}
+.scene-count{color:var(--text-200);font-size:11px;white-space:nowrap}
 .scenes-area{display:flex;flex-direction:column;gap:12px}
 .scene-card{background:var(--bg-200);border:1px solid var(--bg-300);border-radius:8px;padding:12px}
 .shot-invalid{border-color:var(--accent-200);background:var(--bg-100)}
