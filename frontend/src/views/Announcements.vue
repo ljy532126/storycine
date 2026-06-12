@@ -1,10 +1,6 @@
 <template>
   <div class="ann-root">
-    <div class="breadcrumb">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">公告管理</span>
-    </div>
+    <Breadcrumb title="公告管理" />
 
     <!-- 统计卡片 -->
     <div class="ann-stats">
@@ -168,6 +164,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Refresh, Edit, Delete } from '@element-plus/icons-vue';
 import { Announcement, DocDetail, Pin, People, PreviewOpen } from '@icon-park/vue-next';
 import { marked } from 'marked';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 function sanitizeMD(html) {
   return html

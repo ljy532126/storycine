@@ -1,10 +1,6 @@
 ﻿<template>
   <div class="sg-root">
-    <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">剧本工坊</span>
-    </div>
+    <Breadcrumb title="剧本工坊" />
     <div class="sg-topbar">
       <div class="topbar-right">
         <div class="sg-project-pills">
@@ -296,6 +292,7 @@ import { useScriptStore } from '../stores/script';
 import { useSocket } from '../components/useSocket';
 import api, { scriptAPI } from '../api';
 import { FolderUpload, MagicWand, Film, Edit, Delete, Download, ImportAndExport, Time } from '@icon-park/vue-next';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const router = useRouter();
 const projectStore = useProjectStore();

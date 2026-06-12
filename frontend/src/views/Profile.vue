@@ -1,10 +1,6 @@
 <template>
   <div class="pf-root">
-    <div class="breadcrumb">
-      <router-link to="/dashboard" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">个人中心</span>
-    </div>
+    <Breadcrumb title="个人中心" home="/dashboard" />
 
     <div class="pf-cards">
       <!-- 头像 & 昵称 -->
@@ -70,6 +66,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const route = useRoute();
 

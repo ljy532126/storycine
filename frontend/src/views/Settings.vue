@@ -1,11 +1,7 @@
 <template>
   <div class="page">
     <div class="page-header">
-      <div class="breadcrumb">
-        <router-link to="/" class="bc-link">导演台</router-link>
-        <span class="bc-sep"> &gt; </span>
-        <span class="bc-current">系统设置</span>
-      </div>
+<Breadcrumb title="系统设置" />
     </div>
 
     <!-- 顶层 Tab 导航 -->
@@ -353,6 +349,7 @@ import { Refresh } from '@element-plus/icons-vue';
 import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield, DocDetail, User, CheckOne, Lock, IdCard, EditTwo, MessageEmoji } from '@icon-park/vue-next';
 import { useRoute } from 'vue-router';
 import { configAPI } from '../api';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const route = useRoute();
 const settingsTab = ref('llm');

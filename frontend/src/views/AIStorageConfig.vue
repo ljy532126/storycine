@@ -1,10 +1,6 @@
 <template>
   <div class="ac-root">
-    <div class="breadcrumb">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">存储设置</span>
-    </div>
+    <Breadcrumb title="存储设置" />
 
     <div class="ac-grid">
       <div class="ac-card">
@@ -106,6 +102,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const stor = reactive({
   enabled: false, provider: 'minio', endpoint: '', accessKeyId: '',

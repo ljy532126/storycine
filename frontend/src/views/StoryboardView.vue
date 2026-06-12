@@ -1,10 +1,6 @@
 ﻿<template>
   <div class="sb-root">
-    <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">故事板</span>
-    </div>
+    <Breadcrumb title="故事板" />
     <div class="sb-top">
       <div class="tb-left">
         <div class="sg-scroll-area">
@@ -510,6 +506,7 @@ import { storyboardAPI, assetAPI } from '../api';
 import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
 import ImageLightbox from '../components/ImageLightbox.vue';
+import Breadcrumb from '../components/Breadcrumb.vue';
 import html2canvas from 'html2canvas';
 
 const projectStore = useProjectStore();

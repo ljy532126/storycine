@@ -1,10 +1,6 @@
 <template>
   <div class="tts-root">
-    <div class="breadcrumb">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">配音素材库</span>
-    </div>
+    <Breadcrumb title="配音素材库" />
 
     <!-- 顶部工具栏 -->
     <div class="tts-bar">
@@ -119,6 +115,7 @@ import { Refresh, Delete, FolderDownload, Voice, Film, PlayOne, PauseOne, CheckO
 import { Download } from '@element-plus/icons-vue';
 import { useProjectStore } from '../stores/project';
 import { ttsAPI } from '../api';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const projectStore = useProjectStore();
 const tree = ref([]);

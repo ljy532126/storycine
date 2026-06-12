@@ -1,10 +1,6 @@
 ﻿<template>
   <div class="asset-root">
-    <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">角色场景库</span>
-    </div>
+    <Breadcrumb title="角色场景库" />
     <div class="top-bar">
       <div class="sg-project-pills">
         <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
@@ -347,6 +343,7 @@ import { useProjectStore } from '../stores/project';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI } from '../api';
 import ImageLightbox from '../components/ImageLightbox.vue';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore = useProjectStore();

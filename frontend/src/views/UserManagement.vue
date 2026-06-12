@@ -1,10 +1,6 @@
 <template>
   <div class="um-root">
-    <div class="breadcrumb">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">用户管理</span>
-    </div>
+    <Breadcrumb title="用户管理" />
 
     <!-- 统计卡片 -->
     <div class="um-stats">
@@ -362,6 +358,7 @@ import { ref, reactive, computed, onMounted, markRaw } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, User } from '@icon-park/vue-next';
 import { Search, Refresh, List, Check, Close, CircleCloseFilled, Key, MoreFilled, Plus, Delete, FolderOpened, Download, Upload, Loading } from '@element-plus/icons-vue';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const users = ref([]);
 const loading = ref(false);

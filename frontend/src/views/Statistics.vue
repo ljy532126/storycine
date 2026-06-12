@@ -1,10 +1,6 @@
 <template>
   <div class="st-root">
-    <div class="breadcrumb">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">数据看板</span>
-    </div>
+    <Breadcrumb title="数据看板" />
 
     <!-- 工具栏 -->
     <div class="st-toolbar">
@@ -432,6 +428,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { People, FolderOpen, EditTwo, PlayTwo, CheckOne, Time, Data, Trend, Fire, AddUser, Cpu, Memory, Timer, SettingTwo, PictureOne, Refresh } from '@icon-park/vue-next';
 import * as echarts from 'echarts';
 import MapDrilldown from '../components/MapDrilldown.vue';
+import Breadcrumb from '../components/Breadcrumb.vue';
 const route = useRoute();
 
 // ===== 响应式数据 =====

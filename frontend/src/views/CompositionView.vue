@@ -1,10 +1,6 @@
 ﻿<template>
   <div class="comp-root">
-    <div class="breadcrumb" v-if="$route.name !== 'WorkspaceView'">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">成片合成</span>
-    </div>
+    <Breadcrumb title="成片合成" />
     <div class="comp-top">
       <div class="sg-project-pills">
         <span v-for="p in projectStore.projects" :key="p._id" :class="['sg-pill', { active: currentProjectId === p._id }]" @click="if (currentProjectId !== p._id) { resetToScriptGenerate(p._id); } currentProjectId = p._id">{{ p.name }}</span>
@@ -94,6 +90,7 @@ import { useProjectStore } from '../stores/project';
 import { useStoryboardStore } from '../stores/storyboard';
 import { useCompositionStore } from '../stores/composition';
 import { useSocket } from '../components/useSocket';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 const projectStore = useProjectStore();

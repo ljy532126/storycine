@@ -1,10 +1,6 @@
 <template>
   <div class="ml-root">
-    <div class="breadcrumb">
-      <router-link to="/" class="bc-link">导演台</router-link>
-      <span class="bc-sep"> &gt; </span>
-      <span class="bc-current">素材库</span>
-    </div>
+    <Breadcrumb title="素材库" />
 
     <!-- 项目 Pills -->
     <div class="ml-projects" v-if="projectStore.projects.length > 0">
@@ -113,6 +109,7 @@ import {
 } from '@icon-park/vue-next';
 import { Download, Delete, Select, Close } from '@element-plus/icons-vue';
 import ImageLightbox from '../components/ImageLightbox.vue';
+import Breadcrumb from '../components/Breadcrumb.vue';
 
 const projectStore = useProjectStore();
 const currentProjectId = ref('');
