@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="ws-root">
     <div class="ws-steps">
       <div
@@ -41,10 +41,15 @@ const STORAGE_KEY = 'ws_active_step_' + (() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'default'; } catch { return 'default'; }
 })();
 
-const savedStep = localStorage.getItem(STORAGE_KEY);
 const validKeys = steps.map(s => s.key);
-const defaultKey = validKeys.includes(savedStep) ? savedStep : 'script-generate';
-const activeStep = ref(defaultKey);
+
+function getActiveStep() {
+  const wsFromUrl = route.query.ws;
+  if (wsFromUrl && validKeys.includes(wsFromUrl)) return wsFromUrl;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return validKeys.includes(saved) ? saved : 'script-generate';
+}
+const activeStep = ref(getActiveStep());
 const activeIndex = computed(() => steps.findIndex(s => s.key === activeStep.value));
 
 const loaded = {};
@@ -70,6 +75,14 @@ function switchStep(key) {
 
 watch(activeStep, (key) => {
   if (route.query.ws !== key) router.replace({ query: { ...route.query, ws: key } });
+});
+
+// keep-alive: URL 变化时同步 tab
+watch(() => route.query.ws, (ws) => {
+  if (ws && validKeys.includes(ws) && ws !== activeStep.value) {
+    activeStep.value = ws;
+    localStorage.setItem(STORAGE_KEY, ws);
+  }
 });
 
 onMounted(() => {
