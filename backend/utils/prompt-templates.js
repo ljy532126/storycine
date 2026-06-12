@@ -445,6 +445,7 @@ STEP4 敏感扫描：自动替换违禁词
 7. 每个分镜的 duration 根据台词长度+情绪强度智能决定，严禁一刀切
 8. 视频提示词(videoPrompt)含衔接前置指令+音效+台词，按实际分段写
 9. 景别标注专业术语，多用近景特写
+10. **每个字段必须填写**：shotType/cameraAngle/cameraMovement/composition/lighting/soundEffect 绝不能为空，必须根据场景内容给出具体值，不要填默认值或留空
 
 【重要】前后分镜动作必须连贯，台词时段镜头固定不推拉，违禁词自动替换。
 

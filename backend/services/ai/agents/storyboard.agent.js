@@ -58,6 +58,7 @@ async function run(script, characters, options = {}) {
       shotType: validShotTypes.includes(shot.shotType) ? shot.shotType : '中景',
       cameraAngle: validCameraAngles.includes(shot.cameraAngle) ? shot.cameraAngle : '平视',
       cameraMovement: validCameraMoves.includes(shot.cameraMovement) ? shot.cameraMovement : '固定',
+      composition: String(shot.composition || '').substring(0, 100),
       duration: dur,
       lighting: String(shot.lighting || '').substring(0, 100),
       characterEmotion: emotion,

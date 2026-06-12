@@ -701,11 +701,12 @@ async function exportAsPng(html, filename) {
 .scene-card{background:var(--bg-200);border:1px solid var(--bg-300);border-radius:8px;padding:12px}
 .shot-invalid{border-color:var(--accent-200);background:var(--bg-100)}
 /* AI 补全高亮：柔和的琥珀色边框 + 左侧色条 */
-.shot-amended{border-left:3px solid #e6a23c !important;background:linear-gradient(90deg,rgba(230,162,60,0.04) 0%,var(--bg-200) 8%)}
-.shot-amended .scene-num::after{content:' ✨';font-size:11px}
-/* 补全字段高亮：输入框/下拉框微染 */
-:deep(.field-amended .el-input__wrapper){background:rgba(230,162,60,0.06);box-shadow:0 0 0 1px rgba(230,162,60,0.25) inset}
-:deep(.field-amended .el-select .el-input__wrapper){background:rgba(230,162,60,0.06);box-shadow:0 0 0 1px rgba(230,162,60,0.25) inset}
+.shot-amended{border-left:3px solid #e6a23c !important;background:linear-gradient(90deg,rgba(230,162,60,0.08) 0%,var(--bg-200) 12%)}
+.shot-amended .scene-num::after{content:' ✨ AI已优化';font-size:10px;color:#e6a23c;font-weight:600}
+/* 补全字段高亮 */
+:deep(.field-amended .el-input__wrapper){background:rgba(230,162,60,0.10);box-shadow:0 0 0 1px rgba(230,162,60,0.4) inset}
+:deep(.field-amended .el-select .el-input__wrapper){background:rgba(230,162,60,0.10);box-shadow:0 0 0 1px rgba(230,162,60,0.4) inset}
+:deep(.field-amended .el-input-number .el-input__wrapper){background:rgba(230,162,60,0.10);box-shadow:0 0 0 1px rgba(230,162,60,0.4) inset}
 .scene-top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .scene-num{color:var(--primary-200);font-weight:bold;font-size:14px}
 .scene-meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
