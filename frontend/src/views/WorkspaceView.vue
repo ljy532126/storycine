@@ -157,16 +157,38 @@ onMounted(() => {
   width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 700; flex-shrink: 0;
   border: 2px solid var(--bg-300); background: var(--bg-100); color: var(--text-200);
-  transition: all 0.25s; z-index: 1;
+  transition: all 0.25s; z-index: 1; position: relative;
 }
 .ws-step.active .ws-step-circle {
   border-color: var(--gold); background: var(--gold); color: #fff;
-  box-shadow: 0 0 12px rgba(201,168,76,0.3);
+  box-shadow: 0 0 0 0 rgba(201,168,76,0.5);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+.ws-step.active .ws-step-circle::before {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid rgba(201,168,76,0.25);
+  animation: stepRipple 2s ease-in-out infinite;
+}
+.ws-step.active .ws-step-circle::after {
+  content: ''; position: absolute; inset: -9px; border-radius: 50%;
+  border: 1px solid rgba(201,168,76,0.12);
+  animation: stepRipple 2s ease-in-out infinite 0.3s;
 }
 .ws-step.done .ws-step-circle {
   border-color: #67c23a; background: #67c23a; color: #fff;
 }
+.ws-step.done .ws-step-circle::before,
+.ws-step.done .ws-step-circle::after { display: none; }
 .ws-step-check { font-size: 12px; }
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(201,168,76,0); }
+}
+@keyframes stepRipple {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.4; }
+}
 
 .ws-step-label {
   font-size: 11px; font-weight: 600; color: var(--text-200); white-space: nowrap;
@@ -177,9 +199,19 @@ onMounted(() => {
 
 .ws-step-line {
   width: 22px; height: 2px; background: var(--bg-300);
-  margin: 0 4px; flex-shrink: 0; transition: background 0.3s;
+  margin: 0 4px; flex-shrink: 0; transition: all 0.3s; border-radius: 1px;
 }
-.ws-step.done .ws-step-line { background: #67c23a; }
+.ws-step.done .ws-step-line {
+  background: linear-gradient(90deg, #67c23a 0%, rgba(103,194,58,0.3) 100%);
+}
+.ws-step.active .ws-step-line {
+  background: linear-gradient(90deg, var(--gold) 0%, rgba(201,168,76,0.2) 100%);
+  animation: lineShimmer 1.5s ease-in-out infinite;
+}
+@keyframes lineShimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
 .ws-step:hover .ws-step-circle { border-color: var(--gold); }
 
