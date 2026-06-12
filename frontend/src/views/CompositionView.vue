@@ -6,7 +6,7 @@
       <span class="bc-current">成片合成</span>
     </div>
     <div class="comp-top">
-      <el-select v-model="currentProjectId" placeholder="选择片场" @change="(v) => { if (v !== currentProjectId) resetToScriptGenerate(); onProjectChange(v) }" style="width:200px">
+      <el-select v-model="currentProjectId" placeholder="选择片场" @change="(v) => { resetToScriptGenerate(v); onProjectChange(v) }" style="width:200px">
         <el-option v-for="p in projectStore.projects" :key="p._id" :label="p.name" :value="p._id" />
       </el-select>
     </div>

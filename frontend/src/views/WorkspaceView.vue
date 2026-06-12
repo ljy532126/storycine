@@ -25,9 +25,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, provide, markRaw, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useProjectStore } from '../stores/project';
 
 const route = useRoute();
 const router = useRouter();
+const projectStore = useProjectStore();
 
 const steps = [
   { key: 'script-generate', label: '剧本工坊' },
@@ -74,7 +76,9 @@ function switchStep(key) {
 }
 
 // 子页面切换项目时自动回到剧本工坊，避免新片场空跳转
-provide('resetToScriptGenerate', () => {
+provide('resetToScriptGenerate', (projectId) => {
+  // 先存项目 ID，再切 tab，保证 ScriptGenerate mount 时能读到
+  if (projectId) projectStore.rememberProject(projectId);
   if (activeStep.value !== 'script-generate') {
     activeStep.value = 'script-generate';
     localStorage.setItem(STORAGE_KEY, 'script-generate');
