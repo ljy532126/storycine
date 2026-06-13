@@ -1255,6 +1255,18 @@ async function uploadShotVideo(shot, e) {
   if (!file) return;
   if (!currentStoryboard.value?._id) { ElMessage.error('请先保存分镜表'); e.target.value = ''; return; }
 
+  // 读取视频真实时长
+  let actualDuration = 0;
+  try {
+    const url = URL.createObjectURL(file);
+    actualDuration = await new Promise((resolve) => {
+      const v = document.createElement('video'); v.preload = 'metadata';
+      v.onloadedmetadata = () => { resolve(v.duration || 0); URL.revokeObjectURL(url); };
+      v.onerror = () => { resolve(0); URL.revokeObjectURL(url); };
+      v.src = url;
+    });
+  } catch {}
+
   const formData = new FormData();
   formData.append('video', file);
   try {
@@ -1263,7 +1275,14 @@ async function uploadShotVideo(shot, e) {
     );
     shot.renderedVideo = res.data.url;
     shot.status = 'completed';
-    ElMessage.success(`分镜 #${shot.shotNumber} 视频已上传`);
+    if (actualDuration > 0) {
+      shot.duration = Math.ceil(actualDuration);
+      // 持久化时长
+      await storyboardAPI.updateShot(currentStoryboard.value._id, shot.shotNumber, { duration: shot.duration, renderedVideo: shot.renderedVideo, status: 'completed' }).catch(() => {});
+      ElMessage.success(`分镜 #${shot.shotNumber} 视频已上传，时长 ${shot.duration}s`);
+    } else {
+      ElMessage.success(`分镜 #${shot.shotNumber} 视频已上传`);
+    }
   } catch (err) {
     ElMessage.error(`上传失败: ${err.response?.data?.message || err.message}`);
   }
