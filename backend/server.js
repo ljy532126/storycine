@@ -33,10 +33,32 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3012',
   credentials: true,
 }));
-app.use(morgan('dev'));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 1000 }));
 app.use('/uploads', express.static('uploads'));
+// 开发环境：日志双输出（控制台 + backend.log）
+const DEV_LOG = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+if (DEV_LOG) {
+  const util = require('util');
+  const logStream = require('fs').createWriteStream(require('path').join(__dirname, 'backend.log'), { flags: 'a' });
+  const origStdout = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (chunk, enc, cb) => {
+    const s = typeof chunk === 'string' ? chunk : chunk.toString();
+    logStream.write(s.replace(/\x1b\[[0-9;]*m/g, ''));
+    return origStdout(chunk, enc, cb);
+  };
+  const origStderr = process.stderr.write.bind(process.stderr);
+  process.stderr.write = (chunk, enc, cb) => {
+    const s = typeof chunk === 'string' ? chunk : chunk.toString();
+    logStream.write(s.replace(/\x1b\[[0-9;]*m/g, ''));
+    return origStderr(chunk, enc, cb);
+  };
+  console.log('[server] 开发模式：日志同时写入 backend.log');
+  // morgan with custom stream
+  app.use(morgan('dev', { stream: { write: (m) => { logStream.write(m.replace(/\x1b\[[0-9;]*m/g, '')); origStdout(m.replace(/\x1b\[[0-9;]*m/g, '')); } } }));
+} else {
+  app.use(morgan('dev'));
+}
 
 // 生产环境：单端口部署，后端直接托管前端静态文件
 const path = require('path');
