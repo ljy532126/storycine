@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, provide, markRaw, defineAsyncComponent } from 'vue';
+import { ref, reactive, computed, watch, onMounted, provide, markRaw, defineAsyncComponent, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/project';
 import ProjectSwitcher from '../components/ProjectSwitcher.vue';
@@ -98,6 +98,9 @@ const activeStep = ref(getActiveStep());
 const activeIndex = computed(() => steps.findIndex(s => s.key === activeStep.value));
 
 const loaded = {};
+// 异步组件加载时的骨架动画 (render function)
+const AsyncLoader = { render: () => h('div', { class: 'ws-loader' }, [h('div', { class: 'ws-loader-ring' }, [h('div', { class: 'ws-loader-inner' })]), h('span', { class: 'ws-loader-text' }, '加载中')]) };
+
 function getComponent(key) {
   if (!loaded[key]) {
     const map = {
@@ -107,7 +110,7 @@ function getComponent(key) {
       'storyboard': () => import('./StoryboardView.vue'),
       'composition': () => import('./CompositionView.vue'),
     };
-    loaded[key] = markRaw(defineAsyncComponent(map[key]));
+    loaded[key] = markRaw(defineAsyncComponent({ loader: map[key], loadingComponent: AsyncLoader, delay: 0 }));
   }
   return loaded[key];
 }
@@ -249,4 +252,17 @@ onMounted(() => {
   .ws-step-label { font-size: 11px; padding: 0 2px 0 6px; }
   .ws-step-circle { width: 28px; height: 28px; font-size: 11px; }
 }
+</style>
+
+<style>
+/* 异步组件加载骨架动画（非 scoped，h() render 不受 scoped 限制） */
+.ws-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 300px; gap: 14px; }
+.ws-loader-ring {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 3px solid rgba(201,168,76,0.12);
+  border-top-color: var(--gold, #c9a84c);
+  animation: ws-spin 0.8s linear infinite;
+}
+.ws-loader-text { font-size: 13px; color: var(--text-200, #999); letter-spacing: 2px; font-weight: 600; }
+@keyframes ws-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>

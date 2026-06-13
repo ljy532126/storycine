@@ -179,7 +179,7 @@
     </header>
 
         <router-view v-slot="{ Component }">
-          <transition name="page-fade" mode="out-in">
+          <transition name="page-fade">
             <keep-alive exclude="Landing,Login,Register">
               <div class="app-content">
               <component :is="Component" />
@@ -192,7 +192,7 @@
   </div>
 
   <!-- 全局加载条 -->
-  <div class="global-loading-bar" :class="{ 'loading-active': isLoading }"></div>
+  <div class="global-loading-bar" :class="{ 'loading-active': isLoading || routeLoading }"></div>
 
   <!-- 新公告弹窗 -->
   <el-dialog v-model="annPopupVisible" v-if="annPopupData" title="📢 新公告" width="480px" destroy-on-close>
@@ -275,6 +275,10 @@ import { marked } from 'marked';
 
 const route = useRoute();
 const router = useRouter();
+// 全局路由切换加载条
+const routeLoading = ref(false);
+router.beforeEach((to, from, next) => { if (from.name && to.path !== from.path) { routeLoading.value = true; } next(); });
+router.afterEach(() => { setTimeout(() => { routeLoading.value = false; }, 300); });
 function handleLogout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
