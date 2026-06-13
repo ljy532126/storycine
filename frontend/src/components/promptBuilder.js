@@ -79,8 +79,10 @@ function buildImagePrompt(shot, videoConfig, directorSettings) {
   const ratio = (videoConfig?.aspectRatio === '16:9') ? '横屏16:9' : '竖屏9:16';
 
   // 画质/风格从导演设定读取，fallback 到 AI 全局配置
-  const quality = ds.qualityKeywords || aiCfg.imageQuality || '8K';
-  const artStyle = dedupStyle(ds.artStyleCommands || styleKeywords || aiCfg.imageStyle || '写实');
+  const qualityRaw = ds.qualityKeywords || aiCfg.imageQuality || '8K';
+  const artStyleRaw = ds.artStyleCommands || styleKeywords || aiCfg.imageStyle || '写实';
+  // quality和artStyle合并去重，防止两字段重叠导致词条重复
+  const qualityAndStyle = dedupStyle(`${qualityRaw}，${artStyleRaw}`);
 
   // 绑定主体的描述信息（角色外貌 + 场景描述）
   const boundDescs = (shot._boundDescriptions || []).filter(Boolean);
@@ -90,7 +92,7 @@ function buildImagePrompt(shot, videoConfig, directorSettings) {
     : '';
 
   // qualityBlock: 场景+光影+画质+风格+景别+构图
-  const qualityBlock = `【画质/构图】${ratio}，${scene || '电影级场景'}，${lighting}，${quality}，${artStyle}，${shotType}，${composition}，焦点清晰，背景虚化`;
+  const qualityBlock = `【画质/构图】${ratio}，${scene || '电影级场景'}，${lighting}，${qualityAndStyle}，${shotType}，${composition}，焦点清晰，背景虚化`;
 
   // descBlock: 分镜描述完整 + 角色外貌绑定，去掉与imgDesc重复的action片段和已出现在artStyle中的styleKeywords
   const cleanAction = action && imgDesc.includes(action) ? '' : action; // action已在imgDesc中就不重复
@@ -121,13 +123,14 @@ function buildVideoPrompt(shot, videoConfig, directorSettings) {
   const styleKeywords = getStyleKeywords(videoConfig);
   const aiCfg = getAIConfig();
 
-  // 画质/风格
-  const quality = ds.qualityKeywords || '电影级画质，8K高清';
-  const artStyle = dedupStyle(ds.artStyleCommands || styleKeywords || '写实');
+  // 画质/风格 — 合并去重，防止 qualityKeywords 和 artStyleCommands 重叠
+  const qualityRaw = ds.qualityKeywords || '电影级画质，8K高清';
+  const artStyleRaw = ds.artStyleCommands || styleKeywords || '写实';
+  const qualityAndStyle = dedupStyle(`${qualityRaw}，${artStyleRaw}`);
   const noReal = aiCfg.noRealPerson;
   const qualitySuffix = noReal
-    ? `${quality}，动漫/古风/风格化表现，非写实人物`
-    : `${quality}，${artStyle}`;
+    ? `${qualityAndStyle}，动漫/古风/风格化表现，非写实人物`
+    : qualityAndStyle;
 
   // 完整台词（含动作提示和角色名）
   const dialogues = shot._dialogues || [];
