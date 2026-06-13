@@ -68,6 +68,10 @@
             </div>
             <div v-if="c.status === 'completed' && c.outputUrl" class="task-actions">
               <el-button size="small" type="success" @click="downloadComposition(c)">下载成片</el-button>
+              <el-button size="small" @click="deleteTask(c)" class="task-btn-delete">删除</el-button>
+            </div>
+            <div v-if="c.status !== 'completed'" style="display:flex;gap:6px;margin-top:6px">
+              <el-button size="small" @click="deleteTask(c)" class="task-btn-delete">删除</el-button>
             </div>
             <div v-if="c.errorMessage" class="task-error">{{ c.errorMessage }}</div>
           </div>
@@ -81,7 +85,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, inject, watch } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useStoryboardStore } from '../stores/storyboard';
 import { useCompositionStore } from '../stores/composition';
@@ -142,6 +146,13 @@ async function handleCreateComposition() {
 }
 
 function downloadComposition(c) { window.open(c.outputUrl, '_blank'); }
+async function deleteTask(c) {
+  try { await ElMessageBox.confirm('确认删除该合成任务？', '提示', { type: 'warning', confirmButtonText: '删除' }); } catch { return; }
+  try {
+    await compositionStore.deleteComposition(c._id);
+    ElMessage.success('已删除');
+  } catch { ElMessage.error('删除失败'); }
+}
 
 function compStatusTag(s) { return { pending: 'info', rendering: 'warning', completed: 'success', failed: 'danger' }[s] || 'info'; }
 function compStatusLabel(s) { return { pending: '等待中', rendering: '渲染中', completed: '已完成', failed: '失败' }[s] || s; }

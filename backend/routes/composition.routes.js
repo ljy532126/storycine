@@ -65,4 +65,25 @@ router.post('/:id/cancel', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// 删除合成任务
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const composition = await Composition.findById(req.params.id);
+    if (!composition) return res.status(404).json({ message: '合成任务不存在' });
+    // 清理输出文件
+    if (composition.outputUrl) {
+      try {
+        const { unlink } = require('fs/promises');
+        const { resolvePublicUrl } = require('../services/storage.service');
+        const url = composition.outputUrl;
+        const filePath = url.startsWith('http') ? require('path').join(__dirname, '../../uploads/compositions', new URL(url).pathname.split('/').pop()) : require('path').join(__dirname, '..', url);
+        await unlink(filePath).catch(() => {});
+      } catch {}
+    }
+    await Composition.findByIdAndDelete(req.params.id);
+    console.log(`[composition] DELETE /${req.params.id}`);
+    res.json({ message: '已删除' });
+  } catch (error) { next(error); }
+});
+
 module.exports = router;

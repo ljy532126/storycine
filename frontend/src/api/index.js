@@ -144,4 +144,5 @@ export const compositionAPI = {
   create: (data) => api.post('/compositions', data),
   getProgress: (id) => api.get(`/compositions/${id}/progress`),
   cancel: (id) => api.post(`/compositions/${id}/cancel`),
+  delete: (id) => api.delete(`/compositions/${id}`),
 };

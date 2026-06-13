@@ -35,5 +35,9 @@ export const useCompositionStore = defineStore('composition', {
     async cancelComposition(id) {
       await compositionAPI.cancel(id);
     },
+    async deleteComposition(id) {
+      await compositionAPI.delete(id);
+      this.compositions = this.compositions.filter(c => c._id !== id);
+    },
   },
 });
