@@ -1273,7 +1273,7 @@ function insertShotAfter(shot) {
   shots.splice(idx + 1, 0, {
     shotNumber: shot.shotNumber + 0.5,
     sceneName: shot.sceneName || '',
-    shotType: '中景', cameraMovement: '静止', duration: 3,
+    shotType: '中景', cameraMovement: '固定', duration: 3,
     imageDescription: '', renderedImage: '', renderedVideo: '',
     dialogue: { characterName: '', text: '', audioUrl: '' },
     soundEffect: '', notes: '', status: 'pending',
@@ -1305,7 +1305,7 @@ function insertAt(idx) {
   const shots = currentStoryboard.value.shots;
   shots.splice(idx, 0, {
     shotNumber: idx + 0.5, sceneName: shots[idx]?.sceneName || '',
-    shotType: '中景', cameraMovement: '静止', duration: 3,
+    shotType: '中景', cameraMovement: '固定', duration: 3,
     imageDescription: '', renderedImage: '', renderedVideo: '',
     dialogue: { characterName: '', text: '', audioUrl: '' },
     soundEffect: '', notes: '', status: 'pending',
@@ -1320,7 +1320,7 @@ function addBlankShot() {
   const shots = currentStoryboard.value.shots;
   shots.push({
     shotNumber: shots.length + 1, sceneName: '',
-    shotType: '中景', cameraMovement: '静止', duration: 3,
+    shotType: '中景', cameraMovement: '固定', duration: 3,
     imageDescription: '', renderedImage: '', renderedVideo: '',
     dialogue: { characterName: '', text: '', audioUrl: '' },
     soundEffect: '', notes: '', status: 'pending',
@@ -1433,7 +1433,7 @@ async function generateVideoPromptForShot() {
     });
     const parts = [
       '场景：' + (s.sceneName || '') + '，' + (s._timeOfDay || '') + '，' + (s._atmosphere || ''),
-      '景别：' + (s.shotType || '中景') + '，运镜：' + (s.cameraMovement || '静止'),
+      '景别：' + (s.shotType || '中景') + '，运镜：' + (s.cameraMovement || '固定'),
       '时长：' + videoDuration.value + '秒',
       dialogueText ? '台词：' + dialogueText : '',
       charAppearances.length > 0 ? '角色外貌：' + charAppearances.join('；') : '',
