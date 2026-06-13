@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="sb-root">
     <div class="sb-top" v-if="!wsSbActions">
       <div class="tb-left">
@@ -101,7 +101,7 @@
         </div>
 
         <!-- 分镜时间线 -->
-        <div class="timeline" v-if="currentStoryboard && currentStoryboard.shots">
+        <div class="timeline" v-if="currentStoryboard && currentStoryboard.shots" @mouseenter="showTimelineArrows = true" @mouseleave="showTimelineArrows = false">
           <div class="tl-header">
             <span class="tl-label"><Film size="16" fill="var(--gold)"/> 分镜时间线 ({{ currentStoryboard.shots.length }} 镜头)</span>
             <div class="tl-batch-btns">
@@ -109,8 +109,12 @@
               <el-tooltip content="为所有待定镜头批量生成视频" placement="bottom"><el-button size="small" @click="batchGenerateVideos" :loading="batchGenningVideo" class="tb-btn tb-btn-gen">批量生视频</el-button></el-tooltip>
             </div>
           </div>
-          <div class="tl-track" ref="tlTrack">
-            <template v-for="(s, idx) in currentStoryboard.shots" :key="s.shotNumber">
+          <div class="tl-track-wrap">
+            <transition name="tl-arrow-fade">
+              <span v-if="showTimelineArrows && tlCanScrollLeft" class="tl-arrow tl-arrow-left" @click="tlScroll(-280)">◀</span>
+            </transition>
+            <div class="tl-track" ref="tlTrack">
+              <template v-for="(s, idx) in currentStoryboard.shots" :key="s.shotNumber">
               <!-- 分镜间插入按钮 -->
               <div class="tl-insert" @click.stop="insertAt(idx)" title="在此插入新分镜">+</div>
               <!-- 分镜卡片 -->
@@ -185,6 +189,10 @@
                 <span style="font-size:10px;color:var(--primary-300)">点击添加</span>
               </div>
             </div>
+          </div>
+          <transition name="tl-arrow-fade">
+            <span v-if="showTimelineArrows && tlCanScrollRight" class="tl-arrow tl-arrow-right" @click="tlScroll(280)">▶</span>
+          </transition>
           </div>
         </div>
       </div>
@@ -585,6 +593,9 @@ const noSubtitles = ref(getStoredNoSubtitles());
 function getStoredNoSubtitles() { try { return localStorage.getItem('ad_no_subtitles') === 'true'; } catch { return true; } }
 function saveNoSubtitles(v) { try { localStorage.setItem('ad_no_subtitles', String(v)); } catch {} }
 const showImportDialog = ref(false);
+const showTimelineArrows = ref(false);
+const tlCanScrollLeft = ref(false);
+const tlCanScrollRight = ref(false);
 const showExportDialog = ref(false);
 const verPickerShot = ref(null); // 当前打开版本选择器的镜头号
 const exportTypes = ref(['script', 'shots', 'full_storyboard']);
@@ -1305,14 +1316,27 @@ function toggleSceneRef(id) {
 // 时间线横向滚轮 — 用原生 listener 绕过 passive 问题
 watch(tlTrack, (el, _, onCleanup) => {
   if (!el) return;
+  const updateArrows = () => {
+    tlCanScrollLeft.value = el.scrollLeft > 1;
+    tlCanScrollRight.value = el.scrollLeft < el.scrollWidth - el.clientWidth - 1;
+  };
   const handler = (e) => {
     e.preventDefault();
     if (el.scrollWidth <= el.clientWidth) return;
     el.scrollBy({ left: (e.deltaY || e.deltaX || 0) * 1.5, behavior: 'auto' });
+    requestAnimationFrame(updateArrows);
   };
   el.addEventListener('wheel', handler, { passive: false });
-  onCleanup(() => el.removeEventListener('wheel', handler));
+  el.addEventListener('scroll', updateArrows, { passive: true });
+  onCleanup(() => { el.removeEventListener('wheel', handler); el.removeEventListener('scroll', updateArrows); });
+  setTimeout(updateArrows, 500);
 }, { flush: 'post' });
+
+function tlScroll(px) {
+  const el = tlTrack.value;
+  if (!el) return;
+  el.scrollBy({ left: px, behavior: 'smooth' });
+}
 
 async function onRefImageUpload(e) {
   const files = e.target.files;
@@ -2226,7 +2250,7 @@ async function handleImport() {
 .preview-shot { display: flex; flex-direction: column; text-align: center; width: 100%; height: 100%; position: relative; z-index: 2; }
 .preview-frame {
   flex: 1; min-height: 200px; display: flex; align-items: center; justify-content: center;
-  border-radius: 10px; margin: 0 16px;
+  border-radius: 10px; padding: 0 16px;
   position: relative;
 }
 /* 待生成占位 */
@@ -2301,6 +2325,19 @@ async function handleImport() {
 .tl-track { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; align-items: flex-start; }
 .tl-track::-webkit-scrollbar { height: 5px; }
 .tl-track::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+.tl-track-wrap { position: relative; }
+.tl-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 56px; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.6); color: var(--gold); font-size: 11px; cursor: pointer;
+  border-radius: 4px; z-index: 5; user-select: none;
+}
+.tl-arrow:hover { background: var(--gold); color: #000; }
+.tl-arrow-left { left: 0; }
+.tl-arrow-right { right: 0; }
+.tl-arrow-fade-enter-active { transition: opacity 0.2s; }
+.tl-arrow-fade-leave-active { transition: opacity 0.15s; }
+.tl-arrow-fade-enter-from, .tl-arrow-fade-leave-to { opacity: 0; }
 .tl-track::-webkit-scrollbar-track { background: rgba(201,168,76,0.06); border-radius: 3px; }
 
 .tl-card {
