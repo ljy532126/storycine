@@ -6,10 +6,11 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// 自动携带 JWT Token
+// 自动携带 JWT Token，FormData 时删除 Content-Type 让浏览器自动设 boundary
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (config.data instanceof FormData) delete config.headers['Content-Type'];
   return config;
 });
 
