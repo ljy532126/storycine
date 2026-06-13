@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject, watch } from 'vue';
+import { computed, ref, reactive, onMounted, onUnmounted, inject, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useStoryboardStore } from '../stores/storyboard';
@@ -101,48 +101,89 @@ const socket = useSocket();
 
 const currentProjectId = inject('currentProjectId');
 const selectedStoryboardId = ref('');
-const composing = ref(false);
+const composingIds = reactive(new Set()); // 任务级跟踪，替代全局布尔
+const composing = computed(() => composingIds.size > 0);
 const storyboards = ref([]);
 const composeOptions = reactive({ outputFormat: 'mp4', resolution: '1080x1920', frameRate: 24, transitions: 'fade', backgroundMusic: '', subtitlesEnabled: true });
+const compTimeouts = {}; // compositionId -> timer
 
+// 合成超时(10分钟)自动清理
+const COMP_TIMEOUT = 10 * 60 * 1000;
 
-// 监听顶栏切片场
-watch(currentProjectId, (n, o) => { if (n && n !== o) { currentProjectId.value = n; onProjectChange(n); } });
+// 只在 mounted 时注册一次 socket 监听 — 避免重复叠加泄漏
 onMounted(async () => {
   await projectStore.fetchProjects();
   const restored = await projectStore.restoreLastProject();
   if (restored) { currentProjectId.value = restored._id; onProjectChange(restored._id); }
   socket.connect();
-});
 
-function onProjectChange(val) {
-  if (val) {
-    storyboardStore.fetchStoryboards({ projectId: val }).then(() => { storyboards.value = storyboardStore.storyboards; });
-    compositionStore.fetchCompositions(val);
-    socket.joinProject(val);
-  }
-}
-
-async function handleCreateComposition() {
-  composing.value = true;
+  // 全局注册一次（带 compositionId 匹配，防止串台）
   socket.onCompositionProgress((data) => {
     const c = compositionStore.compositions.find(x => x._id === data.compositionId);
     if (c) { c.status = data.status; c.progress = data.progress; }
   });
   socket.onCompositionComplete((data) => {
     const c = compositionStore.compositions.find(x => x._id === data.compositionId);
-    if (c) { c.status = 'completed'; c.outputUrl = data.outputUrl; }
-    composing.value = false;
+    if (c) {
+      c.status = 'completed';
+      c.outputUrl = data.outputUrl || c.outputUrl;
+    }
+    composingIds.delete(data.compositionId);
+    clearTimeout(compTimeouts[data.compositionId]);
+    delete compTimeouts[data.compositionId];
     ElMessage.success('合成完成！');
   });
+});
+
+onUnmounted(() => {
+  socket.offAll();
+  Object.values(compTimeouts).forEach(t => clearTimeout(t));
+});
+
+// 监听顶栏切片场
+watch(currentProjectId, (n, o) => { if (n && n !== o) { currentProjectId.value = n; onProjectChange(n); } });
+
+function onProjectChange(val) {
+  if (val) {
+    storyboardStore.fetchStoryboards({ projectId: val }).then(() => { storyboards.value = storyboardStore.storyboards; });
+    compositionStore.fetchCompositions(val);
+    socket.joinProject(val);
+    // 恢复正在渲染的任务到 composingIds
+    compositionStore.compositions.forEach(c => {
+      if (c.status === 'pending' || c.status === 'rendering') {
+        composingIds.add(c._id);
+        startCompTimeout(c._id);
+      }
+    });
+  }
+}
+
+async function handleCreateComposition() {
+  if (!selectedStoryboardId.value) return;
   try {
-    await compositionStore.createComposition({
+    const comp = await compositionStore.createComposition({
       projectId: currentProjectId.value,
       storyboardId: selectedStoryboardId.value,
       options: { ...composeOptions },
     });
+    composingIds.add(comp._id);
+    startCompTimeout(comp._id);
     ElMessage.info('合成任务已提交');
-  } catch (e) { ElMessage.error('创建失败'); composing.value = false; }
+  } catch (e) { ElMessage.error('创建失败: ' + (e.message || '')); }
+}
+
+function startCompTimeout(compId) {
+  clearTimeout(compTimeouts[compId]);
+  compTimeouts[compId] = setTimeout(() => {
+    const c = compositionStore.compositions.find(x => x._id === compId);
+    if (c && c.status !== 'completed' && c.status !== 'failed') {
+      c.status = 'failed';
+      c.errorMessage = '合成超时（超过10分钟未完成），请检查服务器日志';
+    }
+    composingIds.delete(compId);
+    delete compTimeouts[compId];
+    ElMessage.error('合成超时，请重试');
+  }, COMP_TIMEOUT);
 }
 
 function downloadComposition(c) { window.open(c.outputUrl, '_blank'); }
@@ -150,6 +191,9 @@ async function deleteTask(c) {
   try { await ElMessageBox.confirm('确认删除该合成任务？', '提示', { type: 'warning', confirmButtonText: '删除' }); } catch { return; }
   try {
     await compositionStore.deleteComposition(c._id);
+    composingIds.delete(c._id);
+    clearTimeout(compTimeouts[c._id]);
+    delete compTimeouts[c._id];
     ElMessage.success('已删除');
   } catch { ElMessage.error('删除失败'); }
 }
