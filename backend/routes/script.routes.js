@@ -44,24 +44,28 @@ function sanitizeScriptData(scriptData) {
       if (hasAction && estDuration > 6) estDuration = Math.min(estDuration, 6);
       if (hasEmotion && estDuration < 5) estDuration = 5;
     }
-    // 清洗对话（保留已知字段 + 透传未知字段）
-    const cleanDialogues = (scene.dialogues || []).map(d => ({
-      ...d,
-      characterName: String(d.characterName || '未知').substring(0, 50),
+    // 清洗对话（保留已知字段 + 透传未知字段，剔除 AI 生成的无效_id）
+    const cleanDialogues = (scene.dialogues || []).map(d => {
+      const { _id, ...rest } = d;
+      return {
+        ...rest,
+        characterName: String(d.characterName || '未知').substring(0, 50),
       text: String(d.text || '').substring(0, 2000),
       actionHint: (d.actionHint || '').substring(0, 500),
       innerThought: (d.innerThought || '').substring(0, 1000),
       cameraHint: (d.cameraHint || '').substring(0, 200),
     })).filter(d => d.text && d.characterName);
-    // 清洗场景（保留已知字段 + 透传未知字段，确保枚举字段合法）
+    // 清洗场景（保留已知字段 + 透传未知字段，剔除 AI 生成的无效_id）
+    const { _id: _sid, ...sceneRest } = scene;
     return {
-      ...scene,
+      ...sceneRest,
       sceneNumber: scene.sceneNumber || 1,
       timeOfDay: VALID_TIMES.includes(scene.timeOfDay) ? scene.timeOfDay : '白天',
       location: (scene.location || '未知地点').substring(0, 200),
       shotType: VALID_SHOT_TYPES.includes(scene.shotType) ? scene.shotType : '中景',
       composition: (scene.composition || '').substring(0, 200),
       cameraMovement: VALID_CAM_MOVES.includes(scene.cameraMovement) ? scene.cameraMovement : '固定',
+      cameraAngle: (scene.cameraAngle || '平视').substring(0, 20),
       lighting: (scene.lighting || '').substring(0, 200),
       soundEffect: (scene.soundEffect || '').substring(0, 200),
       duration: estDuration || (scene.duration || 3),
@@ -447,6 +451,17 @@ router.put('/:id', async (req, res, next) => {
     const allowed = ['episodeTitle', 'scenes', 'summary', 'status', 'source'];
     const update = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    // 清洗 AI 生成的短_id，避免 Mongoose ObjectId cast 报错
+    if (update.scenes) {
+      update.scenes.forEach(scene => {
+        if (scene._id && typeof scene._id === 'string' && scene._id.length < 24) delete scene._id;
+        if (scene.dialogues) {
+          scene.dialogues.forEach(d => {
+            if (d._id && typeof d._id === 'string' && d._id.length < 24) delete d._id;
+          });
+        }
+      });
+    }
     Object.assign(script, update);
     await script.save();
     res.json({ message: '保存成功', data: script });

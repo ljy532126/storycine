@@ -139,6 +139,9 @@ router.put('/:id/shots/:shotNumber', async (req, res, next) => {
     if (!shot) return res.status(404).json({ message: '镜头不存在' });
 
     Object.assign(shot, req.body);
+    // 清洗 AI 生成的短_id
+    if (shot._id && typeof shot._id === 'string' && shot._id.length < 24) delete shot._id;
+    (shot._dialogues || []).forEach(d => { if (d._id && typeof d._id === 'string' && d._id.length < 24) delete d._id; });
     await storyboard.save();
     res.json({ message: '镜头更新成功', data: storyboard });
   } catch (error) { next(error); }

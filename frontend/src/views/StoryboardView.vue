@@ -2546,10 +2546,10 @@ async function handleImport() {
 }
 .ref-chip:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,168,76,0.1); }
 .ref-chip.active {
-  color: #fff !important; font-weight: 700;
-  background: var(--gold) !important;
+  color: var(--gold) !important; font-weight: 700;
+  background: rgba(26,26,46,0.85) !important;
   border-color: var(--gold) !important;
-  box-shadow: 0 2px 12px rgba(201,168,76,0.35);
+  box-shadow: 0 0 0 1px rgba(201,168,76,0.3), 0 2px 12px rgba(0,0,0,0.25);
   transform: translateY(-1px);
 }
 .ref-chip.has-img { border-color: rgba(201,168,76,0.4); }
