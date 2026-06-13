@@ -20,7 +20,7 @@
 ```
 
 
-![镜头板](../images/storyboard.png)
+![镜头板](../images/11-storyboard-overview.png)
 ## 核心功能
 
 ### 刷新故事板

@@ -22,7 +22,7 @@
 ```
 
 
-![分镜台本](../images/script-edit.png)
+![分镜台本](../images/07-script-edit-overview.png)
 ## 核心功能
 
 ### AI 智能补全

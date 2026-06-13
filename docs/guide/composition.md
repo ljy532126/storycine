@@ -15,7 +15,7 @@
 | 字幕 | 开关 |
 
 
-![成片合成](../images/composition.png)
+![成片合成](../images/12-composition-overview.png)
 ## 操作流程
 
 1. 确保「**镜头板**」中已有生成好的图片/视频素材

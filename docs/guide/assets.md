@@ -11,7 +11,7 @@
 | 道具 | 名称 / 描述 | 道具图 |
 
 
-![演员库](../images/assets.png)
+![演员库](../images/08-assets-characters.png)
 ## 角色详情（双栏布局）
 
 ```

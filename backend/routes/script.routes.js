@@ -143,13 +143,25 @@ router.post('/ai-generate', aiGenerateLimiter, async (req, res, next) => {
 
     graph.invoke(initialState).then(async (finalState) => {
       const sanitized = sanitizeScriptData(finalState.script);
+      const scenes = sanitized.scenes || [];
+
+      // 防护：LLM 返回空剧本时删除垃圾记录并通知前端
+      if (!scenes.length) {
+        console.error('[script] AI返回空剧本 (0 scenes)，已拒绝保存。finalState.script keys:', Object.keys(finalState.script || {}));
+        io.to(`project-${projectId}`).emit('script-generation-error', {
+          error: 'AI 生成失败：模型返回了空剧本。请在系统设置中检查 LLM 配置，或尝试更换模型提供商（DeepSeek/豆包/OpenAI）后重试。',
+        });
+        activeGenerations.delete(projectId);
+        return;
+      }
+
       const script = await Script.create({
         projectId,
         episodeNumber: 1,
         episodeTitle: sanitized.episodeTitle || finalState.script?.episodeTitle || '',
         source: 'ai_generated',
         summary: finalState.outline?.summary || '',
-        scenes: sanitized.scenes || [],
+        scenes,
       });
 
       // 批量创建角色

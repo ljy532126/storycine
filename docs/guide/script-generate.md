@@ -17,7 +17,7 @@
 ```
 
 
-![剧本工坊](../images/script-generate.png)
+![剧本工坊](../images/05-script-generate-enter.png)
 ## 创作流程
 
 1. 在左侧面板选择创作标签：
