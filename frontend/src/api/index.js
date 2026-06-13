@@ -110,7 +110,7 @@ export const storyboardAPI = {
   autoGenerate: (data) => api.post('/storyboards/auto-generate', data),
   batchUpdateShots: (id, data) => api.put(`/storyboards/${id}/shots/batch`, data),
   updateShot: (id, shotNumber, data) => api.put(`/storyboards/${id}/shots/${shotNumber}`, data),
-  uploadShotVideo: (id, shotNumber, formData) => api.post(`/storyboards/${id}/shots/${shotNumber}/upload-video`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadShotVideo: (id, shotNumber, formData) => api.post(`/storyboards/${id}/shots/${shotNumber}/upload-video`, formData),
   optimizeRhythm: (shots) => api.post('/storyboards/optimize-rhythm', { shots }),
   importData: (id, data, format) => api.post(`/storyboards/${id}/import`, { data, format }),
 };
