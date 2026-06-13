@@ -180,6 +180,10 @@
                 <div v-if="mentionOptions.length === 0" class="mention-empty">无匹配结果</div>
               </div>
             </div>
+            <div v-if="videoRefChips.length > 0" class="prompt-chips">
+              <span style="font-size:11px;color:var(--text-200);margin-right:4px">点击插入：</span>
+              <span v-for="rc in videoRefChips" :key="rc.id" class="prompt-chip" @click="insertChipToImg(rc)" :title="rc.hint">{{ rc.tag }}</span>
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
               <span class="char-count">{{ imgEditorCharCount }} / 5000</span>
               <el-button size="small" type="primary" link @click="generatePromptForShot" :loading="genningPrompt">AI 生成</el-button>
@@ -771,14 +775,12 @@ function getMentionColors(name) {
   const asset = c || s;
   const hasImg = asset ? !!getRefUrl(asset) : false;
   if (s && !c) {
-    // 场景：有图=蓝色，无图=灰色
     return hasImg
-      ? { bg: '#e2f3f5', color: '#02adb5' }
+      ? { bg: 'rgba(2,173,181,0.14)', color: '#028a91' }
       : { bg: '#f0f0f0', color: '#999' };
   }
-  // 角色：有图=金色，无图=灰色
   return hasImg
-    ? { bg: 'rgba(201,168,76,0.2)', color: 'var(--gold-dark)' }
+    ? { bg: 'rgba(106,90,205,0.15)', color: '#5b4ab8' }
     : { bg: '#f0f0f0', color: '#999' };
 }
 
@@ -848,7 +850,7 @@ function onPromptKeydown(e) {
   }
 }
 
-// ===== 芯片点击 =====
+// ===== 芯片点击（视频）=====
 function insertChip(rc) {
   const char = assetStore.characters.find(x => x._id === rc.id);
   if (char) {
@@ -860,6 +862,21 @@ function insertChip(rc) {
   if (scene) {
     const colors = getMentionColors(scene.sceneName);
     insertMention({ id: rc.id, name: rc.name, type: '场景', chip: rc.tag, bg: colors.bg, color: colors.color, url: getRefUrl(scene) || '', appearance: scene.description || scene.stylePrompt || '' });
+  }
+}
+
+// ===== 芯片点击（绘图）=====
+function insertChipToImg(rc) {
+  const char = assetStore.characters.find(x => x._id === rc.id);
+  if (char) {
+    const colors = getMentionColors(char.name);
+    insertImgMention({ id: rc.id, name: rc.name, type: '角色', chip: rc.tag, bg: colors.bg, color: colors.color, url: getRefUrl(char) || '', appearance: char.appearance || '' });
+    return;
+  }
+  const scene = assetStore.scenes.find(x => x._id === rc.id);
+  if (scene) {
+    const colors = getMentionColors(scene.sceneName);
+    insertImgMention({ id: rc.id, name: rc.name, type: '场景', chip: rc.tag, bg: colors.bg, color: colors.color, url: getRefUrl(scene) || '', appearance: scene.description || scene.stylePrompt || '' });
   }
 }
 
@@ -2139,6 +2156,17 @@ async function handleImport() {
 }
 
 .char-count { font-size: 10px; color: var(--text-200); font-weight: 500; }
+
+/* ===== 参考主体选中动效 ===== */
+@keyframes ref-fill {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes ref-border-glow {
+  0%, 100% { border-color: var(--gold); }
+  50% { border-color: #f0d060; }
+}
+
 .ref-chars { display: flex; flex-wrap: wrap; gap: 6px; }
 .ref-chip {
   padding: 5px 12px; border-radius: 6px; background: rgba(251,247,240,0.7);
@@ -2146,11 +2174,15 @@ async function handleImport() {
   color: var(--text-200); font-weight: 500;
   transition: all 0.25s cubic-bezier(0.22,0.61,0.36,1);
   backdrop-filter: blur(4px);
+  position: relative; overflow: hidden;
 }
 .ref-chip:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,168,76,0.1); }
 .ref-chip.active {
-  background: linear-gradient(135deg, rgba(26,26,46,0.08) 0%, rgba(201,168,76,0.1) 100%);
-  border-color: var(--gold); color: var(--gold-dark) !important; font-weight: 700;
+  color: var(--gold-dark) !important; font-weight: 700;
+  background: linear-gradient(90deg, rgba(201,168,76,0.06) 0%, rgba(201,168,76,0.22) 25%, rgba(251,247,240,0.4) 50%, rgba(201,168,76,0.06) 75%, rgba(201,168,76,0.22) 100%);
+  background-size: 200% 100%;
+  animation: ref-fill 2.5s ease-in-out infinite, ref-border-glow 2.5s ease-in-out infinite;
+  transform: translateY(-1px);
 }
 .ref-chip.has-img { border-color: rgba(201,168,76,0.4); }
 .ref-chip:not(.has-img) { opacity: 0.55; }
@@ -2213,7 +2245,7 @@ async function handleImport() {
   min-height: 88px; max-height: 260px; overflow-y: auto;
   padding: 10px 14px; border: 1.5px solid var(--bg-300); border-radius: 8px;
   background: rgba(251,247,240,0.6); font-family: 'DM Sans','Microsoft YaHei',monospace;
-  font-size: 13px; line-height: 1.7; color: var(--text-100);
+  font-size: 12px; line-height: 1.7; color: var(--gold-dark);
   outline: none; cursor: text; word-break: break-word;
   transition: all 0.25s;
 }
@@ -2242,7 +2274,7 @@ async function handleImport() {
 
 .prompt-editor-ph {
   position: absolute; top: 11px; left: 14px; color: var(--text-200);
-  font-size: 13px; pointer-events: none; opacity: 0.6;
+  font-size: 12px; pointer-events: none; opacity: 0.6;
   font-family: 'DM Sans','Microsoft YaHei',monospace;
 }
 
