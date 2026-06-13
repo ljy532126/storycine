@@ -2,6 +2,10 @@
 
 以下功能仅 **管理员（admin）** 账号可用。
 
+
+![用户管理](../images/users.png)
+
+![公告管理](../images/announcements.png)
 ## 用户管理
 
 路径：左侧菜单「**用户管理**」
