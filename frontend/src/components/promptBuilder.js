@@ -12,6 +12,14 @@ function getStyleKeywords(videoConfig) {
   return parts.filter(Boolean).join('，');
 }
 
+/** 去重逗号分隔的风格关键词，保留顺序去重 */
+function dedupStyle(raw) {
+  if (!raw) return '';
+  const parts = raw.split(/[,，、；;]+/).map(s => s.trim()).filter(Boolean);
+  const seen = new Set();
+  return parts.filter(p => { if (seen.has(p)) return false; seen.add(p); return true; }).join('，');
+}
+
 /** 从分镜描述中提取人物/服饰 */
 function extractOutfit(imgDesc) {
   const m = imgDesc.match(/身穿[^，。；]+/);
@@ -72,7 +80,7 @@ function buildImagePrompt(shot, videoConfig, directorSettings) {
 
   // 画质/风格从导演设定读取，fallback 到 AI 全局配置
   const quality = ds.qualityKeywords || aiCfg.imageQuality || '8K';
-  const artStyle = ds.artStyleCommands || styleKeywords || aiCfg.imageStyle || '写实';
+  const artStyle = dedupStyle(ds.artStyleCommands || styleKeywords || aiCfg.imageStyle || '写实');
 
   // 绑定主体的描述信息（角色外貌 + 场景描述）
   const boundDescs = (shot._boundDescriptions || []).filter(Boolean);
@@ -115,7 +123,7 @@ function buildVideoPrompt(shot, videoConfig, directorSettings) {
 
   // 画质/风格
   const quality = ds.qualityKeywords || '电影级画质，8K高清';
-  const artStyle = ds.artStyleCommands || styleKeywords || '写实';
+  const artStyle = dedupStyle(ds.artStyleCommands || styleKeywords || '写实');
   const noReal = aiCfg.noRealPerson;
   const qualitySuffix = noReal
     ? `${quality}，动漫/古风/风格化表现，非写实人物`
