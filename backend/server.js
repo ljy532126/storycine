@@ -39,23 +39,27 @@ app.use('/uploads', express.static('uploads'));
 // 开发环境：日志双输出（控制台 + backend.log）
 const DEV_LOG = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 if (DEV_LOG) {
-  const util = require('util');
-  const logStream = require('fs').createWriteStream(require('path').join(__dirname, 'backend.log'), { flags: 'a' });
-  const origStdout = process.stdout.write.bind(process.stdout);
-  process.stdout.write = (chunk, enc, cb) => {
-    const s = typeof chunk === 'string' ? chunk : chunk.toString();
-    logStream.write(s.replace(/\x1b\[[0-9;]*m/g, ''));
-    return origStdout(chunk, enc, cb);
+  const fs = require('fs');
+  const pathLog = require('path');
+  // 清空旧日志，避免文件越来越大
+  const logPath = pathLog.join(__dirname, 'backend.log');
+  fs.writeFileSync(logPath, `=== StoryCine Backend Log (${new Date().toISOString()}) ===\n`, 'utf8');
+
+  const origLog = console.log, origWarn = console.warn, origError = console.error;
+  const writeLog = (...args) => {
+    const line = args.map(a => {
+      if (typeof a === 'object') try { return JSON.stringify(a); } catch { return String(a); }
+      return String(a);
+    }).join(' ');
+    fs.appendFileSync(logPath, new Date().toISOString().substring(11, 19) + ' ' + line + '\n', 'utf8');
   };
-  const origStderr = process.stderr.write.bind(process.stderr);
-  process.stderr.write = (chunk, enc, cb) => {
-    const s = typeof chunk === 'string' ? chunk : chunk.toString();
-    logStream.write(s.replace(/\x1b\[[0-9;]*m/g, ''));
-    return origStderr(chunk, enc, cb);
-  };
-  console.log('[server] 开发模式：日志同时写入 backend.log');
-  // morgan with custom stream
-  app.use(morgan('dev', { stream: { write: (m) => { logStream.write(m.replace(/\x1b\[[0-9;]*m/g, '')); origStdout(m.replace(/\x1b\[[0-9;]*m/g, '')); } } }));
+  console.log = (...args) => { writeLog(...args); origLog.apply(console, args); };
+  console.warn = (...args) => { writeLog('⚠️', ...args); origWarn.apply(console, args); };
+  console.error = (...args) => { writeLog('❌', ...args); origError.apply(console, args); };
+  console.log('开发模式：日志同时写入 backend.log');
+
+  // morgan 只输出到控制台（console.log 会自动写文件）
+  app.use(morgan('dev'));
 } else {
   app.use(morgan('dev'));
 }
