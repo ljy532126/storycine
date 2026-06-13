@@ -1080,10 +1080,14 @@ function syncWsSbActions() {
   wsSbActions.visible = !!currentProjectId.value;
   wsSbActions.canRefresh = !!currentScriptId.value;
   wsSbActions.canDelete = !!currentStoryboard.value;
+  wsSbActions.canExport = !!currentProjectId.value;
+  wsSbActions.canImport = !!currentStoryboard.value;
   wsSbActions.noSubtitles = noSubtitles.value;
   wsSbActions.save = saveStoryboard;
   wsSbActions.refresh = handleAutoGenerate;
   wsSbActions.del = deleteStoryboard;
+  wsSbActions.export_click = openExport;
+  wsSbActions.import_click = () => { showImportDialog.value = true; };
   wsSbActions.setNoSubtitles = (v) => { noSubtitles.value = v; };
 }
 watch([saving, generating, deletingSB], () => { if (wsSbActions) { wsSbActions.saving = saving.value; wsSbActions.generating = generating.value; wsSbActions.deleting = deletingSB.value; } });

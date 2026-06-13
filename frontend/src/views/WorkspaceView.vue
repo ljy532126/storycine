@@ -26,6 +26,8 @@
         <el-button size="small" @click="sbActions.save" :loading="sbActions.saving" class="ws-act-btn ws-act-save">保存</el-button>
         <el-button size="small" @click="sbActions.refresh" :disabled="!sbActions.canRefresh" :loading="sbActions.generating" class="ws-act-btn ws-act-refresh">刷新</el-button>
         <el-button size="small" @click="sbActions.del" :disabled="!sbActions.canDelete" :loading="sbActions.deleting" class="ws-act-btn ws-act-del">删除</el-button>
+        <el-button size="small" @click="sbActions.export_click" :disabled="!sbActions.canExport" class="ws-act-btn ws-act-export" title="导出">导出</el-button>
+        <el-button size="small" @click="sbActions.import_click" :disabled="!sbActions.canImport" class="ws-act-btn ws-act-import" title="导入">导入</el-button>
         <el-divider direction="vertical" style="margin:0 4px;height:18px" />
         <span style="font-size:10px;color:var(--text-200);white-space:nowrap">无字幕</span>
         <el-switch :model-value="sbActions.noSubtitles" @update:model-value="sbActions.setNoSubtitles" size="small" />
@@ -69,7 +71,7 @@ const episodeBar = reactive({ scripts: [], currentScriptId: '', add: null, dup: 
 provide('wsEpisodeBar', episodeBar);
 
 // 镜头板快捷操作栏（由 StoryboardView 填充）
-const sbActions = reactive({ visible: false, saving: false, generating: false, deleting: false, canRefresh: false, canDelete: false, noSubtitles: true, save: null, refresh: null, del: null, setNoSubtitles: null });
+const sbActions = reactive({ visible: false, saving: false, generating: false, deleting: false, canRefresh: false, canDelete: false, canExport: false, canImport: false, noSubtitles: true, save: null, refresh: null, del: null, export_click: null, import_click: null, setNoSubtitles: null });
 provide('wsSbActions', sbActions);
 
 const steps = [
@@ -238,6 +240,8 @@ onMounted(() => {
 .ws-act-save:hover, .ws-act-refresh:hover { background: var(--gold) !important; color: #fff !important; }
 .ws-act-del { color: var(--text-200) !important; border-color: var(--bg-300) !important; background: var(--bg-200) !important; }
 .ws-act-del:hover { color: #c44545 !important; border-color: #c44545 !important; }
+.ws-act-export, .ws-act-import { color: var(--text-200) !important; border-color: var(--bg-300) !important; background: var(--bg-200) !important; }
+.ws-act-export:hover, .ws-act-import:hover { color: var(--gold-dark) !important; border-color: var(--gold) !important; }
 
 @media (max-width: 768px) {
   .ws-steps { justify-content: flex-start; padding: 10px 14px; }
