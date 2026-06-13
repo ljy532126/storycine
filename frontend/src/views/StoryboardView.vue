@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sb-root">
     <div class="sb-top" v-if="!wsSbActions">
       <div class="tb-left">
@@ -32,7 +32,7 @@
       <div class="sb-left" v-show="screenWidth >= 768 || mobileTab === 'episodes'">
         <div class="panel-title"><Movie size="16" fill="var(--gold)"/> 剧集</div>
         <div class="ep-list">
-          <div v-for="ep in scripts" :key="ep._id"
+          <div v-for="ep in scripts" :key="ep._id" v-memo="[ep._id, ep.episodeTitle, currentScriptId === ep._id]"
             :class="['ep-item', { active: currentScriptId === ep._id }]"
             @click="currentScriptId = ep._id; onScriptChange(ep._id)">
             <span class="ep-num">第{{ ep.episodeNumber }}集</span>
@@ -119,7 +119,7 @@
               <!-- 分镜间插入按钮 -->
               <div class="tl-insert" @click.stop="insertAt(idx)" title="在此插入新分镜">+</div>
               <!-- 分镜卡片 -->
-              <div :class="['tl-card', { 'tl-active': currentShot?.shotNumber === s.shotNumber }]" @click="selectShot(s)">
+              <div :class="['tl-card', { 'tl-active': currentShot?.shotNumber === s.shotNumber }]" @click="selectShot(s)" v-memo="[s.shotNumber, s.renderedImage, s.renderedVideo, s.duration, s.status, currentShot?.shotNumber === s.shotNumber, verPickerShot === s.shotNumber, genningShotSet.has(s.shotNumber)]">
                 <div class="tl-card-header">
                   <span class="tl-shot-num">镜头 {{ s.shotNumber }}</span>
                   <span class="tl-shot-dur"><Time size="12" fill="var(--gold)"/> {{ s.duration }}s</span>
@@ -424,164 +424,27 @@
     </div>
 
     <!-- 引流推广弹窗 -->
-    <el-dialog v-model="showPromoDialog" :width="screenWidth < 768 ? '94%' : '460px'" destroy-on-close title="生成引流短片">
-      <div style="font-size:13px;color:var(--text-100);margin-bottom:16px">从故事板已有视频中自动提取精彩片段，生成竖版引流推广短片。</div>
-      <el-form label-position="top" size="small">
-        <el-form-item label="生成模式">
-          <el-radio-group v-model="promoMode">
-            <el-radio value="simple">简单版 — 1条冲突向引流片</el-radio>
-            <el-radio value="complete">完整版 — 3条不同风格（冲突/甜宠/悬念）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="背景音乐 URL（可选）">
-          <el-input v-model="promoBGM" placeholder="填写音乐链接，留空则不添加背景音乐" />
-        </el-form-item>
-      </el-form>
-      <div v-if="promoStatus === 'rendering'" style="padding:12px;margin:12px 0">
-        <el-progress :percentage="promoProgress" :stroke-width="6" />
-        <p style="font-size:12px;color:var(--text-200);margin-top:6px">{{ promoMessage }}</p>
-      </div>
-      <div v-if="promoResults.length > 0" style="margin-top:12px">
-        <div v-for="(r, i) in promoResults" :key="i" style="padding:8px 12px;margin-bottom:8px;border-radius:8px;border:1px solid var(--bg-300);display:flex;align-items:center;gap:10px">
-          <span style="font-weight:700;font-size:12px;color:var(--gold-dark)">{{ r.label }}</span>
-          <span style="flex:1;font-size:11px;color:var(--text-200);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.hookText }}</span>
-          <el-button size="small" type="success" @click="downloadPromo(r)">下载</el-button>
-        </div>
-      </div>
-      <div v-if="promoError" style="color:#e74c3c;font-size:12px;margin-top:8px">{{ promoError }}</div>
-      <template #footer>
-        <el-button @click="showPromoDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleGeneratePromo" :loading="promoRendering" :disabled="!currentStoryboard?.shots?.some(s => s.renderedVideo)">开始生成</el-button>
-      </template>
-    </el-dialog>
+    <PromoDialog v-model="showPromoDialog" :project-id="currentProjectId" :storyboard-id="currentStoryboard?._id" :has-video="!!currentStoryboard?.shots?.some(s => s.renderedVideo)" :screen-width="screenWidth" />
 
     <!-- 导出弹窗 -->
-    <el-dialog v-model="showExportDialog" :width="screenWidth < 768 ? '94%' : '520px'" destroy-on-close class="export-dialog">
-      <template #header>
-        <div style="display:flex;align-items:center;gap:8px">
-          <Download size="20" fill="var(--gold)"/>
-          <span style="font-size:17px;font-weight:700;color:var(--text-100)">导出分镜</span>
-        </div>
-      </template>
-      <div class="export-body">
-        <div class="export-section">
-          <div class="export-section-title"><Film size="14" fill="var(--navy)"/> 选择剧集</div>
-          <el-select v-model="exportEpisodes" style="width:100%" multiple collapse-tags placeholder="全部剧集（不选=导出全部）">
-            <el-option v-for="ep in scripts" :key="ep._id" :label="formatEpLabel(ep)" :value="ep._id" />
-          </el-select>
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <el-button size="small" link @click="exportEpisodes = scripts.map(e => e._id)">全选</el-button>
-            <el-button size="small" link @click="exportEpisodes = currentScriptId ? [currentScriptId] : []">当前集</el-button>
-            <el-button size="small" link @click="exportEpisodes = []">清空</el-button>
-          </div>
-        </div>
-        <div class="export-section">
-          <div class="export-section-title"><FolderOpen size="14" fill="var(--navy)"/> 导出内容</div>
-          <el-checkbox-group v-model="exportTypes">
-            <el-checkbox value="script">剧本全文</el-checkbox>
-            <el-checkbox value="shots">分镜全文</el-checkbox>
-            <el-checkbox value="full_storyboard">故事板全文</el-checkbox>
-          </el-checkbox-group>
-        </div>
-        <div class="export-section">
-          <div class="export-section-title"><Edit size="14" fill="var(--navy)"/> 导出格式</div>
-          <div class="export-format-cards">
-            <div v-for="f in formatOptions" :key="f.value" :class="['ef-card',{active:exportFormat===f.value}]" @click="exportFormat=f.value">
-              <div class="ef-card-icon" v-html="f.icon"></div>
-              <div class="ef-card-label">{{ f.label }}</div>
-              <div class="ef-card-hint">{{ f.hint }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <el-alert type="info" :closable="false" show-icon style="margin-top:12px"><template #title>{{ formatHint }}</template></el-alert>
-      <template #footer>
-        <el-button @click="showExportDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleExport" :disabled="exportTypes.length === 0">
-          <Download size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导出文件
-        </el-button>
-      </template>
-    </el-dialog>
+    <ExportDialog ref="exportDlg" v-model="showExportDialog" :project-id="currentProjectId" :scripts="scripts" :current-script-id="currentScriptId" :screen-width="screenWidth" />
 
     <ImageLightbox v-model:visible="imgViewerVisible" :url="imgViewerSrc || ''" title="图片预览" />
 
     <!-- 导入弹窗 -->
-    <el-dialog v-model="showImportDialog" title="导入分镜数据" width="600px" class="export-dialog">
-      <div class="export-body">
-        <div class="export-section">
-          <div class="export-section-title"><FolderOpen size="14" fill="var(--navy)"/> 数据格式</div>
-          <el-radio-group v-model="importFormat">
-            <el-radio value="csv">CSV（逗号分隔）</el-radio>
-            <el-radio value="json">JSON（结构化数据）</el-radio>
-          </el-radio-group>
-          <div style="margin-top:10px">
-            <el-upload :auto-upload="false" :show-file-list="false" accept=".csv,.json,.txt" @change="onImportFileChange">
-              <el-button size="small">📁 选择文件上传</el-button>
-            </el-upload>
-          </div>
-        </div>
-        <div class="export-section">
-          <div class="export-section-title"><Edit size="14" fill="var(--navy)"/> 粘贴数据</div>
-          <el-input v-model="importText" type="textarea" :rows="14" placeholder="粘贴 CSV 或 JSON 数据到此处..." />
-        </div>
-      </div>
-      <el-alert type="info" :closable="false" show-icon style="margin-top:12px">
-        <template #title>
-          CSV表头：镜头号,场景名称,景别,构图,运镜,灯光,时长,图像描述,角色名,台词,音效,备注,状态
-          <br>JSON：数组格式 [{ shotNumber, shotType, imageDescription, ... }]
-        </template>
-      </el-alert>
-      <template #footer>
-        <el-button @click="showImportDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleImport" :loading="importing" :disabled="!importText.trim()">
-          <Download size="14" fill="currentColor" style="margin-right:4px;vertical-align:text-bottom"/> 导入数据
-        </el-button>
-      </template>
-    </el-dialog>
+    <ImportDialog v-model="showImportDialog" :storyboard-id="currentStoryboard?._id" :shots="currentStoryboard?.shots" @imported="onImported" />
 
-    <!-- TTS 配音参数弹窗 -->
-    <el-dialog v-model="showTTSDialog" :title="ttsTargetShot ? `配音: 镜头 ${ttsTargetShot.shotNumber}` : '批量全集配音'" width="560px" destroy-on-close>
-      <div v-if="ttsTargetShot" style="margin-bottom:12px">
-        <span style="font-size:12px;font-weight:600;color:var(--text-100);display:block;margin-bottom:6px">选择台词（共 {{ ttsDialogueOptions.length }} 句）</span>
-        <div v-if="ttsDialogueOptions.length > 0" class="tts-dialogue-list">
-          <div v-for="(d, di) in ttsDialogueOptions" :key="di"
-            :class="['tts-dialogue-item', { active: ttsSelectedDi === di }]"
-            @click="ttsSelectedDi = di">
-            <span class="tts-di-char">{{ d.characterName || '未知' }}</span>
-            <span class="tts-di-text">{{ d.text }}</span>
-          </div>
-        </div>
-        <div v-else style="color:var(--text-200);font-size:12px">该镜头没有台词，将合成镜头描述</div>
-      </div>
-      <el-form label-position="top" size="small">
-        <el-form-item label="音色">
-          <el-select v-model="ttsParams.speaker" style="width:100%" filterable>
-            <el-option v-for="v in ttsVoiceOptions" :key="v.value" :label="v.label" :value="v.value" :disabled="v.disabled"/>
-          </el-select>
-          <el-input v-if="ttsParams.speaker === '__custom__'" v-model="ttsCustomSpeaker" placeholder="输入音色ID" size="small" style="margin-top:8px" />
-        </el-form-item>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="语速"><el-slider v-model="ttsParams.speechRate" :min="-50" :max="100" /></el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="音量"><el-slider v-model="ttsParams.loudnessRate" :min="-50" :max="100" /></el-form-item>
-          </el-col>
-        </el-row>
-        <el-alert type="info" :closable="false" style="font-size:12px" title="临时修改仅本次合成生效" />
-      </el-form>
-      <template #footer>
-        <el-button @click="showTTSDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleTTSSynthesize" :loading="synthingShot !== null" :disabled="ttsTargetShot && ttsDialogueOptions.length > 0 && ttsSelectedDi < 0">
-          <Voice size="14" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/>{{ ttsTargetShot ? '合成选中的台词' : '批量合成全部' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- TTS 配音弹窗 -->
+    <TTSDialog ref="ttsDlg" v-model="showTTSDialog" :shot="ttsTargetShot" :dialogue-options="ttsDialogueOptions" :storyboard-id="currentStoryboard?._id" :project-id="currentProjectId" :script-id="currentScriptId" @synth-done="onSynthDone" />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onDeactivated, onUnmounted, inject } from 'vue';
+import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onDeactivated, onUnmounted, inject, defineAsyncComponent } from 'vue';
+const PromoDialog = defineAsyncComponent(() => import('../components/dialogs/PromoDialog.vue'));
+const ExportDialog = defineAsyncComponent(() => import('../components/dialogs/ExportDialog.vue'));
+const ImportDialog = defineAsyncComponent(() => import('../components/dialogs/ImportDialog.vue'));
+const TTSDialog = defineAsyncComponent(() => import('../components/dialogs/TTSDialog.vue'));
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock, Movie, MagicWand, Download, FolderOpen, Edit, Upload } from '@icon-park/vue-next';
@@ -590,9 +453,7 @@ import { useScriptStore } from '../stores/script';
 import { useStoryboardStore } from '../stores/storyboard';
 import { useAssetStore } from '../stores/asset';
 import { storyboardAPI, assetAPI } from '../api';
-import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
-import { useSocket } from '../components/useSocket';
 import ImageLightbox from '../components/ImageLightbox.vue';
 import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
@@ -632,25 +493,6 @@ const tlCanScrollLeft = ref(false);
 const tlCanScrollRight = ref(false);
 const showExportDialog = ref(false);
 const verPickerShot = ref(null); // 当前打开版本选择器的镜头号
-const exportTypes = ref(['script', 'shots', 'full_storyboard']);
-const exportFormat = ref('pdf');
-const exportEpisodes = ref([]);
-const formatOptions = [
-  { value:'pdf', label:'PDF', hint:'打印预览保存', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#e74c3c"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zM16.5 13H15v-2h-1.5V7H15v2h1.5v1.5H15V13zM19 13h-1.5V7H19v6zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>' },
-  { value:'markdown', label:'Markdown', hint:'Typora/VS Code', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#3498db"><path d="M20.56 18H3.44C2.65 18 2 17.37 2 16.59V7.41C2 6.63 2.65 6 3.44 6h17.12c.79 0 1.44.63 1.44 1.41v9.18c0 .78-.65 1.41-1.44 1.41zM6.81 15.19v-4.69l1.88 2.35 1.88-2.35v4.69h1.13V8.81h-1.13l-1.88 2.35-1.88-2.35H5.69v6.38h1.12zM15.73 15.19l2.62-3.19-2.62-3.19h1.51l1.87 2.31 1.87-2.31h1.51l-2.62 3.19 2.62 3.19h-1.51l-1.87-2.31-1.87 2.31h-1.51z"/></svg>' },
-  { value:'csv', label:'CSV Excel', hint:'Excel/WPS', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#27ae60"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6h2v-2H8v2zm0-4h2V8H8v2zm4 4h2v-2h-2v2zm0-4h2V8h-2v2zm4 4h2v-2h-2v2zm0-4h2V8h-2v2z"/></svg>' },
-  { value:'word', label:'Word', hint:'Word/WPS', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#2980b9"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2.5-4.5L10 13l1.5 2.5H13l-2-3 2-3h-1.5L10 11.5 8.5 9.5H7l2 3-2 3h1.5z"/></svg>' },
-  { value:'json', label:'JSON', hint:'结构化数据', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#8e44ad"><path d="M5 3h2v2H5v5c0 1.1-.9 2-2 2v1c1.1 0 2 .9 2 2v5h2v2H5c-1.07 0-2-.94-2-2.03V17c0-1.1-.9-2-2-2v-1c1.1 0 2-.9 2-2V7c0-1.08.93-2 2-2zm14 0c1.07 0 2 .94 2 2.03V7c0 1.1.9 2 2 2v1c-1.1 0-2 .9-2 2v5.03c0 1.09-.93 2-2 2h-2v-2h2v-5c0-1.1.9-2 2-2V7c0-1.1-.9-2-2-2h-2V3h2z"/></svg>' },
-  { value:'html', label:'HTML', hint:'浏览器打开', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#e67e22"><path d="M12 18.177l-6.72-3.878-.9-8.12L12 2l7.62 4.179-.9 8.12L12 18.177zM4.86 6.556l.72 6.482L12 16.545l6.42-3.507.72-6.482L12 3.455 4.86 6.556zM11 13h2l-.3 3.5-1 .5-1-.5L11 13zm0-6h2l-.2 5H11.2L11 7z"/></svg>' },
-  { value:'png', label:'PNG 图片', hint:'截图导出', icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="#16a085"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>' },
-];
-const importText = ref('');
-const importFormat = ref('csv');
-const importing = ref(false);
-const formatHint = computed(() => {
-  const m = { pdf: 'PDF：打开打印预览，浏览器「另存为 PDF」保存', markdown: 'Markdown：下载 .md 文件，可用 Typora/VS Code 打开', csv: 'Excel/CSV：下载 .csv 文件，用 Excel/WPS 打开编辑', word: 'Word：下载 .doc 文件，用 Word/WPS 打开编辑', json: 'JSON：下载 .json 文件，结构化数据，可程序化处理', html: 'HTML：下载 .html 文件，浏览器直接打开查看', png: 'PNG：将导出内容渲染为高清截图下载，多集全选时可能需几秒' };
-  return m[exportFormat.value] || '';
-});
 const shotPrompt = ref('');
 const selectedModel = ref('doubao_image');
 const selectedRefs = ref([]);
@@ -1063,14 +905,6 @@ onMounted(async () => {
 
 // keep-alive 缓存激活时：同步从其他页面切换过来的项目
 onActivated(() => {
-  if (!_promoSocketInit.value) {
-    _promoSocketInit.value = true;
-    socket.connect();
-    socket.on('promo-progress', (d) => { promoStatus.value = 'rendering'; promoMessage.value = d.message || ''; promoProgress.value = d.progress || 0; });
-    socket.on('promo-complete', (d) => { promoStatus.value = 'completed'; promoProgress.value = 100; promoResults.value = d.clips || []; promoRendering.value = false; ElMessage.success('引流短片生成完成'); });
-    socket.on('promo-error', (d) => { promoStatus.value = 'failed'; promoError.value = d.error || '生成失败'; promoRendering.value = false; ElMessage.error(d.error || '引流短片生成失败'); });
-  }
-
   const storeProject = projectStore.currentProject;
   if (storeProject && storeProject._id !== currentProjectId.value) {
     currentProjectId.value = storeProject._id;
@@ -1948,7 +1782,7 @@ function startVideoPolling(taskId, shotNumOverride, sbIdOverride, scriptIdOverri
   const scriptId = scriptIdOverride || currentScriptId.value;
   const key = `${scriptId}_${shotNum}`;
   const startTime = Date.now();
-  videoPollingMap[key] = { progress: 0, status: 'queued', taskId, shotNum, scriptId };
+  videoPollingMap[key] = { progress: 0, status: 'queued', taskId, shotNum, scriptId, startTime };
 
   clearInterval(videoPollTimers[key]);
   videoPollTimers[key] = setInterval(async () => {
@@ -2017,134 +1851,69 @@ function resumeVideoTasks() {
   } catch {}
 }
 
-onUnmounted(() => { Object.values(videoPollTimers).forEach(clearInterval); });
+onUnmounted(() => { Object.values(videoPollTimers).forEach(clearInterval); clearInterval(_pollCleanupTimer); });
 
-function formatEpLabel(ep) {
-  const title = (ep.episodeTitle || '').replace(/^第\d+集[：:]*\s*/, '').trim();
-  return title ? `第${ep.episodeNumber}集：${title}` : `第${ep.episodeNumber}集`;
-}
+// 定期清理过期 videoPollingMap 条目（防止内存泄漏）
+let _pollCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  const FIVE_MIN = 5 * 60 * 1000;
+  Object.entries(videoPollingMap).forEach(([k, v]) => {
+    if (!videoPollTimers[k] && now - v.startTime > FIVE_MIN) {
+      delete videoPollingMap[k];
+    }
+  });
+}, 30000);
+
+// ===== TTS 对白选项 =====
 
 // ===== TTS 配音 =====
 const showTTSDialog = ref(false);
 const ttsTargetShot = ref(null);
-const socket = useSocket();
-const _promoSocketInit = ref(false);
 const synthingShot = ref(null);
-const ttsSelectedDi = ref(-1); // 当前选中的台词索引
-const ttsDialogueOptions = ref([]); // 备选台词列表
+const ttsDialogueOptions = ref([]);
 const ttsBatchRunning = ref(false);
-const ttsParams = reactive({ speaker: 'zh_female_vv_uranus_bigtts', speechRate: 0, loudnessRate: 0 });
-const ttsCustomSpeaker = ref('');
-
-const ttsVoiceOptions = ref([{ label: '加载中...', value: '' }]);
-
-async function fetchTTSVoices() {
-  try {
-    const { data } = await configAPI.getTTSVoices();
-    if (data && data.length > 0) {
-      const opts = [{ label: '自定义音色ID (手动输入)', value: '__custom__' }];
-      const byGender = {};
-      data.forEach(v => { const g = v.gender || '其他'; if (!byGender[g]) byGender[g] = []; byGender[g].push({ label: v.name, value: v.id }); });
-      Object.entries(byGender).forEach(([g, voices]) => { opts.push({ label: `──── ${g}声 ────`, value: '', disabled: true }); opts.push(...voices); });
-      ttsVoiceOptions.value = opts;
-    }
-  } catch {}
-}
+const ttsDlg = ref(null);
 
 function openTTSDialog(shot) {
-  fetchTTSVoices();
   ttsTargetShot.value = shot;
-  ttsParams.speaker = 'zh_female_vv_uranus_bigtts';
-  ttsParams.speechRate = 0;
-  ttsParams.loudnessRate = 0;
-  // 收集 _dialogues + dialogue 作为备选台词
   const dialogues = (shot._dialogues || []).filter(d => d.text && d.text.trim());
   if ((!dialogues.length) && shot.dialogue?.text && shot.dialogue.text.trim()) {
     dialogues.push(shot.dialogue);
   }
   ttsDialogueOptions.value = dialogues;
-  ttsSelectedDi.value = dialogues.length > 0 ? 0 : -1;
+  nextTick(() => ttsDlg.value?.reset());
   showTTSDialog.value = true;
 }
 
-// ===== 引流推广短片 =====
-const showPromoDialog = ref(false);
-const promoMode = ref('simple');
-const promoBGM = ref('');
-const promoRendering = ref(false);
-const promoProgress = ref(0);
-const promoMessage = ref('');
-const promoStatus = ref('');
-const promoResults = ref([]);
-const promoError = ref('');
-
-function openPromoDialog() { showPromoDialog.value = true; promoError.value = ''; promoResults.value = []; promoStatus.value = ''; }
-async function handleGeneratePromo() {
-  promoRendering.value = true; promoError.value = ''; promoResults.value = []; promoStatus.value = 'rendering'; promoProgress.value = 0; promoMessage.value = '正在生成...';
-  const token = localStorage.getItem('token');
-  try {
-    const res = await fetch('/api/v1/promos/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, storyboardId: currentStoryboard.value._id, options: { mode: promoMode.value, backgroundMusic: promoBGM.value, maxDuration: 60 } }),
-    });
-    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.message || '生成请求失败'); }
-    ElMessage.success('已提交引流短片生成任务，请等待完成通知');
-    // Start polling for 5 minutes max
-    const start = Date.now();
-    const poll = setInterval(async () => {
-      if (promoResults.value.length > 0 || promoStatus.value === 'completed' || promoStatus.value === 'failed') {
-        clearInterval(poll); promoRendering.value = false; return;
-      }
-      if (Date.now() - start > 5 * 60 * 1000) { clearInterval(poll); promoRendering.value = false; promoError.value = '生成超时'; return; }
-      promoProgress.value = Math.min(promoProgress.value + 2, 95);
-    }, 2000);
-  } catch (e) { promoError.value = e.message || '生成失败'; promoRendering.value = false; promoStatus.value = ''; }
-}
-function downloadPromo(r) {
-  const a = document.createElement('a'); a.href = r.url; a.download = `promo_${r.label}_${Date.now()}.mp4`; a.click();
-}
-
-async function handleTTSSynthesize() {
-  if (!synthingShot.value && !ttsTargetShot.value) { ttsBatchRunning.value = true; }
-  else { synthingShot.value = ttsTargetShot.value ? ttsTargetShot.value.shotNumber : -1; }
-  showTTSDialog.value = false;
-  const speaker = ttsParams.speaker === '__custom__' ? (ttsCustomSpeaker.value || 'zh_female_vv_uranus_bigtts') : ttsParams.speaker;
-  try {
-    if (!ttsTargetShot.value) {
-      const { data } = await ttsAPI.batchSynthesize({
-        storyboardId: currentStoryboard.value._id,
-        speaker, speechRate: ttsParams.speechRate, loudnessRate: ttsParams.loudnessRate,
-      });
-      const ok = data.results?.filter(r => r.success).length || 0;
-      ElMessage.success(`批量配音完成: ${ok}/${data.results?.length || 0}`);
-      if (currentStoryboard.value) {
-        const sb = await storyboardAPI.get(currentStoryboard.value._id);
-        if (sb?.data) { currentStoryboard.value = sb.data; }
-      }
-    } else {
-      const shot = ttsTargetShot.value;
-      const sel = ttsDialogueOptions.value[ttsSelectedDi.value];
-      const text = sel?.text || shot.dialogue?.text || shot.imageDescription || '';
-      const charName = sel?.characterName || shot.dialogue?.characterName || '';
-      if (!text.trim()) { ElMessage.warning('该镜头没有台词'); return; }
-      const { data } = await ttsAPI.synthesize({
-        storyboardId: currentStoryboard.value._id,
-        shotNumber: shot.shotNumber,
-        text, characterName: charName,
-        projectId: currentProjectId.value,
-        scriptId: currentScriptId.value,
-        speaker, speechRate: ttsParams.speechRate, loudnessRate: ttsParams.loudnessRate,
-      });
-      if (shot.dialogue) shot.dialogue.audioUrl = data.audioUrl;
-      ElMessage.success('配音完成');
+async function onSynthDone() {
+  if (!ttsTargetShot.value) {
+    if (currentStoryboard.value) {
+      const sb = await storyboardAPI.get(currentStoryboard.value._id);
+      if (sb?.data) { currentStoryboard.value = sb.data; }
     }
-  } catch (e) { ElMessage.error(e.response?.data?.message || '配音失败'); }
-  finally { synthingShot.value = null; ttsBatchRunning.value = false; ttsTargetShot.value = null; }
+  }
+  synthingShot.value = null; ttsBatchRunning.value = false; ttsTargetShot.value = null;
 }
 
+// ===== 引流推广 =====
+const showPromoDialog = ref(false);
+function openPromoDialog() { showPromoDialog.value = true; }
+
+// ===== 导出 =====
+const exportDlg = ref(null);
 function openExport() {
-  exportEpisodes.value = currentScriptId.value ? [currentScriptId.value] : scripts.value.map(e => e._id);
   showExportDialog.value = true;
+  nextTick(() => exportDlg.value?.initEpisodes());
+}
+
+// ===== 导入 =====
+function onImported() {
+  if (currentStoryboard.value?._id) {
+    storyboardStore.fetchStoryboards({ projectId: currentProjectId.value }).then(() => {
+      const sb = storyboardStore.storyboards.find(s => s._id === currentStoryboard.value._id);
+      if (sb) { currentStoryboard.value = JSON.parse(JSON.stringify(sb)); currentShot.value = currentStoryboard.value?.shots?.[0] || null; }
+    });
+  }
 }
 
 async function handleExport() {
