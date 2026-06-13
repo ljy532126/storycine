@@ -4,6 +4,7 @@ export default defineConfig({
   lang: 'zh-CN',
   title: 'StoryCine',
   description: '全自动 AI 短剧生成平台使用教程',
+  base: '/storycine/',
 
   themeConfig: {
     logo: '/logo.svg',
