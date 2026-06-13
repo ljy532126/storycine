@@ -868,13 +868,13 @@ async function batchGenerateAssets(type) {
   cursor: pointer; overflow: hidden; border: 2px solid transparent;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.list-item-char-card:hover { transform: translateY(-2px); border-color: #FEACA5; box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
-.card-active { border-color: #FE7C6E !important; box-shadow: 0 0 0 3px rgba(254,124,110,0.15) !important; }
+.list-item-char-card:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 6px 24px rgba(201,168,76,0.12); }
+.card-active { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.18) !important; }
 .card-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.02) 55%, rgba(0,0,0,0.4) 100%);
+  background: linear-gradient(to bottom, rgba(26,26,46,0.2) 0%, rgba(26,26,46,0) 50%, rgba(26,26,46,0.5) 100%);
 }
-.card-active .card-overlay { background: linear-gradient(to bottom, rgba(254,124,110,0.2) 0%, rgba(0,0,0,0.02) 55%, rgba(0,0,0,0.45) 100%); }
+.card-active .card-overlay { background: linear-gradient(to bottom, rgba(201,168,76,0.15) 0%, rgba(26,26,46,0) 50%, rgba(26,26,46,0.55) 100%); }
 
 /* 卡片生成中遮罩 */
 .card-loading-mask {
@@ -923,10 +923,10 @@ async function batchGenerateAssets(type) {
   color: #fff; font-size: 12px; font-weight: 600;
 }
 .card-hover-upload {
-  padding: 6px 14px; background: rgba(254,124,110,0.88);
+  padding: 6px 14px; background: rgba(201,168,76,0.85);
   backdrop-filter: blur(6px);
 }
-.card-hover-upload:hover { background: #FE7C6E; }
+.card-hover-upload:hover { background: var(--gold-dark); }
 .card-hover-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
 /* 查看大图按钮 */
@@ -938,7 +938,7 @@ async function batchGenerateAssets(type) {
   cursor: pointer; opacity: 0; transition: all 0.2s;
 }
 .list-item-char-card:hover .card-view-btn { opacity: 1; }
-.card-view-btn:hover { background: #FE7C6E; color: #fff; transform: scale(1.1); }
+.card-view-btn:hover { background: var(--gold); color: #fff; transform: scale(1.1); }
 
 /* 复选框 */
 .card-check { position: absolute; top: 8px; left: 8px; z-index: 3; }
@@ -947,7 +947,7 @@ async function batchGenerateAssets(type) {
   background: rgba(255,255,255,0.25); border: 1.5px solid rgba(255,255,255,0.5);
   transition: all 0.2s;
 }
-.card-check :deep(.el-checkbox__input.is-checked .el-checkbox__inner) { background: #FE7C6E; border-color: #FE7C6E; }
+.card-check :deep(.el-checkbox__input.is-checked .el-checkbox__inner) { background: var(--gold); border-color: var(--gold); }
 .card-check :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) { border-color: #fff; }
 .card-check :deep(.el-checkbox__label) { display: none; }
 .card-check :deep(.el-checkbox__input) { margin: 0; }
