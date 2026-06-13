@@ -2236,7 +2236,7 @@ async function handleImport() {
 }
 .preview-clear:hover { background: #e74c3c; }
 .preview-info {
-  position: absolute; bottom: 8px; left: 8px;
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 6px; align-items: center; z-index: 3;
 }
 .pi-dur {
