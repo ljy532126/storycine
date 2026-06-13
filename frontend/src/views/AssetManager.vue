@@ -902,11 +902,11 @@ async function batchGenerateAssets(type) {
   display: flex; justify-content: space-between; align-items: baseline; z-index: 2;
 }
 .card-name {
-  color: var(--gold); font-size: 15px; font-weight: 700;
+  color: #FFD76D; font-size: 15px; font-weight: 700;
   text-shadow: 0 1px 6px rgba(0,0,0,0.7);
 }
 .card-meta {
-  color: var(--gold-light); font-size: 10px;
+  color: #FFE9A8; font-size: 10px;
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 
