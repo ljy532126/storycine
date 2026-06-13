@@ -16,6 +16,7 @@ router.use(authRequired);
 // 创建项目
 router.post('/', async (req, res, next) => {
   try {
+    console.log(`[project] POST / create: ${req.body.name}`);
     const project = await Project.create({
       userId: req.user._id,
       name: req.body.name,

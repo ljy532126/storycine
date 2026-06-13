@@ -271,6 +271,7 @@ function parseCSVLine(line) {
 // 删除故事板
 router.delete('/:id', async (req, res, next) => {
   try {
+    console.log(`[storyboard] DELETE /${req.params.id}`);
     const storyboard = await Storyboard.findByIdAndDelete(req.params.id);
     if (!storyboard) return res.status(404).json({ message: '故事板不存在' });
     res.json({ message: '故事板已删除', data: { _id: storyboard._id } });

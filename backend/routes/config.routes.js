@@ -110,6 +110,7 @@ router.get('/llm', async (req, res, next) => {
 
 router.put('/llm', async (req, res, next) => {
   try {
+    console.log(`[config] PUT /llm provider=${req.body.provider}`);
     const { provider, apiKey, baseUrl, model, imageModel } = req.body;
     if (!provider) {
       return res.status(400).json({ message: '缺少 provider 参数 (deepseek|doubao|tongyi|openai)' });
