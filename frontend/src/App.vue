@@ -115,6 +115,10 @@
         </div>
       </div>
       <div class="topbar-right">
+        <a href="https://ljy532126.github.io/storycine/" target="_blank" class="topbar-help-link" title="使用帮助">
+          <div class="topbar-icon"><el-icon :size="18"><QuestionFilled /></el-icon></div>
+          <span class="topbar-help-text">帮助</span>
+        </a>
         <el-tooltip content="全局搜索 Ctrl+K" placement="bottom">
           <div class="topbar-icon" @click="searchVisible = true"><el-icon :size="18"><Search /></el-icon></div>
         </el-tooltip>
@@ -260,7 +264,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
 import {
-  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset, WarningFilled, Bell,
+  HomeFilled, MagicStick, Edit, UserFilled, Film, VideoCameraFilled, PictureFilled, Setting, Folder, TrendCharts, Search, Headset, WarningFilled, Bell, QuestionFilled,
   ArrowLeft, ArrowRight, Menu as MenuIcon, Close,
 } from '@element-plus/icons-vue';
 import { useProjectStore } from './stores/project';
@@ -648,6 +652,10 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
   transition: all 0.15s;
 }
 .topbar-icon:hover { background: var(--bg-100); color: var(--text-100); }
+.topbar-help-link { display: flex; align-items: center; gap: 4px; text-decoration: none; margin-right: 6px; }
+.topbar-help-text { font-size: 11px; color: var(--text-200); font-weight: 500; }
+.topbar-help-link:hover .topbar-icon { background: var(--bg-100); color: var(--text-100); }
+.topbar-help-link:hover .topbar-help-text { color: var(--gold-dark); }
 .topbar-badge {
   position: absolute; top: 2px; right: 2px;
   min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
