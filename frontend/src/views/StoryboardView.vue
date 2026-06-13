@@ -1297,6 +1297,10 @@ async function uploadShotVideo(shot, e) {
     shot.status = 'completed';
     if (actualDuration > 0) {
       shot.duration = Math.ceil(actualDuration);
+      // 强制响应式更新
+      const shots = currentStoryboard.value.shots;
+      const idx = shots.findIndex(s => s.shotNumber === shot.shotNumber);
+      if (idx >= 0) shots[idx].duration = shot.duration;
       // 持久化时长
       await storyboardAPI.updateShot(currentStoryboard.value._id, shot.shotNumber, { duration: shot.duration, renderedVideo: shot.renderedVideo, status: 'completed' }).catch(() => {});
       ElMessage.success(`分镜 #${shot.shotNumber} 视频已上传，时长 ${shot.duration}s`);
@@ -1568,11 +1572,13 @@ async function generateTimedStoryboard() {
 }
 async function generateImageForShot() {
   if (!currentShot.value || !currentShotPrompt.value) { ElMessage.warning('请先填写提示词'); return; }
+  const shot = currentShot.value;
+  const shotNum = shot.shotNumber;
   genningImage.value = true;
   window.__imgGenning = true;
   window.__setLoading?.(true);
   try {
-    genningShotSet.add(currentShot.value.shotNumber);
+    genningShotSet.add(shotNum);
     // 收集参考图：选中角色 + 选中场景 + 当前分镜已上传的参考图
     const refUrls = [];
     const charAppearances = [];
@@ -1592,7 +1598,7 @@ async function generateImageForShot() {
       if (url) refUrls.push(url);
       if (s.description || s.stylePrompt) sceneDescs.push(`【场景:${s.sceneName}】${s.description || s.stylePrompt}`);
     });
-    if (currentShot.value._refImages?.length) refUrls.push(...currentShot.value._refImages);
+    if (shot._refImages?.length) refUrls.push(...shot._refImages);
 
     let enrichedPrompt = currentShotPrompt.value;
     if (charAppearances.length > 0) {
@@ -1607,19 +1613,19 @@ async function generateImageForShot() {
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt: enrichedPrompt, model: selectedModel.value, referenceImages: refUrls })
     });
     const data = await res.json();
-if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(currentShot.value.shotNumber); return; }
+if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(shotNum); return; }
     if (data.data?.imageUrl) {
-      currentShot.value.renderedImage = data.data.imageUrl;
-      const mats = currentShot.value.materials || []; mats.push({ version: mats.length + 1, type: "image", url: data.data.imageUrl, prompt: currentShotPrompt.value, createdAt: new Date().toISOString() }); currentShot.value.materials = mats;
+      shot.renderedImage = data.data.imageUrl;
+      const mats = shot.materials || []; mats.push({ version: mats.length + 1, type: "image", url: data.data.imageUrl, prompt: currentShotPrompt.value, createdAt: new Date().toISOString() }); shot.materials = mats;
       // 持久化到数据库
       if (currentStoryboard.value?._id) {
-        try { await storyboardAPI.updateShot(currentStoryboard.value._id, currentShot.value.shotNumber, { renderedImage: data.data.imageUrl, materials: mats }); } catch {}
+        try { await storyboardAPI.updateShot(currentStoryboard.value._id, shotNum, { renderedImage: data.data.imageUrl, materials: mats }); } catch {}
       }
       ElMessage.success('图片生成完成，已保存到数据库');
     }
   } catch (e) { ElMessage.error('生成失败'); }
   finally {
-    genningShotSet.delete(currentShot.value.shotNumber);
+    genningShotSet.delete(shotNum);
     genningImage.value = false;
     window.__imgGenning = false;
     window.__setLoading?.(false);
@@ -1643,11 +1649,13 @@ function statusLabel(s) {
 
 async function generateVideoForShot() {
   if (!currentShot.value || !currentVideoPrompt.value) { ElMessage.warning('请先填写或生成视频提示词'); return; }
+  const vShot = currentShot.value;
+  const vShotNum = vShot.shotNumber;
   genningVideo.value = true;
   window.__videoGenning = true;
   window.__setLoading?.(true);
   try {
-    genningShotSet.add(currentShot.value.shotNumber);
+    genningShotSet.add(vShotNum);
     const prompt = currentVideoPrompt.value;
     // 解析 @引用 → 有序排列参考图 + 外貌/场景描述
     const parsedRefs = parsePromptRefs(prompt);
@@ -1683,13 +1691,13 @@ async function generateVideoForShot() {
       const s = assetStore.scenes.find(x => x._id === id);
       const url = getRefUrl(s); if (url && !refUrls.includes(url)) refUrls.push(url);
     });
-    if (currentShot.value._refImages?.length) {
-      currentShot.value._refImages.forEach(u => { if (!refUrls.includes(u)) refUrls.push(u); });
+    if (vShot._refImages?.length) {
+      vShot._refImages.forEach(u => { if (!refUrls.includes(u)) refUrls.push(u); });
     }
-    const inputImage = currentShot.value.renderedImage || '';
+    const inputImage = vShot.renderedImage || '';
 
     console.log('[生视频]', JSON.stringify({
-      shot: currentShot.value.shotNumber,
+      shot: vShotNum,
       prompt: finalPrompt.substring(0, 120),
       refUrls: refUrls.map(u => u.substring(0, 80)),
       parsedRefs: parsedRefs.map(r => ({ name: r.name, url: r.url.substring(0, 60) })),
@@ -1707,9 +1715,9 @@ async function generateVideoForShot() {
     if (!taskId) { ElMessage.error('未获取到视频任务ID'); return; }
 
     // 保存 taskId 到 shot + localStorage 持久化（刷新页面也不丢失）
-    currentShot.value.renderedVideo = taskId;
-    currentShot.value._videoTaskId = taskId;
-    const task = { taskId, shotNumber: currentShot.value.shotNumber, startTime: Date.now(), storyboardId: currentStoryboard.value?._id, scriptId: currentScriptId.value };
+    vShot.renderedVideo = taskId;
+    vShot._videoTaskId = taskId;
+    const task = { taskId, shotNumber: vShotNum, startTime: Date.now(), storyboardId: currentStoryboard.value?._id, scriptId: currentScriptId.value };
     try {
       const tasks = JSON.parse(localStorage.getItem('ad_video_tasks') || '{}');
       tasks[taskId] = task;
@@ -1718,10 +1726,10 @@ async function generateVideoForShot() {
     ElMessage.success('视频任务已提交，后台生成中（约1-3分钟），可切换页面稍后回来看');
     window.__addNotification?.('视频任务已提交', 'info', '⏳');
 
-    startVideoPolling(taskId, currentShot.value.shotNumber, currentStoryboard.value?._id, currentScriptId.value);
+    startVideoPolling(taskId, vShotNum, currentStoryboard.value?._id, currentScriptId.value);
   } catch (e) { ElMessage.error('视频生成失败: ' + (e.message || '')); }
   finally {
-    genningShotSet.delete(currentShot.value.shotNumber);
+    genningShotSet.delete(vShotNum);
     genningVideo.value = false;
     window.__videoGenning = false;
     window.__setLoading?.(false);
