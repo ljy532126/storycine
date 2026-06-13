@@ -144,7 +144,7 @@
             <div v-if="announcements.length > 10" class="bell-pop-more">还有 {{ announcements.length - 10 }} 条</div>
           </div>
         </el-popover>
-        <el-popover placement="bottom-end" :width="220" trigger="click">
+        <el-popover placement="bottom-end" :width="240" trigger="click">
           <template #reference>
             <div class="topbar-user">
               <div class="topbar-avatar" :style="{ backgroundImage: currentUser.avatar ? 'url(' + currentUser.avatar + ')' : '' }">
@@ -155,12 +155,19 @@
           </template>
           <div class="user-pop">
             <div class="user-pop-info">
-              <span class="user-pop-name">{{ currentUser.nickname || currentUser.username }}</span>
-              <span class="user-pop-role">{{ currentUser.role === 'admin' ? '管理员' : '用户' }}</span>
+              <div class="user-pop-avatar" :style="{ backgroundImage: currentUser.avatar ? 'url(' + currentUser.avatar + ')' : '' }">
+                <span v-if="!currentUser.avatar">{{ avatarLetter }}</span>
+              </div>
+              <div class="user-pop-names">
+                <span class="user-pop-name">{{ currentUser.nickname || currentUser.username }}</span>
+                <span class="user-pop-role">{{ currentUser.role === 'admin' ? '管理员' : '用户' }}</span>
+              </div>
             </div>
             <div class="user-pop-actions">
-              <div class="user-pop-item" @click="$router.push('/settings')"><el-icon><Setting /></el-icon> 系统设置</div>
-              <div class="user-pop-item danger" @click="handleLogout"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> 退出登录</div>
+              <div class="user-pop-item" @click="$router.push('/settings')"><el-icon size="15"><Setting /></el-icon>系统设置</div>
+              <div class="user-pop-item" @click="$router.push('/settings?tab=profile')"><el-icon size="15"><UserFilled /></el-icon>个人中心</div>
+              <div class="user-pop-divider"></div>
+              <div class="user-pop-item danger" @click="handleLogout"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>退出登录</div>
             </div>
           </div>
         </el-popover>
@@ -661,18 +668,27 @@ body { font-family: 'DM Sans', 'Microsoft YaHei', sans-serif; background: var(--
 .topbar-username { font-size: 12px; color: var(--text-100); font-weight: 500; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 用户下拉 */
-.user-pop { padding: 4px 0; }
-.user-pop-info { padding: 12px 16px 8px; border-bottom: 1px solid var(--bg-300); }
-.user-pop-name { font-size: 14px; font-weight: 700; color: var(--text-100); display: block; }
-.user-pop-role { font-size: 11px; color: var(--text-200); margin-top: 2px; display: block; }
-.user-pop-actions { padding: 4px 0; }
-.user-pop-item {
-  display: flex; align-items: center; gap: 8px; padding: 10px 16px;
-  font-size: 13px; color: var(--text-100); cursor: pointer; transition: background 0.1s;
+.user-pop { padding: 0; }
+.user-pop-info { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--bg-300); }
+.user-pop-avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  background: var(--gold); background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(201,168,76,0.25);
 }
-.user-pop-item:hover { background: var(--bg-100); }
-.user-pop-item.danger { color: #c44545; }
-.user-pop-item.danger:hover { background: rgba(196,69,69,0.06); }
+.user-pop-names { display: flex; flex-direction: column; gap: 2px; }
+.user-pop-name { font-size: 14px; font-weight: 700; color: var(--text-100); }
+.user-pop-role { font-size: 11px; color: var(--text-200); background: var(--bg-100); padding: 2px 8px; border-radius: 10px; display: inline-block; width: fit-content; }
+.user-pop-actions { padding: 6px 0; }
+.user-pop-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 18px;
+  font-size: 13px; color: var(--text-100); cursor: pointer; transition: all 0.15s;
+}
+.user-pop-item:hover { background: var(--bg-100); color: var(--gold-dark); }
+.user-pop-item.danger { color: var(--text-200); }
+.user-pop-item.danger:hover { color: #c44545; background: rgba(196,69,69,0.05); }
+.user-pop-divider { height: 1px; background: var(--bg-300); margin: 4px 0; }
 #app-container { height: 100vh; }
 .app-sidebar {
   background: var(--navy); height: 100vh; overflow: hidden;
