@@ -6,6 +6,7 @@
             </div>
       </div>
       <div class="tb-right">
+        <el-tooltip content="保存当前故事板到数据库" placement="bottom"><el-button size="small" @click="saveStoryboard" :loading="saving" class="tb-btn tb-btn-save">保存</el-button></el-tooltip>
         <el-tooltip content="从剧本重新生成分镜" placement="bottom"><el-button size="small" @click="handleAutoGenerate" :disabled="!currentScriptId" :loading="generating" class="tb-btn tb-btn-refresh">刷新故事板</el-button></el-tooltip>
         <el-tooltip content="删除当前故事板" placement="bottom"><el-button size="small" @click="deleteStoryboard" :disabled="!currentStoryboard" :loading="deletingSB" class="tb-btn tb-btn-delete">删除</el-button></el-tooltip>
         <el-tooltip content="导出" placement="bottom"><el-button size="small" @click="openExport" :disabled="!currentProjectId" class="tb-btn-icon"><Download size="14" fill="currentColor"/></el-button></el-tooltip>
@@ -511,6 +512,7 @@ const currentShot = ref(null);
 const scripts = ref([]);
 const generating = ref(false);
 const deletingSB = ref(false);
+const saving = ref(false);
 const genningImage = ref(false);
 const genningVideo = ref(false);
 const genningPrompt = ref(false);
@@ -949,22 +951,23 @@ onActivated(() => {
   }
 });
 
-function onProjectChange(val) {
+async function onProjectChange(val) {
   currentScriptId.value = ''; currentStoryboard.value = null; currentShot.value = null;
   if (val) {
-    scriptStore.fetchScripts(val).then(() => {
-      scripts.value = [...scriptStore.scripts];
-      if (scripts.value.length > 0) { currentScriptId.value = scripts.value[0]._id; onScriptChange(scripts.value[0]._id); }
-      syncEpisodeBar();
-    });
-    storyboardStore.fetchStoryboards({ projectId: val });
+    await Promise.all([
+      scriptStore.fetchScripts(val),
+      storyboardStore.fetchStoryboards({ projectId: val }),
+    ]);
+    scripts.value = [...scriptStore.scripts];
+    if (scripts.value.length > 0) { currentScriptId.value = scripts.value[0]._id; onScriptChange(scripts.value[0]._id); }
+    syncEpisodeBar();
     assetStore.fetchCharacters(val);
     assetStore.fetchScenes(val);
   }
 }
 function onScriptChange(val) {
   if (val) {
-    const existing = storyboardStore.storyboards.find(s => s.scriptId === val);
+    const existing = storyboardStore.storyboards.find(s => (s.scriptId?._id || s.scriptId) === val);
     currentStoryboard.value = existing ? JSON.parse(JSON.stringify(existing)) : null;
     currentShot.value = currentStoryboard.value?.shots?.[0] || null;
     updatePrompt();
@@ -1022,7 +1025,7 @@ async function handleAutoGenerate() {
     currentStoryboard.value = data.data ? JSON.parse(JSON.stringify(data.data)) : { shots };
     currentStoryboard.value.shots = currentStoryboard.value.shots || shots;
     // 同步到 store 缓存，切换剧集后能恢复
-    const idx = storyboardStore.storyboards.findIndex(s => s.scriptId === currentScriptId.value);
+    const idx = storyboardStore.storyboards.findIndex(s => (s.scriptId?._id || s.scriptId) === currentScriptId.value);
     if (idx >= 0) storyboardStore.storyboards[idx] = JSON.parse(JSON.stringify(currentStoryboard.value));
     else storyboardStore.storyboards.push(JSON.parse(JSON.stringify(currentStoryboard.value)));
     // 保留当前选中的分镜（按镜号匹配）
@@ -1037,6 +1040,21 @@ async function handleAutoGenerate() {
     ElMessage.error('同步失败: ' + (e.message || ''));
   }
   finally { generating.value = false; }
+}
+
+async function saveStoryboard() {
+  if (!currentStoryboard.value?._id) { ElMessage.warning('请先生成故事板'); return; }
+  saving.value = true;
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ shots: currentStoryboard.value.shots }),
+    });
+    ElMessage.success('故事板已保存');
+  } catch (e) { ElMessage.error('保存失败'); }
+  finally { saving.value = false; }
 }
 
 async function deleteStoryboard() {
@@ -2331,6 +2349,19 @@ async function handleImport() {
 .btn-danger-delete { background: #e74c3c !important; border-color: #e74c3c !important; color: #fff !important; font-weight: 600 !important; }
 .btn-danger-delete:hover { background: #c0392b !important; border-color: #c0392b !important; color: #fff !important; }
 .btn-danger-delete.is-disabled { background: #ebc9c6 !important; border-color: #ebc9c6 !important; color: rgba(255,255,255,0.7) !important; }
+
+/* ===== 工具栏按钮 ===== */
+.tb-btn { font-size: 11px !important; padding: 5px 12px !important; font-weight: 600; }
+.tb-btn-refresh { color: var(--gold-dark) !important; border-color: var(--gold) !important; background: var(--bg-200) !important; }
+.tb-btn-refresh:hover { background: var(--gold) !important; color: #fff !important; border-color: var(--gold) !important; }
+.tb-btn-save { color: var(--gold-dark) !important; border-color: var(--gold) !important; background: var(--bg-200) !important; }
+.tb-btn-save:hover { background: var(--gold) !important; color: #fff !important; border-color: var(--gold) !important; }
+.tb-btn-delete { color: var(--text-200) !important; border-color: var(--bg-300) !important; background: var(--bg-200) !important; }
+.tb-btn-delete:hover { color: #c44545 !important; border-color: #c44545 !important; background: rgba(196,69,69,0.04) !important; }
+.tb-btn-gen { color: var(--gold-dark) !important; border-color: var(--gold) !important; font-size: 11px !important; padding: 5px 12px !important; font-weight: 600; background: var(--bg-200) !important; }
+.tb-btn-gen:hover { background: var(--gold-light) !important; border-color: var(--gold) !important; color: var(--navy) !important; }
+.tb-btn-icon { width: 30px !important; height: 30px !important; padding: 0 !important; border-radius: 6px !important; border-color: var(--bg-300) !important; color: var(--text-200) !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; background: var(--bg-200) !important; }
+.tb-btn-icon:hover { border-color: var(--gold) !important; color: var(--gold-dark) !important; background: var(--bg-100) !important; }
 
 /* ===== 面包屑 ===== */
 .breadcrumb { padding: 4px 0 8px; flex-shrink: 0; }

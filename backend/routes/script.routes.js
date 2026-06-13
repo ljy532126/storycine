@@ -26,8 +26,8 @@ async function verifyScriptAccess(script, userId, role) {
 /** 清洗AI生成的剧本数据，确保字段值在Schema枚举范围内 */
 function sanitizeScriptData(scriptData) {
   if (!scriptData || !scriptData.scenes) return scriptData;
-  const VALID_SHOT_TYPES = ['远景', '中景', '近景', '特写', '大特写', '全景', '中近景'];
-  const VALID_CAM_MOVES = ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动', '摇移', '推拉', '跟移'];
+  const VALID_SHOT_TYPES = ['远景', '全景', '中景', '近景', '特写', '大特写', '微距'];
+  const VALID_CAM_MOVES = ['固定', '推镜', '拉镜', '平移', '摇镜', '跟镜', '升降', '希区柯克变焦', '变速推近'];
   scriptData.scenes = scriptData.scenes.map(scene => {
     // 智能估算时长（对话数量 + 字数 + 动作复杂度）
     const existingDuration = Number(scene.duration);
@@ -61,7 +61,7 @@ function sanitizeScriptData(scriptData) {
       location: (scene.location || '未知地点').substring(0, 200),
       shotType: VALID_SHOT_TYPES.includes(scene.shotType) ? scene.shotType : '中景',
       composition: (scene.composition || '').substring(0, 200),
-      cameraMovement: VALID_CAM_MOVES.includes(scene.cameraMovement) ? scene.cameraMovement : '静止',
+      cameraMovement: VALID_CAM_MOVES.includes(scene.cameraMovement) ? scene.cameraMovement : '固定',
       lighting: (scene.lighting || '').substring(0, 200),
       soundEffect: (scene.soundEffect || '').substring(0, 200),
       duration: estDuration || (scene.duration || 3),

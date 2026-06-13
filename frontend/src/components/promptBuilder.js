@@ -99,7 +99,7 @@ function buildVideoPrompt(shot, videoConfig, directorSettings) {
   const imgDesc = shot.imageDescription || '';
   const shotType = shot.shotType || '中景';
   const composition = shot.composition ? `${shot.composition}构图` : '中心构图';
-  const camMove = shot.cameraMovement && shot.cameraMovement !== '静止' ? `${shot.cameraMovement}镜头` : '固定镜头';
+  const camMove = shot.cameraMovement && shot.cameraMovement !== '固定' ? `${shot.cameraMovement}镜头` : '固定镜头';
   const styleKeywords = getStyleKeywords(videoConfig);
   const aiCfg = getAIConfig();
 
@@ -152,8 +152,8 @@ function buildVideoPrompt(shot, videoConfig, directorSettings) {
 export function buildShotsFromScenes(scenes, videoConfig, noSubtitles = false, directorSettings = null, allAssets = []) {
   if (!scenes || scenes.length === 0) return [];
   const subtitleBlock = noSubtitles ? '，无字幕' : '';
-  const VALID_SHOT_TYPES = ['远景', '中景', '近景', '特写', '大特写', '全景', '中近景'];
-  const VALID_CAM_MOVES = ['推', '拉', '摇', '移', '跟', '静止', '升', '降', '晃动'];
+  const VALID_SHOT_TYPES = ['远景', '全景', '中景', '近景', '特写', '大特写', '微距'];
+  const VALID_CAM_MOVES = ['固定', '推镜', '拉镜', '平移', '摇镜', '跟镜', '升降', '希区柯克变焦', '变速推近'];
 
   return scenes.map(s => {
     const imgDesc = s.sceneDescription || '';
@@ -165,8 +165,8 @@ export function buildShotsFromScenes(scenes, videoConfig, noSubtitles = false, d
 
     const st = s.shotType || '中景';
     const shotType = VALID_SHOT_TYPES.includes(st) ? st : '中景';
-    const cm = s.cameraMovement || '静止';
-    const cameraMovement = VALID_CAM_MOVES.includes(cm) ? cm : '静止';
+    const cm = s.cameraMovement || '固定';
+    const cameraMovement = VALID_CAM_MOVES.includes(cm) ? cm : '固定';
 
     const shot = {
       shotNumber: s.sceneNumber,
