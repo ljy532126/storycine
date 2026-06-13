@@ -2250,12 +2250,14 @@ async function handleImport() {
   letter-spacing: 1.5px; box-shadow: 0 2px 6px rgba(201,168,76,0.3);
 }
 .preview-dialogue {
-  padding: 10px 16px; color: #6b5e47; font-size: 12px;
+  padding: 8px 16px; color: #6b5e47; font-size: 12px;
   background: rgba(201,168,76,0.06); border-top: 1px solid rgba(201,168,76,0.15);
-  letter-spacing: 0.2px; flex: 1; min-height: 0; overflow-y: auto;
+  letter-spacing: 0.2px; height: 60px; overflow-y: auto; flex-shrink: 0;
   scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.25) transparent;
+  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
 }
-.preview-dialogue-line { padding: 2px 0; line-height: 1.5; }
+.preview-dialogue-line { padding: 1px 0; line-height: 1.35; }
 .preview-dialogue-line + .preview-dialogue-line { border-top: 1px solid rgba(201,168,76,0.08); }
 .preview-dialogue::-webkit-scrollbar { width: 4px; }
 .preview-dialogue::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
