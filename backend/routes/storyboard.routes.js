@@ -67,8 +67,20 @@ router.get('/', async (req, res, next) => {
     if (projectId) filter.projectId = projectId;
     if (scriptId) filter.scriptId = scriptId;
 
-    const storyboards = await Storyboard.find(filter).sort({ createdAt: -1 });
-    res.json({ data: storyboards });
+    const storyboards = await Storyboard.find(filter)
+      .populate('projectId', 'name')
+      .populate('scriptId', 'episodeTitle episodeNumber')
+      .sort({ createdAt: -1 });
+    const data = storyboards.map(sb => {
+      const obj = sb.toObject ? sb.toObject() : sb;
+      return {
+        ...obj,
+        projectName: sb.projectId?.name || '',
+        episodeTitle: sb.scriptId?.episodeTitle || '',
+        episodeNumber: sb.scriptId?.episodeNumber || 1,
+      };
+    });
+    res.json({ data });
   } catch (error) { next(error); }
 });
 
