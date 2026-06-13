@@ -22,6 +22,14 @@
         <el-button v-if="activeStep === 'script-edit'" size="small" text @click="episodeBar.add?.()" title="新建剧集">+ 新建</el-button>
         <el-button v-if="activeStep === 'script-edit'" size="small" text @click="episodeBar.dup?.()" title="复制当前集">⧉ 复制</el-button>
       </div>
+      <div v-if="activeStep === 'storyboard' && sbActions.visible" class="ws-sb-actions">
+        <el-button size="small" @click="sbActions.save" :loading="sbActions.saving" class="ws-act-btn ws-act-save">保存</el-button>
+        <el-button size="small" @click="sbActions.refresh" :disabled="!sbActions.canRefresh" :loading="sbActions.generating" class="ws-act-btn ws-act-refresh">刷新</el-button>
+        <el-button size="small" @click="sbActions.del" :disabled="!sbActions.canDelete" :loading="sbActions.deleting" class="ws-act-btn ws-act-del">删除</el-button>
+        <el-divider direction="vertical" style="margin:0 4px;height:18px" />
+        <span style="font-size:10px;color:var(--text-200);white-space:nowrap">无字幕</span>
+        <el-switch :model-value="sbActions.noSubtitles" @update:model-value="sbActions.setNoSubtitles" size="small" />
+      </div>
     </div>
 
     <div class="ws-content">
@@ -59,6 +67,10 @@ provide('currentProjectId', currentProjectId);
 // 分镜台本的剧集栏（由 ScriptEdit 填充）
 const episodeBar = reactive({ scripts: [], currentScriptId: '', add: null, dup: null, select: null });
 provide('wsEpisodeBar', episodeBar);
+
+// 镜头板快捷操作栏（由 StoryboardView 填充）
+const sbActions = reactive({ visible: false, saving: false, generating: false, deleting: false, canRefresh: false, canDelete: false, noSubtitles: true, save: null, refresh: null, del: null, setNoSubtitles: null });
+provide('wsSbActions', sbActions);
 
 const steps = [
   { key: 'script-generate', label: '剧本工坊' },
@@ -220,6 +232,12 @@ onMounted(() => {
 .ws-episode-bar { display: flex; align-items: center; gap: 4px; margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--bg-300); flex-shrink: 0; }
 .ws-ep-select { width: 130px; }
 .ws-ep-select :deep(.el-input__wrapper) { background: var(--bg-200); border-color: var(--bg-300); box-shadow: none !important; border-radius: 6px; }
+.ws-sb-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.ws-sb-actions .ws-act-btn { font-size: 11px !important; padding: 5px 10px !important; font-weight: 600; height: 28px; }
+.ws-act-save, .ws-act-refresh { color: var(--gold-dark) !important; border-color: var(--gold) !important; background: var(--bg-200) !important; }
+.ws-act-save:hover, .ws-act-refresh:hover { background: var(--gold) !important; color: #fff !important; }
+.ws-act-del { color: var(--text-200) !important; border-color: var(--bg-300) !important; background: var(--bg-200) !important; }
+.ws-act-del:hover { color: #c44545 !important; border-color: #c44545 !important; }
 
 @media (max-width: 768px) {
   .ws-steps { justify-content: flex-start; padding: 10px 14px; }

@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="sb-root">
-    <div class="sb-top">
+    <div class="sb-top" v-if="!wsSbActions">
       <div class="tb-left">
         <div class="sg-scroll-area">
             </div>
@@ -536,7 +536,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onUnmounted, inject } from 'vue';
+import { ref, reactive, watch, computed, nextTick, onMounted, onActivated, onDeactivated, onUnmounted, inject } from 'vue';
 const resetToScriptGenerate = inject('resetToScriptGenerate', () => {});
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Help, PictureOne, Video, Copy, Plus, Delete, Voice, Film, Pic, Time, List, SettingTwo, AlarmClock, Movie, MagicWand, Download, FolderOpen, Edit, Upload } from '@icon-park/vue-next';
@@ -551,6 +551,7 @@ import ImageLightbox from '../components/ImageLightbox.vue';
 import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
 const episodeBar = inject('wsEpisodeBar', null);
+const wsSbActions = inject('wsSbActions', null);
 
 
 const projectStore = useProjectStore();
@@ -1017,7 +1018,9 @@ onActivated(() => {
     currentProjectId.value = storeProject._id;
     onProjectChange(storeProject._id);
   }
+  syncWsSbActions();
 });
+onDeactivated(() => { if (wsSbActions) wsSbActions.visible = false; });
 
 async function onProjectChange(val) {
   currentScriptId.value = ''; currentStoryboard.value = null; currentShot.value = null;
@@ -1042,6 +1045,7 @@ async function onScriptChange(val) {
     syncEpisodeBar();
     // 安全网：从剧本拉最新台词同步到故事板镜头
     loadLatestDialogues(val);
+    syncWsSbActions();
   }
 }
 async function loadLatestDialogues(scriptId) {
@@ -1071,6 +1075,18 @@ async function loadLatestDialogues(scriptId) {
   } catch {} // 静默，失败不影响主流程
 }
 function syncEpisodeBar(){if(!episodeBar)return;episodeBar.scripts=scripts.value;episodeBar.currentScriptId=currentScriptId.value;episodeBar.select=onScriptChange;episodeBar.add=null;episodeBar.dup=null;}
+function syncWsSbActions() {
+  if (!wsSbActions) return;
+  wsSbActions.visible = !!currentProjectId.value;
+  wsSbActions.canRefresh = !!currentScriptId.value;
+  wsSbActions.canDelete = !!currentStoryboard.value;
+  wsSbActions.noSubtitles = noSubtitles.value;
+  wsSbActions.save = saveStoryboard;
+  wsSbActions.refresh = handleAutoGenerate;
+  wsSbActions.del = deleteStoryboard;
+  wsSbActions.setNoSubtitles = (v) => { noSubtitles.value = v; };
+}
+watch([saving, generating, deletingSB], () => { if (wsSbActions) { wsSbActions.saving = saving.value; wsSbActions.generating = generating.value; wsSbActions.deleting = deletingSB.value; } });
 async function handleAutoGenerate() {
   if (!currentScriptId.value || !currentProjectId.value) return;
   generating.value = true;
