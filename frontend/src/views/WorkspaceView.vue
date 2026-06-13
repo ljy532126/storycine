@@ -30,7 +30,7 @@
         <el-button size="small" @click="sbActions.import_click" :disabled="!sbActions.canImport" class="ws-act-btn ws-act-import" title="导入">导入</el-button>
         <el-divider direction="vertical" style="margin:0 4px;height:18px" />
         <span style="font-size:10px;color:var(--text-200);white-space:nowrap">无字幕</span>
-        <el-switch :model-value="sbActions.noSubtitles" @update:model-value="sbActions.setNoSubtitles" size="small" />
+        <el-switch v-model="sbActions.noSubtitles" size="small" />
       </div>
     </div>
 
@@ -71,7 +71,7 @@ const episodeBar = reactive({ scripts: [], currentScriptId: '', add: null, dup: 
 provide('wsEpisodeBar', episodeBar);
 
 // 镜头板快捷操作栏（由 StoryboardView 填充）
-const sbActions = reactive({ visible: false, saving: false, generating: false, deleting: false, canRefresh: false, canDelete: false, canExport: false, canImport: false, noSubtitles: true, save: null, refresh: null, del: null, export_click: null, import_click: null, setNoSubtitles: null });
+const sbActions = reactive({ visible: false, saving: false, generating: false, deleting: false, canRefresh: false, canDelete: false, canExport: false, canImport: false, noSubtitles: true, save: null, refresh: null, del: null, export_click: null, import_click: null });
 provide('wsSbActions', sbActions);
 
 const steps = [

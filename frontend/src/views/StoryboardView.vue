@@ -1088,9 +1088,10 @@ function syncWsSbActions() {
   wsSbActions.del = deleteStoryboard;
   wsSbActions.export_click = openExport;
   wsSbActions.import_click = () => { showImportDialog.value = true; };
-  wsSbActions.setNoSubtitles = (v) => { noSubtitles.value = v; };
 }
 watch([saving, generating, deletingSB], () => { if (wsSbActions) { wsSbActions.saving = saving.value; wsSbActions.generating = generating.value; wsSbActions.deleting = deletingSB.value; } });
+// 双向同步无字幕开关
+watch(() => wsSbActions?.noSubtitles, (v) => { if (v !== undefined && v !== noSubtitles.value) { noSubtitles.value = v; saveNoSubtitles(v); } });
 async function handleAutoGenerate() {
   if (!currentScriptId.value || !currentProjectId.value) return;
   generating.value = true;
