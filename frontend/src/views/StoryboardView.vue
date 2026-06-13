@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sb-root">
     <div class="sb-top">
       <div class="tb-left">
@@ -105,9 +105,17 @@
                   <span class="tl-shot-dur"><Time size="12" fill="var(--gold)"/> {{ s.duration }}s</span>
                 </div>
                 <div class="tl-img">
-                  <img v-if="s.renderedImage" :src="s.renderedImage" @dblclick.stop="openImgViewer(s.renderedImage)" />
+                  <div v-if="genningShotSet.has(s.shotNumber)" class="tl-genning">
+                    <span class="tl-genning-spin">⟳</span>
+                    <span class="tl-genning-text">生成中</span>
+                  </div>
+                  <img v-else-if="s.renderedImage" :src="s.renderedImage" @dblclick.stop="openImgViewer(s.renderedImage)" />
+                  <div v-else-if="s.renderedVideo" class="tl-video-thumb" @dblclick.stop="openVideoPreview(s.renderedVideo)">
+                    <span class="tl-video-play">▶</span>
+                  </div>
                   <span v-else class="tl-placeholder">待生成</span>
                   <span v-if="s.renderedImage" class="tl-img-clear" @click.stop="clearShotMedia(s, 'image')" title="清除图片（文件保留不删）">✕</span>
+                  <span v-if="s.renderedVideo" class="tl-img-clear" @click.stop="clearShotMedia(s, 'video')" title="清除视频（文件保留不删）">✕</span>
                 </div>
                 <div class="tl-meta">
                   <span class="tl-type">{{ s.shotType }}</span>
@@ -527,6 +535,7 @@ const genningVideoPrompt = ref(false);
 const genningTimedSB = ref(false);
 const batchGenning = ref(false);
 const batchGenningVideo = ref(false);
+const genningShotSet = reactive(new Set());
 const noSubtitles = ref(getStoredNoSubtitles());
 
 function getStoredNoSubtitles() { try { return localStorage.getItem('ad_no_subtitles') === 'true'; } catch { return true; } }
@@ -1405,6 +1414,7 @@ async function batchGenerateImages() {
   window.__setLoading?.(true);
   let done = 0;
   for (const s of pending) {
+    genningShotSet.add(s.shotNumber);
     try {
       const prompt = s._imagePrompt || s.imageDescription;
       const res = await fetch('/api/v1/assets/generate-image', {
@@ -1412,7 +1422,7 @@ async function batchGenerateImages() {
         body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt, model: selectedModel.value, referenceImages: s._refImages || [] })
       });
       const data = await res.json();
-if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
+if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(s.shotNumber); continue; }
       if (data.data?.imageUrl) { s.renderedImage = data.data.imageUrl; done++; const mats2 = s.materials || []; mats2.push({ version: mats2.length + 1, type: "image", url: data.data.imageUrl, prompt: s._imagePrompt || "", createdAt: new Date().toISOString() }); s.materials = mats2; const mats = s.materials || []; mats.push({ version: mats.length + 1, type: "image", url: data.data.imageUrl, prompt: s._imagePrompt || "", createdAt: new Date().toISOString() }); s.materials = mats; try { if (currentStoryboard.value?._id) { const token2 = localStorage.getItem('token'); await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${s.shotNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token2}` }, body: JSON.stringify({ renderedImage: data.data.imageUrl, materials: s.materials }) }); } } catch {} }
     } catch (e) { console.error('batch image fail:', e); }
   }
@@ -1437,6 +1447,7 @@ async function batchGenerateVideos() {
   selectedSceneRefs.value.forEach(id => { const url = getRefUrl(assetStore.scenes.find(x => x._id === id)); if (url) fallbackUrls.push(url); });
 
   for (const s of pending) {
+    genningShotSet.add(s.shotNumber);
     try {
       const prompt = s._videoPrompt || s.imageDescription;
       const parsedRefs = prompt ? parsePromptRefs(prompt) : [];
@@ -1452,7 +1463,7 @@ async function batchGenerateVideos() {
         body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
       });
       const data = await res.json();
-if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
+if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(s.shotNumber); continue; }
       if (data.data?.imageUrl) { s.renderedVideo = data.data.imageUrl; done++; try { if (currentStoryboard.value?._id) { const token = localStorage.getItem('token'); await fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${s.shotNumber}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ renderedVideo: data.data.imageUrl }) }); } } catch {} }
     } catch (e) { console.error('batch video fail:', e); }
   }
@@ -1561,6 +1572,7 @@ async function generateImageForShot() {
   window.__imgGenning = true;
   window.__setLoading?.(true);
   try {
+    genningShotSet.add(currentShot.value.shotNumber);
     // 收集参考图：选中角色 + 选中场景 + 当前分镜已上传的参考图
     const refUrls = [];
     const charAppearances = [];
@@ -1595,7 +1607,7 @@ async function generateImageForShot() {
       body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt: enrichedPrompt, model: selectedModel.value, referenceImages: refUrls })
     });
     const data = await res.json();
-if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
+if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(currentShot.value.shotNumber); return; }
     if (data.data?.imageUrl) {
       currentShot.value.renderedImage = data.data.imageUrl;
       const mats = currentShot.value.materials || []; mats.push({ version: mats.length + 1, type: "image", url: data.data.imageUrl, prompt: currentShotPrompt.value, createdAt: new Date().toISOString() }); currentShot.value.materials = mats;
@@ -1607,6 +1619,7 @@ if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
     }
   } catch (e) { ElMessage.error('生成失败'); }
   finally {
+    genningShotSet.delete(currentShot.value.shotNumber);
     genningImage.value = false;
     window.__imgGenning = false;
     window.__setLoading?.(false);
@@ -1634,6 +1647,7 @@ async function generateVideoForShot() {
   window.__videoGenning = true;
   window.__setLoading?.(true);
   try {
+    genningShotSet.add(currentShot.value.shotNumber);
     const prompt = currentVideoPrompt.value;
     // 解析 @引用 → 有序排列参考图 + 外貌/场景描述
     const parsedRefs = parsePromptRefs(prompt);
@@ -1707,6 +1721,7 @@ async function generateVideoForShot() {
     startVideoPolling(taskId, currentShot.value.shotNumber, currentStoryboard.value?._id, currentScriptId.value);
   } catch (e) { ElMessage.error('视频生成失败: ' + (e.message || '')); }
   finally {
+    genningShotSet.delete(currentShot.value.shotNumber);
     genningVideo.value = false;
     window.__videoGenning = false;
     window.__setLoading?.(false);
@@ -1882,7 +1897,7 @@ async function handleExport() {
       }),
     });
     const data = await res.json();
-if (!res.ok) { ElMessage.error(data.message || '生成失败'); return; }
+if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete((currentStoryboard.value?.shots?.find(x=>x.shotNumber===currentShot?.value?.shotNumber)?.shotNumber || 0)); return; }
 
     if (fmt === 'pdf') {
       // PDF: 打开打印窗口
@@ -2146,6 +2161,27 @@ async function handleImport() {
 }
 .tl-img:hover .tl-img-clear { opacity: 1; }
 .tl-img-clear:hover { background: #e74c3c; }
+
+/* 视频缩略图 */
+.tl-video-thumb {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--navy) 0%, #1a1a2e 100%); cursor: pointer;
+}
+.tl-video-play {
+  width: 28px; height: 28px; border-radius: 50%; background: rgba(201,168,76,0.85);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff;
+}
+
+/* 卡片生成中 */
+@keyframes tl-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.tl-genning {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(201,168,76,0.02) 100%);
+}
+.tl-genning-spin { font-size: 22px; color: var(--gold); animation: tl-spin 1.2s linear infinite; }
+.tl-genning-text { font-size: 10px; color: var(--gold-dark); font-weight: 600; letter-spacing: 1px; }
+
 .tl-placeholder { color: var(--gold); font-size: 12px; opacity: 0.4; letter-spacing: 1px; }
 .tl-meta { display: flex; justify-content: space-between; padding: 4px 10px 0; font-size: 10px; cursor: pointer; }
 .tl-desc { padding: 3px 10px 0; font-size: 10px; color: var(--text-200); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
