@@ -234,8 +234,8 @@ onMounted(() => {
 .ws-episode-bar { display: flex; align-items: center; gap: 4px; margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--bg-300); flex-shrink: 0; }
 .ws-ep-select { width: 130px; }
 .ws-ep-select :deep(.el-input__wrapper) { background: var(--bg-200); border-color: var(--bg-300); box-shadow: none !important; border-radius: 6px; }
-.ws-sb-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.ws-sb-actions .ws-act-btn { font-size: 11px !important; padding: 5px 10px !important; font-weight: 600; height: 28px; }
+.ws-sb-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.ws-sb-actions .ws-act-btn { font-size: 10px !important; padding: 4px 8px !important; font-weight: 600; height: 26px; }
 .ws-act-save, .ws-act-refresh { color: var(--gold-dark) !important; border-color: var(--gold) !important; background: var(--bg-200) !important; }
 .ws-act-save:hover, .ws-act-refresh:hover { background: var(--gold) !important; color: #fff !important; }
 .ws-act-del { color: var(--text-200) !important; border-color: var(--bg-300) !important; background: var(--bg-200) !important; }
