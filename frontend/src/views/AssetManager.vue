@@ -218,6 +218,8 @@
             </div>
             </template>
             <template v-else-if="activeTab === 'scenes'">
+              <div class="detail-two-col">
+                <div class="detail-col-left">
               <el-form label-position="top" size="small">
                 <el-form-item label="场景名称">
                   <el-input v-model="selectedAsset.sceneName" placeholder="场景名称" />
@@ -226,11 +228,57 @@
                   <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
                 </el-form-item>
               </el-form>
-              <div class="prompt-section" style="margin-top:12px">
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <el-button size="small" @click="handleDelete" class="am-btn-delete">移除</el-button>
+                <el-button size="small" @click="saveAssetDetails" :loading="saving" class="am-btn-gen">保存修改</el-button>
+              </div>
+              </div>
+              <div class="detail-col-right">
+              <div class="prompt-section" style="margin-top:0">
                 <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
                   <el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 生成</el-button>
                 </div>
-                <el-input v-model="promptText" type="textarea" :rows="4" placeholder="输入场景提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
+                <el-input v-model="promptText" type="textarea" :rows="14" placeholder="输入场景提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
+              </div>
+              <div class="model-row">
+                <el-select v-model="selectedModel" size="small">
+                <el-option label="Seedream 4.0 | 2K" value="doubao_image" />
+                <el-option label="Seedream 4.0 | 4K" value="doubao_image_4k" />
+                <el-option label="gpt-image-2" value="openai_image" />
+              </el-select>
+              <el-select v-model="genRatio" size="small" style="width:100px">
+                <el-option label="9:16 竖屏" value="9:16" />
+                <el-option label="16:9 横屏" value="16:9" />
+                <el-option label="4:3" value="4:3" />
+                <el-option label="3:4" value="3:4" />
+              </el-select>
+            </div>
+              <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成场景图</el-button>
+              </div>
+            </div>
+            </template>
+            <template v-else>
+              <div class="detail-two-col">
+                <div class="detail-col-left">
+              <el-form label-position="top" size="small">
+                <el-form-item label="道具名称">
+                  <el-input v-model="selectedAsset.propName" placeholder="道具名称" />
+                </el-form-item>
+                <el-form-item label="道具描述">
+                  <el-input v-model="selectedAsset.description" type="textarea" :rows="3" />
+                </el-form-item>
+              </el-form>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <el-button size="small" @click="handleDelete" class="am-btn-delete">移除</el-button>
+                <el-button size="small" @click="saveAssetDetails" :loading="saving" class="am-btn-gen">保存修改</el-button>
+              </div>
+              </div>
+              <div class="detail-col-right">
+              <div class="prompt-section" style="margin-top:0">
+                <div class="section-label">生图提示词<span class="char-count">{{ promptText.length }} / 5000</span>
+                  <el-button size="small" link @click="generatePrompt" :loading="generatingPrompt" class="am-link-btn">AI 生成</el-button>
+                </div>
+                <el-input v-model="promptText" type="textarea" :rows="14" placeholder="输入道具提示词..." maxlength="5000" show-word-limit class="prompt-textarea" />
               </div>
               <div class="model-row">
                 <el-select v-model="selectedModel" size="small">
@@ -246,6 +294,8 @@
               </el-select>
             </div>
               <el-button size="default" @click="generateImage" :loading="generatingImage" class="am-btn-gen" style="width:100%;margin-top:10px">生成道具图</el-button>
+              </div>
+            </div>
             </template>
           </div>
         </div>
