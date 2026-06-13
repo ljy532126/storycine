@@ -70,6 +70,8 @@
               </div>
               <!-- 图片预览 -->
               <img v-else-if="currentShot.renderedImage" :src="currentShot.renderedImage" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in" @click="openImgViewer(currentShot.renderedImage)" />
+              <!-- 清除按钮 -->
+              <div v-if="currentShot.renderedVideo || currentShot.renderedImage" class="preview-clear" @click="clearShotMedia(currentShot, currentShot.renderedVideo ? 'video' : 'image')" title="清除媒体（文件保留）">✕</div>
               <Pic v-else size="48" fill="var(--primary-300)"/>
             </div>
             <div class="preview-info">
@@ -105,6 +107,7 @@
                 <div class="tl-img">
                   <img v-if="s.renderedImage" :src="s.renderedImage" @dblclick.stop="openImgViewer(s.renderedImage)" />
                   <span v-else class="tl-placeholder">待生成</span>
+                  <span v-if="s.renderedImage" class="tl-img-clear" @click.stop="clearShotMedia(s, 'image')" title="清除图片（文件保留不删）">✕</span>
                 </div>
                 <div class="tl-meta">
                   <span class="tl-type">{{ s.shotType }}</span>
@@ -1327,6 +1330,25 @@ function insertShotAfter(shot) {
   ElMessage.success(`已在 #${shot.shotNumber} 后插入新分镜`);
 }
 
+async function clearShotMedia(shot, type) {
+  if (!currentStoryboard.value?._id) { ElMessage.error('请先保存分镜表'); return; }
+  try {
+    await ElMessageBox.confirm(
+      type === 'image' ? '清除该镜头的图片？文件保留在服务器，可重新上传。' : '清除该镜头的视频？文件保留在服务器，可重新上传。',
+      '清除媒体', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' }
+    );
+  } catch { return; }
+
+  const field = type === 'image' ? 'renderedImage' : 'renderedVideo';
+  shot[field] = '';
+  shot.status = 'pending';
+  // 保留 materials 历史版本不删
+  try {
+    await storyboardAPI.updateShot(currentStoryboard.value._id, shot.shotNumber, { [field]: '', status: 'pending' });
+    ElMessage.success(`已清除${type === 'image' ? '图片' : '视频'}`);
+  } catch { ElMessage.error('保存失败'); }
+}
+
 async function deleteShot(shot) {
   if (!currentStoryboard.value) return;
   const shots = currentStoryboard.value.shots;
@@ -2048,6 +2070,13 @@ async function handleImport() {
   background: rgba(0,0,0,0.02); border-radius: 10px; margin: 0 16px;
   position: relative;
 }
+.preview-clear {
+  position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
+  background: rgba(0,0,0,0.65); color: #fff; font-size: 13px; line-height: 22px;
+  text-align: center; border-radius: 50%; cursor: pointer; z-index: 5;
+  transition: background 0.2s;
+}
+.preview-clear:hover { background: #e74c3c; }
 .preview-info {
   display: flex; gap: 10px; justify-content: center; padding: 10px;
   font-size: 12px;
@@ -2106,9 +2135,17 @@ async function handleImport() {
 }
 .tl-shot-num { font-size: 11px; font-weight: 700; color: var(--text-100); letter-spacing: 0.5px; }
 .tl-shot-dur { font-size: 10px; color: var(--gold-dark); font-weight: 700; }
-.tl-img { width: 100%; height: 72px; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+.tl-img { width: 100%; height: 72px; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; position: relative; }
 .tl-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
 .tl-card:hover .tl-img img { transform: scale(1.05); }
+.tl-img-clear {
+  position: absolute; top: 2px; right: 2px; width: 18px; height: 18px;
+  background: rgba(0,0,0,0.7); color: #fff; font-size: 11px; line-height: 18px;
+  text-align: center; border-radius: 50%; cursor: pointer; opacity: 0;
+  transition: opacity 0.2s; z-index: 5;
+}
+.tl-img:hover .tl-img-clear { opacity: 1; }
+.tl-img-clear:hover { background: #e74c3c; }
 .tl-placeholder { color: var(--gold); font-size: 12px; opacity: 0.4; letter-spacing: 1px; }
 .tl-meta { display: flex; justify-content: space-between; padding: 4px 10px 0; font-size: 10px; cursor: pointer; }
 .tl-desc { padding: 3px 10px 0; font-size: 10px; color: var(--text-200); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
