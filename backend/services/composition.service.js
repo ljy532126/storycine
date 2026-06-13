@@ -145,19 +145,22 @@ async function processComposition(compositionId) {
       console.error('[composition] storage upload failed, using local URL:', upErr.message);
       publicUrl = result.publicUrl || `/uploads/compositions/${filename}`;
     }
+    // 开发环境直接用本地路径，不走 PUBLIC_URL 重写
     const resolvedUrl = storage.resolvePublicUrl(publicUrl);
+    const localUrl = publicUrl.startsWith('http') ? `http://localhost:${process.env.SERVER_PORT || 3012}${new URL(publicUrl).pathname}` : publicUrl;
+    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 
     // ---- Success ----
     composition.status = 'completed';
     composition.progress = 100;
-    composition.outputUrl = resolvedUrl;
+    composition.outputUrl = isDev ? localUrl : resolvedUrl;
     composition.warnings = result.warnings || [];
     await composition.save();
 
     emit('composition-complete', {
       status: 'completed',
       progress: 100,
-      outputUrl: resolvedUrl,
+      outputUrl: isDev ? localUrl : resolvedUrl,
       warnings: result.warnings,
     });
 
