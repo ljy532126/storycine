@@ -2537,30 +2537,19 @@ async function handleImport() {
 .char-count { font-size: 10px; color: var(--text-200); font-weight: 500; }
 
 /* ===== 参考主体选中动效 ===== */
-@keyframes ref-fill {
-  0% { background-position: 0% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes ref-border-glow {
-  0%, 100% { border-color: var(--gold); }
-  50% { border-color: #f0d060; }
-}
-
 .ref-chars { display: flex; flex-wrap: wrap; gap: 6px; }
 .ref-chip {
   padding: 5px 12px; border-radius: 6px; background: rgba(251,247,240,0.7);
   font-size: 11px; cursor: pointer; border: 1.5px solid var(--bg-300);
   color: var(--text-200); font-weight: 500;
-  transition: all 0.25s cubic-bezier(0.22,0.61,0.36,1);
-  backdrop-filter: blur(4px);
-  position: relative; overflow: hidden;
+  transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 3px;
 }
 .ref-chip:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,168,76,0.1); }
 .ref-chip.active {
-  color: var(--gold-dark) !important; font-weight: 700;
-  background: linear-gradient(90deg, rgba(201,168,76,0.06) 0%, rgba(201,168,76,0.22) 25%, rgba(251,247,240,0.4) 50%, rgba(201,168,76,0.06) 75%, rgba(201,168,76,0.22) 100%);
-  background-size: 200% 100%;
-  animation: ref-fill 2.5s ease-in-out infinite, ref-border-glow 2.5s ease-in-out infinite;
+  color: #fff !important; font-weight: 700;
+  background: var(--gold) !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 2px 12px rgba(201,168,76,0.35);
   transform: translateY(-1px);
 }
 .ref-chip.has-img { border-color: rgba(201,168,76,0.4); }
