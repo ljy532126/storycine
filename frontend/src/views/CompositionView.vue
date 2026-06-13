@@ -61,13 +61,20 @@
               <span class="task-name">{{ c.name }}</span>
               <el-tag :type="compStatusTag(c.status)" size="small">{{ compStatusLabel(c.status) }}</el-tag>
             </div>
+            <div class="task-episode" v-if="c.episodeNumber">
+              📺 第{{ c.episodeNumber }}集{{ c.episodeTitle ? ' · ' + c.episodeTitle : '' }}
+            </div>
             <el-progress v-if="c.status === 'rendering'" :percentage="c.progress" :stroke-width="6" style="margin:6px 0" />
             <div class="task-meta">
-              <span>{{ c.resolution }} | {{ c.outputFormat }} | {{ c.frameRate }}fps</span>
+              <span>{{ c.resolution }} | {{ c.outputFormat }} | {{ c.frameRate }}fps | {{ c.totalDuration || 0 }}s</span>
+              <span>{{ compTransitionLabel(c.transitions) }} | {{ c.subtitlesEnabled ? '字幕开' : '字幕关' }}</span>
+            </div>
+            <div class="task-meta" style="margin-top:2px">
               <span>{{ formatDate(c.createdAt) }}</span>
             </div>
             <div v-if="c.status === 'completed' && c.outputUrl" class="task-actions">
               <el-button size="small" type="success" @click="downloadComposition(c)">下载成片</el-button>
+              <el-button size="small" @click="copyOutputUrl(c.outputUrl)">复制链接</el-button>
               <el-button size="small" @click="deleteTask(c)" class="task-btn-delete">删除</el-button>
             </div>
             <div v-if="c.status !== 'completed'" style="display:flex;gap:6px;margin-top:6px">
@@ -127,6 +134,7 @@ onMounted(async () => {
     if (c) {
       c.status = 'completed';
       c.outputUrl = data.outputUrl || c.outputUrl;
+      if (data.duration) c.totalDuration = data.duration;
     }
     composingIds.delete(data.compositionId);
     clearTimeout(compTimeouts[data.compositionId]);
@@ -186,7 +194,37 @@ function startCompTimeout(compId) {
   }, COMP_TIMEOUT);
 }
 
-function downloadComposition(c) { window.open(c.outputUrl, '_blank'); }
+function downloadComposition(c) {
+  const a = document.createElement('a');
+  a.href = c.outputUrl;
+  a.download = c.name ? `${c.name}.${c.outputFormat || 'mp4'}` : `composition.${c.outputFormat || 'mp4'}`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+async function copyOutputUrl(url) {
+  const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
+  try {
+    // 优先 clipboard API (HTTPS)，fallback execCommand (HTTP)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(fullUrl);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = fullUrl;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    ElMessage.success('已复制链接');
+  } catch (e) {
+    console.error('[复制失败]', e);
+    ElMessage.error('复制失败，请手动复制：' + fullUrl);
+  }
+}
+function compTransitionLabel(t) { return { fade: '淡入淡出', cut: '剪切', slide: '滑动', dissolve: '叠加' }[t] || t; }
 async function deleteTask(c) {
   try { await ElMessageBox.confirm('确认删除该合成任务？', '提示', { type: 'warning', confirmButtonText: '删除' }); } catch { return; }
   try {
@@ -219,6 +257,7 @@ function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : ''; }
 .task-item { padding: 12px; border-radius: 6px; margin-bottom: 8px; background: var(--bg-200); border: 1px solid var(--bg-300); }
 .task-header { display: flex; justify-content: space-between; align-items: center; }
 .task-name { font-weight: bold; color: var(--text-100); font-size: 14px; }
+.task-episode { font-size: 11px; color: var(--gold-dark); margin-top: 2px; }
 .task-meta { display: flex; justify-content: space-between; color: var(--text-200); font-size: 12px; margin-top: 4px; }
 .task-actions { margin-top: 8px; }
 .task-error { color: var(--accent-100); font-size: 12px; margin-top: 4px; }

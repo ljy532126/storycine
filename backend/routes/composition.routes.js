@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Composition = require('../models/composition.model');
+const Storyboard = require('../models/storyboard.model');
+const Script = require('../models/script.model');
+const Project = require('../models/project.model');
 const {
   createComposition,
   getCompositionProgress,
@@ -30,22 +33,44 @@ router.post('/', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// 获取合成任务列表
+// 获取合成任务列表（含分镜表+剧本+片场关联信息）
 router.get('/', async (req, res, next) => {
   try {
     const { projectId } = req.query;
     const filter = projectId ? { projectId } : {};
-    const compositions = await Composition.find(filter).sort({ createdAt: -1 });
-    res.json({ data: compositions });
+    const compositions = await Composition.find(filter)
+      .populate({ path: 'storyboardId', populate: { path: 'scriptId', select: 'episodeTitle episodeNumber' } })
+      .populate('projectId', 'name')
+      .sort({ createdAt: -1 });
+    const data = compositions.map(c => {
+      const obj = c.toObject ? c.toObject() : c;
+      return {
+        ...obj,
+        projectName: obj.projectId?.name || '',
+        episodeTitle: obj.storyboardId?.scriptId?.episodeTitle || '',
+        episodeNumber: obj.storyboardId?.scriptId?.episodeNumber || 1,
+        storyboardTotalShots: obj.storyboardId?.totalShots || 0,
+      };
+    });
+    res.json({ data });
   } catch (error) { next(error); }
 });
 
 // 获取单个合成任务详情
 router.get('/:id', async (req, res, next) => {
   try {
-    const composition = await Composition.findById(req.params.id);
+    const composition = await Composition.findById(req.params.id)
+      .populate({ path: 'storyboardId', populate: { path: 'scriptId', select: 'episodeTitle episodeNumber' } })
+      .populate('projectId', 'name');
     if (!composition) return res.status(404).json({ message: '合成任务不存在' });
-    res.json({ data: composition });
+    const obj = composition.toObject ? composition.toObject() : composition;
+    res.json({ data: {
+      ...obj,
+      projectName: obj.projectId?.name || '',
+      episodeTitle: obj.storyboardId?.scriptId?.episodeTitle || '',
+      episodeNumber: obj.storyboardId?.scriptId?.episodeNumber || 1,
+      storyboardTotalShots: obj.storyboardId?.totalShots || 0,
+    } });
   } catch (error) { next(error); }
 });
 

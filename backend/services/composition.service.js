@@ -1,5 +1,6 @@
 const Composition = require('../models/composition.model');
 const Storyboard = require('../models/storyboard.model');
+const Project = require('../models/project.model');
 const CompositionEngine = require('./composition/composition-engine');
 const storage = require('./storage.service');
 const socketRegistry = require('../utils/socket-registry');
@@ -12,13 +13,28 @@ const runningEngines = new Map();
  * 创建合成任务（仅写DB，不启动处理）
  */
 async function createComposition(projectId, storyboardId, options = {}) {
-  const storyboard = await Storyboard.findById(storyboardId);
+  const storyboard = await Storyboard.findById(storyboardId)
+    .populate('scriptId', 'episodeTitle episodeNumber');
   if (!storyboard) throw new Error('分镜表不存在');
+
+  // 生成中文名称：片场名_第N集_标题_时间
+  let displayName;
+  try {
+    const project = await Project.findById(projectId).select('name');
+    const projectName = project?.name || '未命名片场';
+    const epNum = storyboard.scriptId?.episodeNumber || '?';
+    const epTitle = storyboard.scriptId?.episodeTitle || '';
+    const now = new Date();
+    const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+    displayName = `${projectName}_第${epNum}集`;
+    if (epTitle) displayName += `_${epTitle}`;
+    displayName += `_${ts}`;
+  } catch { displayName = options.name || `合成_${Date.now()}`; }
 
   const composition = await Composition.create({
     projectId,
     storyboardId,
-    name: options.name || `合成_${Date.now()}`,
+    name: options.name || displayName,
     outputFormat: options.outputFormat || 'mp4',
     resolution: options.resolution || '1080x1920',
     frameRate: options.frameRate || 24,
@@ -160,6 +176,7 @@ async function processComposition(compositionId) {
       fresh.status = 'completed';
       fresh.progress = 100;
       fresh.outputUrl = isDev ? localUrl : resolvedUrl;
+      fresh.totalDuration = result.duration || fresh.totalDuration;
       fresh.warnings = result.warnings || [];
       await fresh.save();
     }
@@ -168,6 +185,7 @@ async function processComposition(compositionId) {
       status: 'completed',
       progress: 100,
       outputUrl: isDev ? localUrl : resolvedUrl,
+      duration: result.duration,
       warnings: result.warnings,
     });
 

@@ -121,6 +121,20 @@
                   <span v-else class="tl-placeholder">待生成</span>
                   <span v-if="s.renderedImage" class="tl-img-clear" @click.stop="clearShotMedia(s, 'image')" title="清除图片（文件保留不删）">✕</span>
                   <span v-if="s.renderedVideo" class="tl-img-clear" @click.stop="clearShotMedia(s, 'video')" title="清除视频（文件保留不删）">✕</span>
+                  <!-- 历史版本选择器 -->
+                  <span v-if="(s.materials || []).filter(m => m.type === 'image').length >= 2"
+                    class="tl-ver-badge" @click.stop="toggleVerPicker(s)" title="历史生成版本">
+                    {{ (s.materials || []).filter(m => m.type === 'image').length }}版
+                  </span>
+                </div>
+                <!-- 版本选择弹窗 -->
+                <div v-if="verPickerShot === s.shotNumber" class="tl-ver-popup" @click.stop>
+                  <div v-for="m in (s.materials || []).filter(x => x.type === 'image').sort((a,b) => b.version - a.version)" :key="m.version"
+                    :class="['tl-ver-item', { 'tl-ver-active': s.renderedImage === m.url }]"
+                    @click.stop="selectVer(s, m)">
+                    <img :src="m.url" />
+                    <span class="tl-ver-label">v{{ m.version }}</span>
+                  </div>
                 </div>
                 <div class="tl-meta">
                   <span class="tl-type">{{ s.shotType }}</span>
@@ -547,6 +561,7 @@ function getStoredNoSubtitles() { try { return localStorage.getItem('ad_no_subti
 function saveNoSubtitles(v) { try { localStorage.setItem('ad_no_subtitles', String(v)); } catch {} }
 const showImportDialog = ref(false);
 const showExportDialog = ref(false);
+const verPickerShot = ref(null); // 当前打开版本选择器的镜头号
 const exportTypes = ref(['script', 'shots', 'full_storyboard']);
 const exportFormat = ref('pdf');
 const exportEpisodes = ref([]);
@@ -1138,6 +1153,7 @@ function selectShot(s) {
   saveCurrentPrompt();
   saveCurrentVideoPrompt();
   saveVideoDuration();
+  verPickerShot.value = null; // 切换镜头关闭版本选择器
   // 切换到新分镜
   currentShot.value = s;
   loadShotData(s);
@@ -1213,6 +1229,22 @@ function setMatAsCurrent(m) {
     }).catch(() => {});
   }
   ElMessage.success(m.type === 'video' ? `已切换为当前视频 (v${m.version})` : `已切换为主图 (v${m.version})`);
+}
+function toggleVerPicker(shot) {
+  verPickerShot.value = verPickerShot.value === shot.shotNumber ? null : shot.shotNumber;
+}
+function selectVer(shot, m) {
+  shot.renderedImage = m.url;
+  verPickerShot.value = null;
+  // 持久化到数据库
+  if (currentStoryboard.value?._id) {
+    const token = localStorage.getItem('token');
+    fetch(`/api/v1/storyboards/${currentStoryboard.value._id}/shots/${shot.shotNumber}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ renderedImage: m.url }),
+    }).catch(() => {});
+  }
+  ElMessage.success(`已切换为 v${m.version} 版本图片`);
 }
 function toggleSceneRef(id) {
   const idx = selectedSceneRefs.value.indexOf(id);
@@ -2207,6 +2239,41 @@ async function handleImport() {
 }
 .tl-img:hover .tl-img-clear { opacity: 1; }
 .tl-img-clear:hover { background: #e74c3c; }
+
+/* 历史版本徽章 */
+.tl-ver-badge {
+  position: absolute; bottom: 2px; left: 2px;
+  background: rgba(201,168,76,0.85); color: #fff; font-size: 9px;
+  padding: 1px 5px; border-radius: 3px; cursor: pointer; z-index: 4;
+  font-weight: 700; letter-spacing: 0.5px; opacity: 0;
+  transition: opacity 0.2s;
+}
+.tl-img:hover .tl-ver-badge { opacity: 1; }
+.tl-ver-badge:hover { background: var(--gold); }
+
+/* 版本选择弹窗 */
+.tl-ver-popup {
+  position: absolute; bottom: 22px; left: 0; right: 0;
+  background: rgba(30,30,50,0.95); border: 1px solid var(--gold);
+  border-radius: 6px; padding: 4px; z-index: 10;
+  display: flex; gap: 4px; overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent;
+}
+.tl-ver-popup::-webkit-scrollbar { height: 3px; }
+.tl-ver-popup::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
+.tl-ver-item {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 4px;
+  overflow: hidden; cursor: pointer; position: relative;
+  border: 1.5px solid transparent; transition: border-color 0.2s;
+}
+.tl-ver-item:hover { border-color: rgba(201,168,76,0.5); }
+.tl-ver-active { border-color: var(--gold); }
+.tl-ver-item img { width: 100%; height: 100%; object-fit: cover; }
+.tl-ver-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.7); color: #fff; font-size: 8px;
+  text-align: center; padding: 1px 0; letter-spacing: 0.5px;
+}
 
 /* 视频缩略图 */
 .tl-video-thumb {

@@ -108,7 +108,7 @@ class CompositionEngine {
       const saved = await this._saveOutput(finalFile);
       this._report(100, '完成');
 
-      return { outputPath: saved.outputPath, publicUrl: saved.publicUrl, warnings: this.warnings };
+      return { outputPath: saved.outputPath, publicUrl: saved.publicUrl, warnings: this.warnings, duration: this._calcTotalDuration(segments) };
     } catch (err) {
       // clean up workDir on failure (caller may keep it for debugging)
       throw err;
@@ -120,6 +120,13 @@ class CompositionEngine {
     if (this.workDir && fs.existsSync(this.workDir)) {
       await fsp.rm(this.workDir, { recursive: true, force: true }).catch(() => {});
     }
+  }
+
+  /** 实际合成时长（含转场裁剪），秒 */
+  _calcTotalDuration(segments) {
+    const total = segments.reduce((s, seg) => s + (seg.duration || 0), 0);
+    const td = this.transition === 'cut' ? 0 : XFADE_DURATION;
+    return Math.round(total - (segments.length - 1) * td);
   }
 
   // ------------------------------------------------------------------
