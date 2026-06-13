@@ -57,9 +57,18 @@ router.put('/:id', async (req, res, next) => {
     if (!checkDocOwnership(project, req.user._id)) {
       return res.status(403).json({ message: '无权修改此项目' });
     }
-    const allowed = ['name', 'description', 'coverImage', 'status', 'scriptSource', 'videoConfig', 'directorSettings'];
+    const allowed = ['name', 'description', 'coverImage', 'status', 'scriptSource'];
     const update = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    // videoConfig/directorSettings 深度合并，防止 partial 更新覆盖其他字段
+    if (req.body.videoConfig !== undefined) {
+      project.videoConfig = { ...project.videoConfig?.toObject?.() || project.videoConfig || {}, ...req.body.videoConfig };
+      project.markModified('videoConfig');
+    }
+    if (req.body.directorSettings !== undefined) {
+      project.directorSettings = { ...project.directorSettings?.toObject?.() || project.directorSettings || {}, ...req.body.directorSettings };
+      project.markModified('directorSettings');
+    }
     Object.assign(project, update);
     await project.save();
     res.json({ message: '更新成功', data: project });

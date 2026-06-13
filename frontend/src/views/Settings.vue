@@ -117,6 +117,60 @@
         </div>
         <div class="st-hint-card">配置修改后自动保存，无需手动确认。全局生效，拍摄时可临时覆盖。</div>
       </div>
+
+      <!-- 导演全局设定 -->
+      <div class="st-grid" style="margin-top:16px">
+        <div class="st-card st-card-full">
+          <h3 class="st-card-title"><SettingTwo theme="outline" size="17" fill="var(--gold)" /> 导演全局设定</h3>
+          <p class="st-card-sub">自定义画质关键词和风格指令，应用到分镜台本的提示词中。选择片场后编辑 → 保存即生效。</p>
+
+          <div class="st-field-row" style="margin-bottom:12px">
+            <span class="st-field-label">目标片场</span>
+            <el-select v-model="directorProjectId" style="width:280px" filterable @change="loadDirectorSettings">
+              <el-option v-for="p in directorProjects" :key="p._id" :label="p.name" :value="p._id" />
+            </el-select>
+            <el-button size="small" text @click="loadDirectorProjects" :loading="dirProjectsLoading">刷新</el-button>
+          </div>
+
+          <div class="st-field-row">
+            <span class="st-field-label">基础风格</span>
+            <el-select v-model="directorForm.visualStyle" size="small" style="width:200px" @change="autoSaveDirector">
+              <el-option label="写实" value="写实" />
+              <el-option label="动漫" value="动漫" />
+              <el-option label="真人" value="真人" />
+              <el-option label="古风" value="古风" />
+              <el-option label="电影感" value="电影感" />
+            </el-select>
+          </div>
+
+          <div class="st-field-row">
+            <span class="st-field-label">画质关键词</span>
+            <el-input v-model="directorForm.qualityKeywords" size="small" style="width:100%;max-width:520px" placeholder="如：8K，超写实，电影级摄影，高细节" @change="autoSaveDirector" />
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:100px;margin-bottom:10px">
+            <span v-for="q in qualityPresets" :key="q" class="dir-chip" @click="appendQuality(q)">{{ q }}</span>
+          </div>
+
+          <div class="st-field-row">
+            <span class="st-field-label">氛围光影</span>
+            <el-input v-model="directorForm.atmosphereLighting" size="small" style="width:100%;max-width:520px" placeholder="如：电影级光影，暖光，明暗交错" @change="autoSaveDirector" />
+          </div>
+
+          <div class="st-field-row">
+            <span class="st-field-label">风格指令</span>
+            <el-input v-model="directorForm.artStyleCommands" size="small" style="width:100%;max-width:520px" placeholder="如：赛璐珞风格，日式动画质感，二次元，明亮色彩" @change="autoSaveDirector" />
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:100px;margin-bottom:4px">
+            <span v-for="s in artStylePresets" :key="s" class="dir-chip" @click="appendArtStyle(s)">{{ s }}</span>
+          </div>
+
+          <div class="st-prov-actions" style="margin-top:12px">
+            <el-button type="primary" size="small" @click="saveDirectorSettings" :loading="dirSaving">保存到该片场</el-button>
+            <el-button size="small" @click="applyDirectorToAll" :loading="dirApplying">应用到全部片场</el-button>
+            <span v-if="dirSavedMsg" style="color:#67c23a;font-size:12px;margin-left:8px">{{ dirSavedMsg }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== 存储设置 ===== -->
@@ -349,6 +403,7 @@ import { Refresh } from '@element-plus/icons-vue';
 import { Cpu, PictureOne, FolderOpen, Voice, SettingTwo, Data, Key, People, Shield, DocDetail, User, CheckOne, Lock, IdCard, EditTwo, MessageEmoji } from '@icon-park/vue-next';
 import { useRoute } from 'vue-router';
 import { configAPI } from '../api';
+import { useProjectStore } from '../stores/project';
 
 
 const route = useRoute();
@@ -585,7 +640,121 @@ async function testSms() {
   finally { smsTesting.value = false; }
 }
 
-watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); fetchSmsStatus(); } });
+// ===== 导演全局设定 =====
+const projectStore = useProjectStore();
+const directorProjects = ref([]);
+const directorProjectId = ref('');
+const dirProjectsLoading = ref(false);
+const dirSaving = ref(false);
+const dirApplying = ref(false);
+const dirSavedMsg = ref('');
+const directorForm = reactive({ qualityKeywords: '', atmosphereLighting: '', artStyleCommands: '', visualStyle: '写实' });
+
+const qualityPresets = ['8K', '4K', '超写实', '电影级摄影', '高细节', 'CG渲染', '虚幻引擎', '体积光', '光线追踪'];
+const artStylePresets = ['赛璐珞风格', '日式动画质感', '二次元', '日系动画', '明亮色彩', '清晰线条', '水墨风格', '油画质感', '厚涂风格', '水彩风格', '素描风', '扁平化', '古风', '赛博朋克', '废土风'];
+
+function appendQuality(q) {
+  const current = directorForm.qualityKeywords.split(/[,，、；]/).map(s => s.trim()).filter(Boolean);
+  if (!current.includes(q)) {
+    current.push(q);
+    directorForm.qualityKeywords = current.join('，');
+  }
+}
+function appendArtStyle(s) {
+  const current = directorForm.artStyleCommands.split(/[,，、；]/).map(x => x.trim()).filter(Boolean);
+  if (!current.includes(s)) {
+    current.push(s);
+    directorForm.artStyleCommands = current.join('，');
+  }
+}
+
+async function loadDirectorProjects() {
+  dirProjectsLoading.value = true;
+  try {
+    await projectStore.fetchProjects();
+    directorProjects.value = projectStore.projects.filter(p => !p.isDeleted);
+    if (!directorProjectId.value && directorProjects.value.length > 0) {
+      directorProjectId.value = directorProjects.value[0]._id;
+      loadDirectorSettings();
+    }
+  } catch {} finally { dirProjectsLoading.value = false; }
+}
+
+async function loadDirectorSettings() {
+  if (!directorProjectId.value) return;
+  try {
+    const project = await projectStore.fetchProject(directorProjectId.value);
+    const ds = project?.directorSettings || {};
+    const vc = project?.videoConfig || {};
+    Object.assign(directorForm, {
+      qualityKeywords: ds.qualityKeywords || '',
+      atmosphereLighting: ds.atmosphereLighting || '',
+      artStyleCommands: ds.artStyleCommands || '',
+      visualStyle: vc.visualStyle || '写实',
+    });
+  } catch {}
+}
+
+function autoSaveDirector() {}
+
+async function saveDirectorSettings() {
+  if (!directorProjectId.value) { ElMessage.warning('请选择目标片场'); return; }
+  dirSaving.value = true; dirSavedMsg.value = '';
+  try {
+    const token = localStorage.getItem('token');
+    const project = await projectStore.fetchProject(directorProjectId.value);
+    const body = {
+      directorSettings: {
+        qualityKeywords: directorForm.qualityKeywords,
+        atmosphereLighting: directorForm.atmosphereLighting,
+        artStyleCommands: directorForm.artStyleCommands,
+      },
+      // 保留完整的 videoConfig，只改 visualStyle
+      videoConfig: { ...(project?.videoConfig || {}), visualStyle: directorForm.visualStyle },
+    };
+    await fetch(`/api/v1/projects/${directorProjectId.value}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    dirSavedMsg.value = '已保存';
+    ElMessage.success('导演设定已应用到该片场');
+    setTimeout(() => dirSavedMsg.value = '', 3000);
+  } catch (e) { ElMessage.error('保存失败: ' + (e.message || '')); }
+  finally { dirSaving.value = false; }
+}
+
+async function applyDirectorToAll() {
+  dirApplying.value = true; dirSavedMsg.value = '';
+  const projects = directorProjects.value.filter(p => p._id);
+  if (projects.length === 0) { ElMessage.warning('没有可用的片场'); dirApplying.value = false; return; }
+  try {
+    const token = localStorage.getItem('token');
+    let ok = 0;
+    for (const p of projects) {
+      try {
+        const body = {
+          directorSettings: {
+            qualityKeywords: directorForm.qualityKeywords,
+            atmosphereLighting: directorForm.atmosphereLighting,
+            artStyleCommands: directorForm.artStyleCommands,
+          },
+          videoConfig: { visualStyle: directorForm.visualStyle },
+        };
+        const res = await fetch(`/api/v1/projects/${p._id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) ok++;
+      } catch {}
+    }
+    dirSavedMsg.value = `已应用到${ok}个片场`;
+    ElMessage.success(`已应用到 ${ok}/${projects.length} 个片场`);
+    setTimeout(() => dirSavedMsg.value = '', 3000);
+  } catch (e) { ElMessage.error('批量应用失败: ' + (e.message || '')); }
+  finally { dirApplying.value = false; }
+}
+
+watch(() => settingsTab.value, v => { if (v === 'profile') { loadProfileData(); if (isAdmin.value) loadSmsCfg(); fetchSmsStatus(); } if (v === 'image') { loadDirectorProjects(); } });
 watch(() => route.path, p => { if (p === '/settings') { refreshStatus(); loadProfileData(); fetchSmsStatus(); if (typeof isAdmin !== 'undefined' && isAdmin.value) loadSmsCfg(); } });
 
 onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChangelog(); fetchSmsStatus(); if (localStorage.getItem('token')) { loadImgCfg(); loadStorCfg(); } });
@@ -648,6 +817,16 @@ onMounted(() => { refreshStatus(); fetchTTSConfig(); fetchTTSVoices(); loadChang
 /* ===== 提示条 ===== */
 .st-hint-card { padding: 12px 18px; border-radius: 10px; font-size: 13px; color: var(--text-100); background: var(--bg-100); border: 1px solid var(--bg-300); display: flex; align-items: center; gap: 8px; }
 .st-hint-ok { background: rgba(103,194,58,0.05); border-color: rgba(103,194,58,0.2); color: #4a8c2c; }
+
+/* 导演设定 */
+.st-card-full { grid-column: 1 / -1; }
+.dir-chip {
+  font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer;
+  background: rgba(201,168,76,0.08); color: var(--gold-dark); border: 1px solid rgba(201,168,76,0.2);
+  transition: all 0.15s; user-select: none;
+}
+.dir-chip:hover { background: var(--gold); color: #fff; border-color: var(--gold); }
+.st-field-label { font-size: 12px; font-weight: 600; color: var(--text-100); min-width: 90px; }
 
 /* ===== 测试按钮 ===== */
 .st-test-btn { border: 2px solid var(--bg-300) !important; background: var(--bg-100) !important; color: var(--text-100) !important; border-radius: 8px !important; font-weight: 600 !important; }
