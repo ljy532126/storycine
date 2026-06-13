@@ -59,9 +59,12 @@ function buildImagePrompt(shot, videoConfig, directorSettings) {
   const charName = shot.dialogue?.characterName || '';
   const outfit = extractOutfit(imgDesc);
   const action = extractAction(imgDesc);
+  // 角色名+服饰合并
   const character = [charName, outfit].filter(Boolean).join('，');
   const shotType = shot.shotType || '中景';
-  const composition = shot.composition ? `${shot.composition}构图` : '中心构图';
+  // composition 避免重复加"构图"
+  const compRaw = shot.composition || '';
+  const composition = compRaw ? (compRaw.includes('构图') ? compRaw : compRaw + '构图') : '中心构图';
   const styleKeywords = getStyleKeywords(videoConfig);
 
   const noText = aiCfg.noTextWatermark !== false;
@@ -77,8 +80,14 @@ function buildImagePrompt(shot, videoConfig, directorSettings) {
   const constraintPrefix = noText
     ? '【强约束】画面中严禁出现任何文字、字母、乱码、logo、水印、标题、字幕、签名、符号、海报元素、排版文字，仅保留场景与角色，纯画面，无任何额外元素'
     : '';
+
+  // qualityBlock: 场景+光影+画质+风格+景别+构图
   const qualityBlock = `【画质/构图】${ratio}，${scene || '电影级场景'}，${lighting}，${quality}，${artStyle}，${shotType}，${composition}，焦点清晰，背景虚化`;
-  const descBlock = `【场景/角色描述】${[character, imgDesc, action, ...boundDescs, styleKeywords].filter(Boolean).join('，')}`;
+
+  // descBlock: 分镜描述完整 + 角色外貌绑定，去掉与imgDesc重复的action片段和已出现在artStyle中的styleKeywords
+  const cleanAction = action && imgDesc.includes(action) ? '' : action; // action已在imgDesc中就不重复
+  const descParts = [character, imgDesc, cleanAction, ...boundDescs].filter(Boolean);
+  const descBlock = `【场景/角色描述】${descParts.join('，')}`;
 
   const parts = [constraintPrefix, qualityBlock, descBlock].filter(Boolean);
   return parts.join('；');
@@ -98,7 +107,8 @@ function buildVideoPrompt(shot, videoConfig, directorSettings) {
   const lighting = shot.lighting || ds.atmosphereLighting || '电影级光影';
   const imgDesc = shot.imageDescription || '';
   const shotType = shot.shotType || '中景';
-  const composition = shot.composition ? `${shot.composition}构图` : '中心构图';
+  const compRaw = shot.composition || '';
+  const composition = compRaw ? (compRaw.includes('构图') ? compRaw : compRaw + '构图') : '中心构图';
   const camMove = shot.cameraMovement && shot.cameraMovement !== '固定' ? `${shot.cameraMovement}镜头` : '固定镜头';
   const styleKeywords = getStyleKeywords(videoConfig);
   const aiCfg = getAIConfig();
