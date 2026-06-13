@@ -80,6 +80,7 @@ router.get('/captcha', captchaLimiter, (req, res) => {
 // ===== 注册 =====
 router.post('/register', registerLimiter, async (req, res) => {
   try {
+    console.log(`[auth] POST /register username=${req.body.username}`);
     const { username, password, phone } = req.body;
     const ip = getClientIp(req);
     const ua = req.headers['user-agent'] || '';
@@ -117,6 +118,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 // ===== 登录（密码） =====
 router.post('/login', loginLimiter, async (req, res) => {
   try {
+    console.log(`[auth] POST /login username=${req.body.username}`);
     const { username, password } = req.body;
     const ip = getClientIp(req);
     const ua = req.headers['user-agent'] || '';
@@ -158,6 +160,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const token = generateToken(user);
     res.json({ message: '登录成功', data: { token, user: { id: user._id, uid: user.uid, username, nickname: user.nickname || username, avatar: user.avatar || '', role: user.role, phone: user.phone || '' } } });
   } catch (e) {
+    console.error('[auth] POST /login error:', e.message);
     res.status(500).json({ message: '服务器错误，请稍后重试' });
   }
 });
@@ -227,6 +230,7 @@ router.put('/password', authRequired, async (req, res) => {
 // ===== 管理员：创建用户 =====
 router.post('/users', adminRequired, async (req, res) => {
   try {
+    console.log(`[auth] POST /users (admin) create user: ${req.body.username}`);
     const { username, password, role, nickname } = req.body;
     if (!username || username.length < 3 || username.length > 30) return res.status(400).json({ message: '账号长度3-30个字符' });
     if (!password || password.length < 8) return res.status(400).json({ message: '密码至少8位' });
@@ -249,6 +253,7 @@ router.post('/users', adminRequired, async (req, res) => {
 // ===== 管理员：删除用户 =====
 router.delete('/users/:id', adminRequired, async (req, res) => {
   try {
+    console.log(`[auth] DELETE /users/${req.params.id} by ${req.user.username}`);
     if (req.params.id === req.user._id.toString()) return res.status(400).json({ message: '不能删除自己' });
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ message: '用户不存在' });

@@ -57,6 +57,7 @@ router.put('/:id/resolve', adminRequired, async (req, res, next) => {
 // 批量标记已处理
 router.post('/batch-resolve', adminRequired, async (req, res, next) => {
   try {
+    console.log(`[error-log] POST /batch-resolve count=${(req.body.ids||[]).length}`);
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: '缺少 ids 数组' });
