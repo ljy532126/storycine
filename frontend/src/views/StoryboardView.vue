@@ -72,7 +72,16 @@
               <img v-else-if="currentShot.renderedImage" :src="currentShot.renderedImage" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in" @click="openImgViewer(currentShot.renderedImage)" />
               <!-- 清除按钮 -->
               <div v-if="currentShot.renderedVideo || currentShot.renderedImage" class="preview-clear" @click="clearShotMedia(currentShot, currentShot.renderedVideo ? 'video' : 'image')" title="清除媒体（文件保留）">✕</div>
-              <Pic v-else size="48" fill="var(--primary-300)"/>
+              <!-- 暂无媒体占位 -->
+              <div v-if="!currentShot.renderedImage && !currentShot.renderedVideo && !(getShotPollKey() && videoPollingMap[getShotPollKey()])" class="preview-placeholder">
+                <div class="pp-pulse-ring">
+                  <div class="pp-pulse-ring-inner">
+                    <Film size="36" fill="rgba(201,168,76,0.25)"/>
+                  </div>
+                </div>
+                <span class="pp-label">待生成</span>
+                <span class="pp-hint">点击下方镜头卡片生成后在此预览</span>
+              </div>
             </div>
             <div class="preview-info">
               <span class="pi-tag">{{ currentShot.shotType }}</span>
@@ -2177,6 +2186,26 @@ async function handleImport() {
   height: 260px; display: flex; align-items: center; justify-content: center;
   background: rgba(0,0,0,0.02); border-radius: 10px; margin: 0 16px;
   position: relative; flex-shrink: 0;
+}
+/* 待生成占位 */
+.preview-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2; }
+.pp-pulse-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: rgba(201,168,76,0.04); display: flex; align-items: center; justify-content: center;
+  animation: pp-breathe 2.5s ease-in-out infinite;
+}
+.pp-pulse-ring-inner { animation: pp-spin 8s linear infinite; opacity: 0.5; }
+@keyframes pp-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(201,168,76,0.15); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(201,168,76,0); }
+}
+@keyframes pp-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.pp-label {
+  font-size: 14px; font-weight: 700; color: rgba(139,105,20,0.3); letter-spacing: 4px;
+  text-transform: uppercase;
+}
+.pp-hint {
+  font-size: 11px; color: rgba(139,105,20,0.2); letter-spacing: 1px;
 }
 .preview-clear {
   position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
