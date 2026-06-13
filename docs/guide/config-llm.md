@@ -9,8 +9,6 @@ StoryCine 支持 4 个 AI 模型提供商：**DeepSeek**、**豆包 (Doubao)**�
 3. 填入 API Key 和 Base URL（如需要）
 4. 点击「**保存**」→「**测试连接**」
 
-![系统设置](../images/13-settings-llm.png)
-
 ## 环境变量配置
 
 编辑 `backend/.env`，填入对应的 Key：
