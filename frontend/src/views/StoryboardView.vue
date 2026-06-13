@@ -485,9 +485,18 @@
     </el-dialog>
 
     <!-- TTS 配音参数弹窗 -->
-    <el-dialog v-model="showTTSDialog" :title="ttsTargetShot ? `配音: 镜头 ${ttsTargetShot.shotNumber}` : '批量全集配音'" width="520px" destroy-on-close>
-      <div style="margin-bottom:12px;font-size:13px;color:var(--text-100)" v-if="ttsTargetShot">
-        台词: <strong>{{ (ttsTargetShot.dialogue?.text || ttsTargetShot.imageDescription || '').substring(0, 80) }}{{ (ttsTargetShot.dialogue?.text || ttsTargetShot.imageDescription || '').length > 80 ? '...' : '' }}</strong>
+    <el-dialog v-model="showTTSDialog" :title="ttsTargetShot ? `配音: 镜头 ${ttsTargetShot.shotNumber}` : '批量全集配音'" width="560px" destroy-on-close>
+      <div v-if="ttsTargetShot" style="margin-bottom:12px">
+        <span style="font-size:12px;font-weight:600;color:var(--text-100);display:block;margin-bottom:6px">选择台词（共 {{ ttsDialogueOptions.length }} 句）</span>
+        <div v-if="ttsDialogueOptions.length > 0" class="tts-dialogue-list">
+          <div v-for="(d, di) in ttsDialogueOptions" :key="di"
+            :class="['tts-dialogue-item', { active: ttsSelectedDi === di }]"
+            @click="ttsSelectedDi = di">
+            <span class="tts-di-char">{{ d.characterName || '未知' }}</span>
+            <span class="tts-di-text">{{ d.text }}</span>
+          </div>
+        </div>
+        <div v-else style="color:var(--text-200);font-size:12px">该镜头没有台词，将合成镜头描述</div>
       </div>
       <el-form label-position="top" size="small">
         <el-form-item label="音色">
@@ -508,8 +517,8 @@
       </el-form>
       <template #footer>
         <el-button @click="showTTSDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleTTSSynthesize" :loading="synthingShot !== null">
-          {{ ttsTargetShot ? '' : '' }}<Voice size="14" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/>{{ ttsTargetShot ? '合成此句' : '批量合成全部' }}
+        <el-button type="primary" @click="handleTTSSynthesize" :loading="synthingShot !== null" :disabled="ttsTargetShot && ttsDialogueOptions.length > 0 && ttsSelectedDi < 0">
+          <Voice size="14" fill="currentColor" style="margin-right:2px;vertical-align:text-bottom"/>{{ ttsTargetShot ? '合成选中的台词' : '批量合成全部' }}
         </el-button>
       </template>
     </el-dialog>
@@ -1886,6 +1895,8 @@ function formatEpLabel(ep) {
 const showTTSDialog = ref(false);
 const ttsTargetShot = ref(null);
 const synthingShot = ref(null);
+const ttsSelectedDi = ref(-1); // 当前选中的台词索引
+const ttsDialogueOptions = ref([]); // 备选台词列表
 const ttsBatchRunning = ref(false);
 const ttsParams = reactive({ speaker: 'zh_female_vv_uranus_bigtts', speechRate: 0, loudnessRate: 0 });
 const ttsCustomSpeaker = ref('');
@@ -1911,6 +1922,13 @@ function openTTSDialog(shot) {
   ttsParams.speaker = 'zh_female_vv_uranus_bigtts';
   ttsParams.speechRate = 0;
   ttsParams.loudnessRate = 0;
+  // 收集 _dialogues + dialogue 作为备选台词
+  const dialogues = (shot._dialogues || []).filter(d => d.text && d.text.trim());
+  if ((!dialogues.length) && shot.dialogue?.text && shot.dialogue.text.trim()) {
+    dialogues.push(shot.dialogue);
+  }
+  ttsDialogueOptions.value = dialogues;
+  ttsSelectedDi.value = dialogues.length > 0 ? 0 : -1;
   showTTSDialog.value = true;
 }
 
@@ -1933,12 +1951,14 @@ async function handleTTSSynthesize() {
       }
     } else {
       const shot = ttsTargetShot.value;
-      const text = shot.dialogue?.text || shot.imageDescription || '';
+      const sel = ttsDialogueOptions.value[ttsSelectedDi.value];
+      const text = sel?.text || shot.dialogue?.text || shot.imageDescription || '';
+      const charName = sel?.characterName || shot.dialogue?.characterName || '';
       if (!text.trim()) { ElMessage.warning('该镜头没有台词'); return; }
       const { data } = await ttsAPI.synthesize({
         storyboardId: currentStoryboard.value._id,
         shotNumber: shot.shotNumber,
-        text, characterName: shot.dialogue?.characterName || '',
+        text, characterName: charName,
         projectId: currentProjectId.value,
         scriptId: currentScriptId.value,
         speaker, speechRate: ttsParams.speechRate, loudnessRate: ttsParams.loudnessRate,
@@ -2639,4 +2659,14 @@ async function handleImport() {
 .ef-card-icon { margin-bottom: 4px; line-height: 1; }
 .ef-card-label { font-size: 11px; font-weight: 700; color: var(--text-100); margin-bottom: 1px; }
 .ef-card-hint { font-size: 10px; color: var(--text-200); }
+</style>
+<style>
+/* TTS 台词选择列表（弹窗渲染在 body 下，必须非 scoped） */
+.tts-dialogue-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--bg-300, #e5e5e5); border-radius: 8px; }
+.tts-dialogue-item { padding: 10px 12px; cursor: pointer; display: flex; gap: 8px; align-items: flex-start; border-bottom: 1px solid var(--bg-300, #f0f0f0); transition: background 0.15s; }
+.tts-dialogue-item:last-child { border-bottom: none; }
+.tts-dialogue-item:hover { background: rgba(201,168,76,0.06); }
+.tts-dialogue-item.active { background: rgba(201,168,76,0.12); border-left: 3px solid var(--gold, #c9a84c); }
+.tts-di-char { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--gold-dark, #8b6914); min-width: 48px; }
+.tts-di-text { font-size: 13px; color: var(--text-100, #333); line-height: 1.5; word-break: break-word; }
 </style>
