@@ -33,6 +33,13 @@ const shotSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'generating_image', 'generating_video', 'completed', 'failed'], default: 'pending' },
   _imagePrompt: { type: String, default: '' },
   _videoPrompt: { type: String, default: '' },
+  _dialogues: [{
+    characterName: { type: String, default: '' },
+    text: { type: String, default: '' },
+    actionHint: { type: String, default: '' },
+    innerThought: { type: String, default: '' },
+    cameraHint: { type: String, default: '' },
+  }],
   _refImages: { type: [String], default: [] },
 });
 
