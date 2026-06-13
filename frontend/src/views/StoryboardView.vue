@@ -2188,31 +2188,31 @@ async function handleImport() {
 
 /* Preview — 增强电影感 */
 .preview-area {
-  background: linear-gradient(135deg, #f8f6f0 0%, #ede8dc 50%, #f0ece3 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
   border-radius: 16px;
-  border: 2px solid rgba(201,168,76,0.15);
-  flex: 1; display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(201,168,76,0.2);
+  flex: 1; display: flex; align-items: stretch; justify-content: center;
   overflow: hidden; position: relative;
-  box-shadow: inset 0 0 60px rgba(139,105,20,0.04), 0 4px 24px rgba(0,0,0,0.05);
+  box-shadow: inset 0 0 80px rgba(0,0,0,0.3), 0 4px 24px rgba(0,0,0,0.15);
 }
 .preview-area::before {
   content: ''; position: absolute; inset: 0;
   background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.08) 100%);
   pointer-events: none; z-index: 1;
 }
-.preview-empty { text-align: center; color: #8b7355; position: relative; z-index: 2; }
-.preview-empty p { margin-top: 12px; font-size: 14px; color: #8b7355; opacity: 0.6; letter-spacing: 1px; }
-.preview-shot { display: flex; flex-direction: column; text-align: center; width: 100%; max-height: 100%; position: relative; z-index: 2; }
+.preview-empty { text-align: center; color: rgba(255,255,255,0.5); position: relative; z-index: 2; }
+.preview-empty p { margin-top: 12px; font-size: 14px; color: rgba(255,255,255,0.4); opacity: 0.6; letter-spacing: 1px; }
+.preview-shot { display: flex; flex-direction: column; text-align: center; width: 100%; height: 100%; position: relative; z-index: 2; }
 .preview-frame {
-  height: 260px; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.02); border-radius: 10px; margin: 0 16px;
-  position: relative; flex-shrink: 0;
+  flex: 1; min-height: 200px; display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; margin: 0 16px;
+  position: relative;
 }
 /* 待生成占位 */
 .preview-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2; }
 .pp-pulse-ring {
   width: 80px; height: 80px; border-radius: 50%;
-  background: rgba(201,168,76,0.04); display: flex; align-items: center; justify-content: center;
+  background: rgba(201,168,76,0.06); display: flex; align-items: center; justify-content: center;
   animation: pp-breathe 2.5s ease-in-out infinite;
 }
 .pp-pulse-ring-inner { animation: pp-spin 8s linear infinite; opacity: 0.5; }
@@ -2222,11 +2222,11 @@ async function handleImport() {
 }
 @keyframes pp-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .pp-label {
-  font-size: 14px; font-weight: 700; color: rgba(139,105,20,0.3); letter-spacing: 4px;
+  font-size: 14px; font-weight: 700; color: rgba(201,168,76,0.35); letter-spacing: 4px;
   text-transform: uppercase;
 }
 .pp-hint {
-  font-size: 11px; color: rgba(139,105,20,0.2); letter-spacing: 1px;
+  font-size: 11px; color: rgba(255,255,255,0.25); letter-spacing: 1px;
 }
 .preview-clear {
   position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
@@ -2250,15 +2250,15 @@ async function handleImport() {
   letter-spacing: 1.5px; box-shadow: 0 2px 6px rgba(201,168,76,0.3);
 }
 .preview-dialogue {
-  padding: 8px 16px; color: #6b5e47; font-size: 12px;
-  background: rgba(201,168,76,0.06); border-top: 1px solid rgba(201,168,76,0.15);
+  padding: 8px 16px; color: rgba(255,255,255,0.75); font-size: 12px;
+  background: rgba(0,0,0,0.25); border-top: 1px solid rgba(201,168,76,0.12);
   letter-spacing: 0.2px; height: 60px; overflow-y: auto; flex-shrink: 0;
   scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.25) transparent;
   mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
 }
 .preview-dialogue-line { padding: 1px 0; line-height: 1.35; }
-.preview-dialogue-line + .preview-dialogue-line { border-top: 1px solid rgba(201,168,76,0.08); }
+.preview-dialogue-line + .preview-dialogue-line { border-top: 1px solid rgba(255,255,255,0.06); }
 .preview-dialogue::-webkit-scrollbar { width: 4px; }
 .preview-dialogue::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
 
