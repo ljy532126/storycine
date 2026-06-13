@@ -999,14 +999,42 @@ async function onProjectChange(val) {
     assetStore.fetchScenes(val);
   }
 }
-function onScriptChange(val) {
+async function onScriptChange(val) {
   if (val) {
     const existing = storyboardStore.storyboards.find(s => (s.scriptId?._id || s.scriptId) === val);
     currentStoryboard.value = existing ? JSON.parse(JSON.stringify(existing)) : null;
     currentShot.value = currentStoryboard.value?.shots?.[0] || null;
     updatePrompt();
     syncEpisodeBar();
+    // 安全网：从剧本拉最新台词同步到故事板镜头
+    loadLatestDialogues(val);
   }
+}
+async function loadLatestDialogues(scriptId) {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1/scripts/${scriptId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    const script = data.data;
+    if (!script?.scenes || !currentStoryboard.value?.shots) return;
+    let changed = false;
+    currentStoryboard.value.shots.forEach(shot => {
+      const scene = script.scenes.find(s => s.sceneNumber === shot.shotNumber);
+      if (scene?.dialogues) {
+        const oldLen = (shot._dialogues || []).length;
+        if (oldLen !== scene.dialogues.length) {
+          shot._dialogues = scene.dialogues.map(d => ({...d}));
+          changed = true;
+        }
+      }
+    });
+    if (changed && currentShot.value) {
+      // 强制触发当前镜头预览更新
+      currentShot.value = { ...currentShot.value };
+    }
+  } catch {} // 静默，失败不影响主流程
 }
 function syncEpisodeBar(){if(!episodeBar)return;episodeBar.scripts=scripts.value;episodeBar.currentScriptId=currentScriptId.value;episodeBar.select=onScriptChange;episodeBar.add=null;episodeBar.dup=null;}
 async function handleAutoGenerate() {
@@ -2092,11 +2120,11 @@ async function handleImport() {
 }
 .preview-empty { text-align: center; color: #8b7355; position: relative; z-index: 2; }
 .preview-empty p { margin-top: 12px; font-size: 14px; color: #8b7355; opacity: 0.6; letter-spacing: 1px; }
-.preview-shot { text-align: center; width: 100%; position: relative; z-index: 2; }
+.preview-shot { display: flex; flex-direction: column; text-align: center; width: 100%; max-height: 100%; position: relative; z-index: 2; }
 .preview-frame {
   height: 260px; display: flex; align-items: center; justify-content: center;
   background: rgba(0,0,0,0.02); border-radius: 10px; margin: 0 16px;
-  position: relative;
+  position: relative; flex-shrink: 0;
 }
 .preview-clear {
   position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
@@ -2107,7 +2135,7 @@ async function handleImport() {
 .preview-clear:hover { background: #e74c3c; }
 .preview-info {
   display: flex; gap: 10px; justify-content: center; padding: 10px;
-  font-size: 12px;
+  font-size: 12px; flex-shrink: 0;
 }
 .pi-tag {
   background: linear-gradient(135deg, var(--gold) 0%, #b8943a 100%);
@@ -2116,12 +2144,15 @@ async function handleImport() {
   letter-spacing: 1.5px; box-shadow: 0 2px 6px rgba(201,168,76,0.3);
 }
 .preview-dialogue {
-  padding: 12px 20px; color: #6b5e47; font-size: 13px;
+  padding: 10px 16px; color: #6b5e47; font-size: 12px;
   background: rgba(201,168,76,0.06); border-top: 1px solid rgba(201,168,76,0.15);
-  font-style: italic; letter-spacing: 0.3px;
+  letter-spacing: 0.2px; flex: 1; min-height: 0; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.25) transparent;
 }
-.preview-dialogue-line { padding: 3px 0; }
+.preview-dialogue-line { padding: 2px 0; line-height: 1.5; }
 .preview-dialogue-line + .preview-dialogue-line { border-top: 1px solid rgba(201,168,76,0.08); }
+.preview-dialogue::-webkit-scrollbar { width: 4px; }
+.preview-dialogue::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
 
 /* Timeline — 卡片升级 */
 .timeline {
@@ -2236,7 +2267,13 @@ async function handleImport() {
   padding: 14px; overflow-y: auto;
   box-shadow: 0 2px 20px rgba(139,105,20,0.06);
   backdrop-filter: blur(6px);
+  scrollbar-width: thin; scrollbar-color: transparent transparent;
 }
+.sb-right:hover { scrollbar-color: rgba(201,168,76,0.2) transparent; }
+.sb-right::-webkit-scrollbar { width: 4px; }
+.sb-right::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; transition: background 0.3s; }
+.sb-right:hover::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); }
+.sb-right::-webkit-scrollbar-track { background: transparent; }
 .tab-switch {
   display: flex; margin-bottom: 14px; border-radius: 8px; overflow: hidden;
   border: 1.5px solid var(--gold);
@@ -2363,7 +2400,13 @@ async function handleImport() {
   font-size: 12px; line-height: 1.7; color: var(--gold-dark);
   outline: none; cursor: text; word-break: break-word;
   transition: all 0.25s;
+  scrollbar-width: thin; scrollbar-color: transparent transparent;
 }
+.prompt-editor:hover { scrollbar-color: rgba(201,168,76,0.2) transparent; }
+.prompt-editor::-webkit-scrollbar { width: 4px; }
+.prompt-editor::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; transition: background 0.3s; }
+.prompt-editor:hover::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); }
+.prompt-editor::-webkit-scrollbar-track { background: transparent; }
 .prompt-editor:focus {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(201,168,76,0.1);

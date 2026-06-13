@@ -207,6 +207,7 @@ window.addEventListener('resize', () => { screenWidth.value = window.innerWidth;
 import { ElMessage,ElMessageBox } from 'element-plus';
 import { useProjectStore } from '../stores/project';
 import { useScriptStore } from '../stores/script';
+import { useStoryboardStore } from '../stores/storyboard';
 import { useAssetStore } from '../stores/asset';
 import { assetAPI,scriptAPI,storyboardAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
@@ -409,7 +410,67 @@ function removeScene(i){currentScript.value.scenes.splice(i,1);charactersStr.val
 function addDialogue(scene){scene.dialogues.push({characterName:'',text:'',actionHint:'',innerThought:'',cameraHint:''});pushHistory('添加台词');markDirty()}
 function removeDialogue(scene,i){scene.dialogues.splice(i,1);pushHistory('删除台词');markDirty()}
 
-async function handleSave(){if(!currentScript.value)return;try{await scriptStore.updateScript(currentScript.value._id,{scenes:currentScript.value.scenes,episodeTitle:currentScript.value.episodeTitle});dirty.value=false;_lastAutoHistory=0;pushHistory('保存');ElMessage.success('内容已经稳稳保存好咯~')}catch(e){ElMessage.error('哎呀，保存出错啦，再试一次哦')}}
+async function handleSave(){
+  if(!currentScript.value)return;
+  // 保存前校验：台词行有内容但缺角色名或对话文本
+  const scenes = currentScript.value.scenes || [];
+  for (let si = 0; si < scenes.length; si++) {
+    const dialogues = scenes[si].dialogues || [];
+    for (let di = 0; di < dialogues.length; di++) {
+      const d = dialogues[di];
+      const hasChar = !!(d.characterName || '').trim();
+      const hasText = !!(d.text || '').trim();
+      const hasOther = !!(d.actionHint || d.cameraHint || d.innerThought || '').trim();
+      if (!hasChar && !hasText && !hasOther) continue;
+      if (!hasChar) { ElMessage.warning(`第${si+1}镜 第${di+1}句台词：请填写"角色"名称`); return; }
+      if (!hasText) { ElMessage.warning(`第${si+1}镜 第${di+1}句台词 (${d.characterName})：请填写"对话内容"`); return; }
+    }
+  }
+  try{
+    await scriptStore.updateScript(currentScript.value._id,{scenes:currentScript.value.scenes,episodeTitle:currentScript.value.episodeTitle});
+    dirty.value=false;_lastAutoHistory=0;pushHistory('保存');ElMessage.success('内容已经稳稳保存好咯~');
+  }catch(e){ElMessage.error('哎呀，保存出错啦~' + (e.response?.data?.message || e.message || ''))}
+  // 保存成功后同步台词到故事板（不阻塞 UI）
+  syncDialoguesToStoryboard(currentScript.value._id, currentScript.value.scenes);
+}
+
+async function syncDialoguesToStoryboard(scriptId, scenes) {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1/storyboards?scriptId=${scriptId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    const sb = data.data?.[0];
+    console.log('[syncD] 查到 SB:', sb?._id, 'shots:', sb?.shots?.length);
+    if (!sb || !sb.shots) { console.log('[syncD] 无 storyboard'); return; }
+    let changed = false;
+    sb.shots.forEach(shot => {
+      const scene = (scenes || []).find(s => s.sceneNumber === shot.shotNumber);
+      if (scene && scene.dialogues) {
+        const oldLen = (shot._dialogues || []).length;
+        console.log(`[syncD] 镜头${shot.shotNumber}: _dialogues ${oldLen} -> ${scene.dialogues.length}`);
+        shot._dialogues = scene.dialogues.map(d => ({...d}));
+        if (oldLen !== scene.dialogues.length) changed = true;
+      }
+    });
+    if (!changed) { console.log('[syncD] 无变化，跳过 PUT'); return; }
+    console.log('[syncD] PUT storyboard...');
+    const putRes = await fetch(`/api/v1/storyboards/${sb._id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ shots: sb.shots }),
+    });
+    const putData = await putRes.json();
+    console.log('[syncD] PUT 结果:', putRes.status, putData);
+    if (putRes.ok) {
+      const store = useStoryboardStore();
+      const idx = store.storyboards.findIndex(s => (s.scriptId?._id || s.scriptId) === scriptId);
+      console.log('[syncD] store idx:', idx);
+      if (idx >= 0) store.storyboards[idx] = JSON.parse(JSON.stringify(sb));
+      ElMessage.success('台词已同步到故事板');
+    }
+  } catch (e) { console.error('[syncD] 异常:', e); }
+}
 
 async function handleAutoStoryboard(){
   if(!currentProjectId.value||!currentScript.value)return;
