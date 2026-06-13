@@ -1320,15 +1320,40 @@ watch(tlTrack, (el, _, onCleanup) => {
     tlCanScrollLeft.value = el.scrollLeft > 1;
     tlCanScrollRight.value = el.scrollLeft < el.scrollWidth - el.clientWidth - 1;
   };
-  const handler = (e) => {
+  // 滚轮
+  const wheelHandler = (e) => {
     e.preventDefault();
     if (el.scrollWidth <= el.clientWidth) return;
     el.scrollBy({ left: (e.deltaY || e.deltaX || 0) * 1.5, behavior: 'auto' });
     requestAnimationFrame(updateArrows);
   };
-  el.addEventListener('wheel', handler, { passive: false });
+  // 鼠标拖拽（3px阈值区分点击与拖动）
+  let dragging = false, dragStartX = 0, dragStartScroll = 0, dragMoved = 0;
+  const onDown = (e) => {
+    if (e.target.closest('.tl-btn') || e.target.closest('.tl-img-clear') || e.target.closest('.tl-ver-badge') || e.target.closest('audio')) return;
+    dragging = true; dragStartX = e.clientX; dragStartScroll = el.scrollLeft; dragMoved = 0;
+    el.style.cursor = 'grabbing'; el.style.userSelect = 'none';
+  };
+  const onMove = (e) => {
+    if (!dragging) return;
+    dragMoved += Math.abs(e.clientX - dragStartX);
+    if (dragMoved < 3) return;
+    el.scrollLeft = dragStartScroll - (e.clientX - dragStartX);
+    updateArrows();
+  };
+  const onUp = () => { dragging = false; el.style.cursor = ''; el.style.userSelect = ''; };
+  el.addEventListener('mousedown', onDown);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  el.addEventListener('wheel', wheelHandler, { passive: false });
   el.addEventListener('scroll', updateArrows, { passive: true });
-  onCleanup(() => { el.removeEventListener('wheel', handler); el.removeEventListener('scroll', updateArrows); });
+  onCleanup(() => {
+    el.removeEventListener('wheel', wheelHandler);
+    el.removeEventListener('scroll', updateArrows);
+    el.removeEventListener('mousedown', onDown);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  });
   setTimeout(updateArrows, 500);
 }, { flush: 'post' });
 
