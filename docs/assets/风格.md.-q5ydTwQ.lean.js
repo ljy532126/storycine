@@ -1,0 +1,1 @@
+import{_ as e,o as r,c as l,a2 as i}from"./chunks/framework.B1WjDBTi.js";const u=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"风格.md","filePath":"风格.md"}'),h={name:"风格.md"};function o(t,a,n,d,p,s){return r(),l("div",null,[...a[0]||(a[0]=[i("",133)])])}const c=e(h,[["render",o]]);export{u as __pageData,c as default};

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "deploy": "vitepress build && xcopy /E /Y .vitepress\\dist\\* . && echo > .nojekyll"
   },
   "devDependencies": {
     "vitepress": "^1.6.4"
