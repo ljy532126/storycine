@@ -78,7 +78,7 @@ function buildImagePrompt(shot, videoConfig, directorSettings) {
     ? '【强约束】画面中严禁出现任何文字、字母、乱码、logo、水印、标题、字幕、签名、符号、海报元素、排版文字，仅保留场景与角色，纯画面，无任何额外元素'
     : '';
   const qualityBlock = `【画质/构图】${ratio}，${scene || '电影级场景'}，${lighting}，${quality}，${artStyle}，${shotType}，${composition}，焦点清晰，背景虚化`;
-  const descBlock = `【场景/角色描述】${[character, action || imgDesc, ...boundDescs, styleKeywords].filter(Boolean).join('，')}`;
+  const descBlock = `【场景/角色描述】${[character, imgDesc, action, ...boundDescs, styleKeywords].filter(Boolean).join('，')}`;
 
   const parts = [constraintPrefix, qualityBlock, descBlock].filter(Boolean);
   return parts.join('；');
