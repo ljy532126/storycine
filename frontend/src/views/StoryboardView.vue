@@ -79,7 +79,12 @@
               <span class="pi-tag">{{ currentShot.cameraMovement }}</span>
               <span>{{ currentShot.duration }}s</span>
             </div>
-            <div class="preview-dialogue" v-if="currentShot.dialogue?.text">
+            <div class="preview-dialogue" v-if="(currentShot._dialogues || []).length > 0">
+              <div v-for="(d, di) in currentShot._dialogues" :key="di" class="preview-dialogue-line">
+                <strong>{{ d.characterName }}</strong>：{{ d.text }}
+              </div>
+            </div>
+            <div class="preview-dialogue" v-else-if="currentShot.dialogue?.text">
               <strong>{{ currentShot.dialogue.characterName }}</strong>：{{ currentShot.dialogue.text }}
             </div>
           </div>
@@ -2115,6 +2120,8 @@ async function handleImport() {
   background: rgba(201,168,76,0.06); border-top: 1px solid rgba(201,168,76,0.15);
   font-style: italic; letter-spacing: 0.3px;
 }
+.preview-dialogue-line { padding: 3px 0; }
+.preview-dialogue-line + .preview-dialogue-line { border-top: 1px solid rgba(201,168,76,0.08); }
 
 /* Timeline — 卡片升级 */
 .timeline {
