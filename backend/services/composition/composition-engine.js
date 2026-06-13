@@ -5,9 +5,6 @@ const path = require('path');
 const os = require('os');
 const axios = require('axios');
 
-const XFADE_MAP = { fade: 'fade', dissolve: 'dissolve', slide: 'slideright', cut: null };
-const XFADE_DURATION = 0.5;
-
 class CompositionEngine {
   /**
    * @param {Object} opts
@@ -74,15 +71,13 @@ class CompositionEngine {
         throw new Error('所有镜头素材均缺失，无法合成');
       }
 
-      // ---- Step 2: concat / xfade (55–75 %) ----
+      // ---- Step 2: concat (55–75 %) ----
       this._report(55, '合成视频...');
       let concatFile;
       if (segments.length === 1) {
         concatFile = segments[0].file;
-      } else if (this.transition === 'cut') {
-        concatFile = await this._concatDemux(segments);
       } else {
-        concatFile = await this._xfadeConcat(segments);
+        concatFile = await this._concatFilter(segments);
       }
 
       // ---- Step 3: subtitles (75–88 %) ----
@@ -124,9 +119,7 @@ class CompositionEngine {
 
   /** 实际合成时长（含转场裁剪），秒 */
   _calcTotalDuration(segments) {
-    const total = segments.reduce((s, seg) => s + (seg.duration || 0), 0);
-    const td = this.transition === 'cut' ? 0 : XFADE_DURATION;
-    return Math.round(total - (segments.length - 1) * td);
+    return segments.reduce((s, seg) => s + (seg.duration || 0), 0);
   }
 
   // ------------------------------------------------------------------
@@ -141,14 +134,13 @@ class CompositionEngine {
     const segFile = path.join(this.workDir, `seg_${index}.mp4`);
     const duration = shot.duration || 3;
 
-    // ---- resolve visual source ----
     const visualUrl = shot.renderedVideo || shot.renderedImage;
     if (!visualUrl) throw new Error('缺少 renderedImage / renderedVideo');
     const visualFile = await this._resolveAsset(visualUrl, `vis_${index}`);
 
     const scaleFilter = `scale=${this.width}:${this.height}:force_original_aspect_ratio=decrease,pad=${this.width}:${this.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p`;
 
-    // Create normalised video-only intermediate
+    // Normalise video KEEPING original audio (no -an)
     const vidOnly = path.join(this.workDir, `_v_${index}.mp4`);
     if (shot.renderedVideo) {
       await this._ffmpeg([
@@ -156,34 +148,62 @@ class CompositionEngine {
         '-t', String(duration),
         '-vf', `${scaleFilter},fps=${this.frameRate},setpts=PTS-STARTPTS`,
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
-        '-an',
+        '-c:a', 'aac', '-b:a', '128k',
         '-y', vidOnly,
       ], `normalise-video #${shot.shotNumber}`);
     } else {
+      // Image → video + silence
       await this._ffmpeg([
         '-loop', '1', '-i', visualFile,
         '-t', String(duration),
-        '-vf', `${scaleFilter},fps=${this.frameRate}`,
+        '-vf', `${scaleFilter},fps=${this.frameRate},setpts=PTS-STARTPTS`,
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
+        '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
+        '-c:a', 'aac',
+        '-shortest',
         '-y', vidOnly,
       ], `img→video #${shot.shotNumber}`);
     }
 
-    // ---- mix audio ----
+    // Check if vidOnly actually has an audio stream
+    const hasAudio = await this._probeHasAudio(vidOnly);
+
+    // Mix TTS dialogue on top if present
     if (shot.dialogue && shot.dialogue.audioUrl) {
-      const audioFile = await this._resolveAsset(shot.dialogue.audioUrl, `aud_${index}`);
-      await this._ffmpeg([
-        '-i', vidOnly,
-        '-i', audioFile,
-        '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
-        '-filter_complex',
-        `[1:a]volume=1.5[a1];` +
-        `[2:a][a1]amix=inputs=2:duration=first:normalize=0[outa]`,
-        '-map', '0:v', '-map', '[outa]',
-        '-c:v', 'copy', '-c:a', 'aac',
-        '-y', segFile,
-      ], `mix-dialogue #${shot.shotNumber}`);
-    } else {
+      const dialogueFile = await this._resolveAsset(shot.dialogue.audioUrl, `aud_${index}`);
+
+      if (hasAudio) {
+        // vidOnly has audio (original or silence) — mix TTS on top
+        await this._ffmpeg([
+          '-i', vidOnly,
+          '-i', dialogueFile,
+          '-filter_complex',
+          `[1:a]volume=1.5[dial];` +
+          `[0:a][dial]amix=inputs=2:duration=first:normalize=0[outa]`,
+          '-map', '0:v', '-map', '[outa]',
+          '-c:v', 'copy', '-c:a', 'aac',
+          '-y', segFile,
+        ], `mix-dialogue #${shot.shotNumber}`);
+      } else {
+        // vidOnly has no audio — add silence base + TTS
+        await this._ffmpeg([
+          '-i', vidOnly,
+          '-i', dialogueFile,
+          '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
+          '-filter_complex',
+          `[1:a]volume=1.5[dial];` +
+          `[2:a][dial]amix=inputs=2:duration=first:normalize=0[outa]`,
+          '-map', '0:v', '-map', '[outa]',
+          '-c:v', 'copy', '-c:a', 'aac',
+          '-y', segFile,
+        ], `mix-dialogue+silence #${shot.shotNumber}`);
+      }
+      await fsp.unlink(vidOnly).catch(() => {});
+      return { file: segFile, duration };
+    }
+
+    // No TTS — ensure audio track exists
+    if (!hasAudio) {
       await this._ffmpeg([
         '-i', vidOnly,
         '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
@@ -191,103 +211,67 @@ class CompositionEngine {
         '-c:v', 'copy', '-c:a', 'aac',
         '-y', segFile,
       ], `add-silence #${shot.shotNumber}`);
+      await fsp.unlink(vidOnly).catch(() => {});
+      return { file: segFile, duration };
     }
 
-    // Clean up intermediate
-    await fsp.unlink(vidOnly).catch(() => {});
-    return { file: segFile, duration };
+    return { file: vidOnly, duration };
   }
 
-  /** Simple concat demuxer (no transitions) */
-  async _concatDemux(segments) {
-    const listFile = path.join(this.workDir, 'list.txt');
-    const content = segments.map(s => {
-      const p = s.file.replace(/\\/g, '/');
-      return `file '${p}'`;
-    }).join('\n');
-    await fsp.writeFile(listFile, content);
+  /** Concat via filter (re-encode) — handles any encoding variance between segments */
+  async _concatFilter(segments) {
+    const n = segments.length;
+    const inputs = segments.flatMap(s => ['-i', s.file]);
+    const vIns = segments.map((_, i) => `[${i}:v]`).join('');
+    const aIns = segments.map((_, i) => `[${i}:a]`).join('');
 
     const out = path.join(this.workDir, 'concat.mp4');
     await this._ffmpeg([
-      '-f', 'concat', '-safe', '0', '-i', listFile,
-      '-c', 'copy', '-y', out,
-    ], 'concat (cut)');
-    return out;
-  }
-
-  /** xfade transition chain */
-  async _xfadeConcat(segments) {
-    const td = XFADE_DURATION;
-    const xfadeType = XFADE_MAP[this.transition] || 'fade';
-
-    // cumulative offsets for each xfade
-    // offset_i = sum(seg[0..i].dur) - (i+1)*td
-    let cumDur = 0;
-    const offsets = [];
-    for (let i = 0; i < segments.length - 1; i++) {
-      cumDur += segments[i].duration;
-      offsets.push(cumDur - (i + 1) * td);
-    }
-
-    const inputs = segments.flatMap(s => ['-i', s.file]);
-
-    // Build filter graph: video chain + audio chain
-    let lastV = '[0:v]';
-    let lastA = '[0:a]';
-    const filters = [];
-
-    for (let i = 1; i < segments.length; i++) {
-      const vOut = `v${i}`;
-      const aOut = `a${i}`;
-      filters.push(
-        `${lastV}[${i}:v]xfade=transition=${xfadeType}:duration=${td}:offset=${offsets[i - 1].toFixed(3)}[${vOut}]`
-      );
-      filters.push(
-        `${lastA}[${i}:a]acrossfade=d=${td}:c1=tri:c2=tri[${aOut}]`
-      );
-      lastV = `[${vOut}]`;
-      lastA = `[${aOut}]`;
-    }
-
-    const filterComplex = filters.join(';');
-
-    const out = path.join(this.workDir, 'xfade.mp4');
-    await this._ffmpeg([
       ...inputs,
-      '-filter_complex', filterComplex,
-      '-map', lastV, '-map', lastA,
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+      '-filter_complex',
+      `${vIns}concat=n=${n}:v=1:a=0[vout];` +
+      `${aIns}concat=n=${n}:v=0:a=1[aout]`,
+      '-map', '[vout]', '-map', '[aout]',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac',
       '-y', out,
-    ], `xfade (${xfadeType})`);
+    ], 'concat');
     return out;
   }
 
   /** Overlay subtitles via ASS */
   async _addSubtitles(videoFile, shots, segments) {
-    // Build cumulative timeline — note xfade shortens total duration
-    const td = this.transition === 'cut' ? 0 : XFADE_DURATION;
     let cumTime = 0;
     const events = [];
 
     for (let i = 0; i < segments.length; i++) {
-      const shot = shots.find(s => s.shotNumber === i + 1) || shots[i];
+      const shot = shots[i] || shots.find(s => s.shotNumber === i + 1);
+      if (!shot) { cumTime += segments[i].duration; continue; }
       const dur = segments[i].duration;
-      const text = (shot && shot.dialogue && shot.dialogue.text) ? shot.dialogue.text : '';
 
-      if (text && text.trim()) {
-        const start = this._assTime(cumTime);
-        const end = this._assTime(cumTime + dur);
-        // Escape commas and newlines for ASS
-        const safe = text.replace(/\\/g, '\\\\').replace(/\n/g, '\\N').replace(/\r/g, '');
-        events.push(`Dialogue: 0,${start},${end},Default,,0,0,0,,${safe}`);
+      // Collect all dialogue texts
+      const texts = [];
+      if (shot.dialogue?.text?.trim()) texts.push(shot.dialogue.text.trim());
+      if (Array.isArray(shot._dialogues)) {
+        shot._dialogues.forEach(d => { if (d.text?.trim()) texts.push(d.text.trim()); });
       }
-      cumTime += dur - (i < segments.length - 1 ? td : 0);
+
+      if (texts.length > 0) {
+        // Spread each dialogue line evenly across the shot duration
+        const slotDur = dur / texts.length;
+        for (let t = 0; t < texts.length; t++) {
+          const start = this._assTime(cumTime + t * slotDur);
+          const end = this._assTime(cumTime + (t + 1) * slotDur);
+          const safe = texts[t].replace(/\\/g, '\\\\').replace(/\r/g, '');
+          events.push(`Dialogue: 0,${start},${end},Default,,0,0,0,,${safe}`);
+        }
+      }
+      cumTime += dur;
     }
 
     if (events.length === 0) return videoFile; // nothing to overlay
 
-    const fontSize = Math.max(24, Math.round(this.height * 0.045));
+    const fontSize = Math.max(18, Math.round(this.height * 0.03));
     const marginV = Math.round(this.height * 0.06);
 
     const ass = `[Script Info]
@@ -451,6 +435,23 @@ ${events.join('\n')}`;
   /** Escape a path for use inside FFmpeg filter arguments (:, \, ') */
   _escapeFilterPath(p) {
     return p.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "'\\''");
+  }
+
+  /** Check if a media file has an audio stream */
+  _probeHasAudio(file) {
+    return new Promise((resolve) => {
+      const proc = spawn('ffprobe', [
+        '-v', 'error',
+        '-select_streams', 'a:0',
+        '-show_entries', 'stream=codec_type',
+        '-of', 'csv=p=0',
+        file,
+      ]);
+      let stdout = '';
+      proc.stdout.on('data', d => { stdout += d.toString(); });
+      proc.on('close', () => resolve(stdout.trim() === 'audio'));
+      proc.on('error', () => resolve(false));
+    });
   }
 
   _report(pct, stage) {
