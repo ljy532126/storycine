@@ -87,8 +87,16 @@ function errorHandler(err, req, res, _next) {
     return res.status(400).json({ message: '无效的ID格式' });
   }
 
-  if (err.code === 11000) {
-    return res.status(409).json({ message: '数据已存在，违反唯一约束' });
+  if (err.code === 11000 || err.code === '11000') {
+    let msg = '数据已存在，违反唯一约束';
+    // 提取字段名给用户友好提示
+    const m = err.message?.match(/index:\s*\S+\s+dup key:\s*\{([^}]+)\}/);
+    if (m) {
+      const fields = m[1].split(',').map(s => s.split(':')[0]?.trim()).filter(Boolean);
+      if (fields.includes('name')) msg = '角色名已存在，同一项目下不能有重名角色';
+      else if (fields.length) msg = `${fields.join('、')} 已存在，不能重复`;
+    }
+    return res.status(409).json({ message: msg });
   }
 
   // Multer 文件上传错误
