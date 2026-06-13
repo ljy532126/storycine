@@ -118,11 +118,15 @@ async function processComposition(compositionId) {
       subtitlesEnabled: composition.subtitlesEnabled,
       backgroundMusic: composition.backgroundMusic,
       onProgress: async (pct, stage) => {
-        // Throttle DB writes: only write on 5 % increments or stage change
+        // 每隔 20% 才写库一次，避免与最终 save 冲突
         try {
-          composition.progress = pct;
-          await composition.save();
-          emit('composition-progress', { status: 'rendering', progress: pct, stage });
+          const lastWritten = composition._lastProgressWrite || 0;
+          if (pct - lastWritten >= 20 || pct >= 100) {
+            composition.progress = pct;
+            composition._lastProgressWrite = pct;
+            await Composition.updateOne({ _id: composition._id }, { $set: { progress: pct } }).catch(() => {});
+            emit('composition-progress', { status: 'rendering', progress: pct, stage });
+          }
         } catch (_) { /* non-critical */ }
       },
     });
@@ -150,12 +154,15 @@ async function processComposition(compositionId) {
     const localUrl = publicUrl.startsWith('http') ? `http://localhost:${process.env.SERVER_PORT || 3012}${new URL(publicUrl).pathname}` : publicUrl;
     const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 
-    // ---- Success ----
-    composition.status = 'completed';
-    composition.progress = 100;
-    composition.outputUrl = isDev ? localUrl : resolvedUrl;
-    composition.warnings = result.warnings || [];
-    await composition.save();
+    // ---- Success (重取最新文档避免 onProgress 并发 save 冲突) ----
+    const fresh = await Composition.findById(compositionId);
+    if (fresh) {
+      fresh.status = 'completed';
+      fresh.progress = 100;
+      fresh.outputUrl = isDev ? localUrl : resolvedUrl;
+      fresh.warnings = result.warnings || [];
+      await fresh.save();
+    }
 
     emit('composition-complete', {
       status: 'completed',
@@ -175,9 +182,14 @@ async function processComposition(compositionId) {
     console.error(`[composition] ${compositionId} failed:`, err.message);
 
     if (composition) {
-      composition.status = 'failed';
-      composition.errorMessage = err.message;
-      await composition.save().catch(() => {});
+      try {
+        const failDoc = await Composition.findById(compositionId);
+        if (failDoc) {
+          failDoc.status = 'failed';
+          failDoc.errorMessage = err.message;
+          await failDoc.save();
+        }
+      } catch (_) {}
     }
 
     const io = socketRegistry.getIO();
