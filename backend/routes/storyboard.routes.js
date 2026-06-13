@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const Storyboard = require('../models/storyboard.model');
 const appConfig = require('../config/app.config');
 const {
@@ -139,6 +142,42 @@ router.put('/:id/shots/:shotNumber', async (req, res, next) => {
     await storyboard.save();
     res.json({ message: '镜头更新成功', data: storyboard });
   } catch (error) { next(error); }
+});
+
+// 视频上传
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'storyboard-videos');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: uploadsDir,
+    filename: (req, file, cb) => {
+      const uid = req.user?.uid || 'u';
+      cb(null, `${uid}_${Date.now()}_${file.originalname}`);
+    },
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 },
+}).single('video');
+
+router.post('/:id/shots/:shotNumber/upload-video', (req, res, next) => {
+  videoUpload(req, res, async (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: '视频大小不能超过500MB' });
+      return res.status(400).json({ message: err.message });
+    }
+    try {
+      if (!req.file) return res.status(400).json({ message: '未选择视频文件' });
+      const storyboard = await Storyboard.findById(req.params.id);
+      if (!storyboard) return res.status(404).json({ message: '分镜表不存在' });
+      const shot = storyboard.shots.find(s => s.shotNumber === parseInt(req.params.shotNumber));
+      if (!shot) return res.status(404).json({ message: '镜头不存在' });
+
+      const url = `/uploads/storyboard-videos/${req.file.filename}`;
+      shot.renderedVideo = url;
+      shot.status = 'completed';
+      await storyboard.save();
+      res.json({ message: '视频上传成功', data: { url } });
+    } catch (e) { next(e); }
+  });
 });
 
 // AI优化镜头节奏
