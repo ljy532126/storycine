@@ -864,17 +864,21 @@ async function batchGenerateAssets(type) {
 /* 图片卡片 */
 .list-item-char-card {
   position: relative; height: 115px; border-radius: 12px; margin: 8px 12px;
-  background-size: cover; background-position: center top; background-color: #f0ebe3;
+  background-size: cover; background-position: center top;
   cursor: pointer; overflow: hidden; border: 2px solid transparent;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* 纯色卡片底色 — 暖棕渐变轮换 */
+.list-item-char-card { background-color: #e8ddd0; }
+.list-item-char-card:nth-child(odd) { background-color: #ded5c6; }
+
 .list-item-char-card:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 6px 24px rgba(201,168,76,0.12); }
 .card-active { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.18) !important; }
 .card-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(26,26,46,0.2) 0%, rgba(26,26,46,0) 50%, rgba(26,26,46,0.5) 100%);
+  background: linear-gradient(135deg, rgba(26,26,46,0.15) 0%, rgba(26,26,46,0) 45%, rgba(26,26,46,0.5) 100%);
 }
-.card-active .card-overlay { background: linear-gradient(to bottom, rgba(201,168,76,0.15) 0%, rgba(26,26,46,0) 50%, rgba(26,26,46,0.55) 100%); }
+.card-active .card-overlay { background: linear-gradient(135deg, rgba(201,168,76,0.2) 0%, rgba(26,26,46,0) 45%, rgba(26,26,46,0.6) 100%); }
 
 /* 卡片生成中遮罩 */
 .card-loading-mask {
