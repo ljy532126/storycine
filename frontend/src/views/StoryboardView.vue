@@ -107,6 +107,7 @@
             <div class="tl-batch-btns">
               <el-tooltip content="为所有待定镜头批量生成图片" placement="bottom"><el-button size="small" @click="batchGenerateImages" :loading="batchGenning" class="tb-btn tb-btn-gen">批量生图</el-button></el-tooltip>
               <el-tooltip content="为所有待定镜头批量生成视频" placement="bottom"><el-button size="small" @click="batchGenerateVideos" :loading="batchGenningVideo" class="tb-btn tb-btn-gen">批量生视频</el-button></el-tooltip>
+              <el-tooltip content="生成引流推广短片" placement="bottom"><el-button size="small" @click="openPromoDialog" :disabled="!currentStoryboard?.shots?.some(s => s.renderedVideo)" class="tb-btn tb-btn-gen">引流推广</el-button></el-tooltip>
             </div>
           </div>
           <div class="tl-track-wrap">
@@ -422,6 +423,38 @@
       <span class="sb-loader-text">镜头板加载中</span>
     </div>
 
+    <!-- 引流推广弹窗 -->
+    <el-dialog v-model="showPromoDialog" :width="screenWidth < 768 ? '94%' : '460px'" destroy-on-close title="生成引流短片">
+      <div style="font-size:13px;color:var(--text-100);margin-bottom:16px">从故事板已有视频中自动提取精彩片段，生成竖版引流推广短片。</div>
+      <el-form label-position="top" size="small">
+        <el-form-item label="生成模式">
+          <el-radio-group v-model="promoMode">
+            <el-radio value="simple">简单版 — 1条冲突向引流片</el-radio>
+            <el-radio value="complete">完整版 — 3条不同风格（冲突/甜宠/悬念）</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="背景音乐 URL（可选）">
+          <el-input v-model="promoBGM" placeholder="填写音乐链接，留空则不添加背景音乐" />
+        </el-form-item>
+      </el-form>
+      <div v-if="promoStatus === 'rendering'" style="padding:12px;margin:12px 0">
+        <el-progress :percentage="promoProgress" :stroke-width="6" />
+        <p style="font-size:12px;color:var(--text-200);margin-top:6px">{{ promoMessage }}</p>
+      </div>
+      <div v-if="promoResults.length > 0" style="margin-top:12px">
+        <div v-for="(r, i) in promoResults" :key="i" style="padding:8px 12px;margin-bottom:8px;border-radius:8px;border:1px solid var(--bg-300);display:flex;align-items:center;gap:10px">
+          <span style="font-weight:700;font-size:12px;color:var(--gold-dark)">{{ r.label }}</span>
+          <span style="flex:1;font-size:11px;color:var(--text-200);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.hookText }}</span>
+          <el-button size="small" type="success" @click="downloadPromo(r)">下载</el-button>
+        </div>
+      </div>
+      <div v-if="promoError" style="color:#e74c3c;font-size:12px;margin-top:8px">{{ promoError }}</div>
+      <template #footer>
+        <el-button @click="showPromoDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleGeneratePromo" :loading="promoRendering" :disabled="!currentStoryboard?.shots?.some(s => s.renderedVideo)">开始生成</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 导出弹窗 -->
     <el-dialog v-model="showExportDialog" :width="screenWidth < 768 ? '94%' : '520px'" destroy-on-close class="export-dialog">
       <template #header>
@@ -559,6 +592,7 @@ import { useAssetStore } from '../stores/asset';
 import { storyboardAPI, assetAPI } from '../api';
 import { ttsAPI, configAPI } from '../api';
 import { buildShotsFromScenes } from '../components/promptBuilder';
+import { useSocket } from '../components/useSocket';
 import ImageLightbox from '../components/ImageLightbox.vue';
 import ProjectSwitcher from '../components/ProjectSwitcher.vue';
 
@@ -1029,6 +1063,14 @@ onMounted(async () => {
 
 // keep-alive 缓存激活时：同步从其他页面切换过来的项目
 onActivated(() => {
+  if (!_promoSocketInit.value) {
+    _promoSocketInit.value = true;
+    socket.connect();
+    socket.on('promo-progress', (d) => { promoStatus.value = 'rendering'; promoMessage.value = d.message || ''; promoProgress.value = d.progress || 0; });
+    socket.on('promo-complete', (d) => { promoStatus.value = 'completed'; promoProgress.value = 100; promoResults.value = d.clips || []; promoRendering.value = false; ElMessage.success('引流短片生成完成'); });
+    socket.on('promo-error', (d) => { promoStatus.value = 'failed'; promoError.value = d.error || '生成失败'; promoRendering.value = false; ElMessage.error(d.error || '引流短片生成失败'); });
+  }
+
   const storeProject = projectStore.currentProject;
   if (storeProject && storeProject._id !== currentProjectId.value) {
     currentProjectId.value = storeProject._id;
@@ -1985,6 +2027,8 @@ function formatEpLabel(ep) {
 // ===== TTS 配音 =====
 const showTTSDialog = ref(false);
 const ttsTargetShot = ref(null);
+const socket = useSocket();
+const _promoSocketInit = ref(false);
 const synthingShot = ref(null);
 const ttsSelectedDi = ref(-1); // 当前选中的台词索引
 const ttsDialogueOptions = ref([]); // 备选台词列表
@@ -2021,6 +2065,43 @@ function openTTSDialog(shot) {
   ttsDialogueOptions.value = dialogues;
   ttsSelectedDi.value = dialogues.length > 0 ? 0 : -1;
   showTTSDialog.value = true;
+}
+
+// ===== 引流推广短片 =====
+const showPromoDialog = ref(false);
+const promoMode = ref('simple');
+const promoBGM = ref('');
+const promoRendering = ref(false);
+const promoProgress = ref(0);
+const promoMessage = ref('');
+const promoStatus = ref('');
+const promoResults = ref([]);
+const promoError = ref('');
+
+function openPromoDialog() { showPromoDialog.value = true; promoError.value = ''; promoResults.value = []; promoStatus.value = ''; }
+async function handleGeneratePromo() {
+  promoRendering.value = true; promoError.value = ''; promoResults.value = []; promoStatus.value = 'rendering'; promoProgress.value = 0; promoMessage.value = '正在生成...';
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/v1/promos/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ projectId: currentProjectId.value, storyboardId: currentStoryboard.value._id, options: { mode: promoMode.value, backgroundMusic: promoBGM.value, maxDuration: 60 } }),
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.message || '生成请求失败'); }
+    ElMessage.success('已提交引流短片生成任务，请等待完成通知');
+    // Start polling for 5 minutes max
+    const start = Date.now();
+    const poll = setInterval(async () => {
+      if (promoResults.value.length > 0 || promoStatus.value === 'completed' || promoStatus.value === 'failed') {
+        clearInterval(poll); promoRendering.value = false; return;
+      }
+      if (Date.now() - start > 5 * 60 * 1000) { clearInterval(poll); promoRendering.value = false; promoError.value = '生成超时'; return; }
+      promoProgress.value = Math.min(promoProgress.value + 2, 95);
+    }, 2000);
+  } catch (e) { promoError.value = e.message || '生成失败'; promoRendering.value = false; promoStatus.value = ''; }
+}
+function downloadPromo(r) {
+  const a = document.createElement('a'); a.href = r.url; a.download = `promo_${r.label}_${Date.now()}.mp4`; a.click();
 }
 
 async function handleTTSSynthesize() {

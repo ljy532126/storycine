@@ -165,6 +165,7 @@ app.use('/api/v1/scripts', scriptRoutes);
 app.use('/api/v1/assets', assetRoutes);
 app.use('/api/v1/storyboards', storyboardRoutes);
 app.use('/api/v1/compositions', compositionRoutes);
+app.use('/api/v1/promos', require('./routes/promo.routes'));
 app.use('/api/v1/config', configRoutes);
 app.use('/api/v1/export', require('./routes/export.routes'));
 app.use('/api/v1/statistics', require('./routes/statistics.routes'));

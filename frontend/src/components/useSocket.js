@@ -51,6 +51,9 @@ export function useSocket() {
     socket.off('composition-progress');
     socket.off('composition-complete');
     socket.off('composition-error');
+    socket.off('promo-progress');
+    socket.off('promo-complete');
+    socket.off('promo-error');
   }
 
   onUnmounted(() => { offAll(); });

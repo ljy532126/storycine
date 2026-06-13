@@ -44,17 +44,19 @@ function sanitizeScriptData(scriptData) {
       if (hasAction && estDuration > 6) estDuration = Math.min(estDuration, 6);
       if (hasEmotion && estDuration < 5) estDuration = 5;
     }
-    // 清洗对话（保留已知字段 + 透传未知字段，剔除 AI 生成的无效_id）
+    // 清洗对话
     const cleanDialogues = (scene.dialogues || []).map(d => {
       const { _id, ...rest } = d;
-      return {
+      const cleaned = {
         ...rest,
         characterName: String(d.characterName || '未知').substring(0, 50),
-      text: String(d.text || '').substring(0, 2000),
-      actionHint: (d.actionHint || '').substring(0, 500),
-      innerThought: (d.innerThought || '').substring(0, 1000),
-      cameraHint: (d.cameraHint || '').substring(0, 200),
-    })).filter(d => d.text && d.characterName);
+        text: String(d.text || '').substring(0, 2000),
+        actionHint: (d.actionHint || '').substring(0, 500),
+        innerThought: (d.innerThought || '').substring(0, 1000),
+        cameraHint: (d.cameraHint || '').substring(0, 200),
+      };
+      return cleaned;
+    }).filter(d => d.text && d.characterName);
     // 清洗场景（保留已知字段 + 透传未知字段，剔除 AI 生成的无效_id）
     const { _id: _sid, ...sceneRest } = scene;
     return {
