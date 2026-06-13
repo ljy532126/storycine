@@ -27,7 +27,7 @@
       <div :class="['smtab', { active: mobileTab === 'settings' }]" @click="mobileTab = 'settings'"><SettingTwo size="14" fill="currentColor"/> 设置</div>
     </div>
 
-    <div class="sb-body" v-if="currentProjectId">
+    <div class="sb-body" v-if="currentProjectId && pageReady">
       <!-- ===== 左：剧集列表 ===== -->
       <div class="sb-left" v-show="screenWidth >= 768 || mobileTab === 'episodes'">
         <div class="panel-title"><Movie size="16" fill="var(--gold)"/> 剧集</div>
@@ -409,6 +409,10 @@
     </div>
 
     <el-empty v-if="!currentProjectId" description="请选择片场" style="margin-top:80px" />
+    <div v-else-if="!pageReady" class="sb-loader-wrap">
+      <div class="sb-loader-ring"><div class="sb-loader-inner"><Film size="28" fill="rgba(201,168,76,0.3)"/></div></div>
+      <span class="sb-loader-text">镜头板加载中</span>
+    </div>
 
     <!-- 导出弹窗 -->
     <el-dialog v-model="showExportDialog" :width="screenWidth < 768 ? '94%' : '520px'" destroy-on-close class="export-dialog">
@@ -563,6 +567,7 @@ const currentProjectId = inject('currentProjectId');
 const currentScriptId = ref('');
 const currentStoryboard = ref(null);
 const currentShot = ref(null);
+const pageReady = ref(false);
 const scripts = ref([]);
 const generating = ref(false);
 const deletingSB = ref(false);
@@ -1017,13 +1022,16 @@ onActivated(() => {
   if (storeProject && storeProject._id !== currentProjectId.value) {
     currentProjectId.value = storeProject._id;
     onProjectChange(storeProject._id);
+  } else if (currentProjectId.value && !pageReady.value) {
+    // keep-alive 恢复，数据已存在
+    nextTick(() => { pageReady.value = true; });
   }
   syncWsSbActions();
 });
 onDeactivated(() => { if (wsSbActions) wsSbActions.visible = false; });
 
 async function onProjectChange(val) {
-  currentScriptId.value = ''; currentStoryboard.value = null; currentShot.value = null;
+  currentScriptId.value = ''; currentStoryboard.value = null; currentShot.value = null; pageReady.value = false;
   if (val) {
     await Promise.all([
       scriptStore.fetchScripts(val),
@@ -1035,6 +1043,8 @@ async function onProjectChange(val) {
     assetStore.fetchCharacters(val);
     assetStore.fetchScenes(val);
   }
+  await nextTick();
+  pageReady.value = true;
 }
 async function onScriptChange(val) {
   if (val) {
@@ -2143,6 +2153,16 @@ async function handleImport() {
 
 /* ===== BODY ===== */
 .sb-body { display: flex; flex: 1; gap: 14px; overflow: hidden; min-height: 0; }
+
+/* 页面就绪前的加载骨架 */
+.sb-loader-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 300px; }
+.sb-loader-ring {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(201,168,76,0.06); display: flex; align-items: center; justify-content: center;
+  animation: pp-breathe 2.5s ease-in-out infinite;
+}
+.sb-loader-inner { animation: pp-spin 8s linear infinite; opacity: 0.4; }
+.sb-loader-text { font-size: 13px; color: rgba(139,105,20,0.35); letter-spacing: 3px; font-weight: 700; }
 
 /* ===== LEFT: Episode List ===== */
 .sb-left {
