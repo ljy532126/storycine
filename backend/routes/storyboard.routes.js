@@ -145,11 +145,13 @@ router.put('/:id/shots/:shotNumber', async (req, res, next) => {
 });
 
 // 视频上传
-const uploadsDir = path.join(__dirname, '..', 'uploads', 'storyboard-videos');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const videosDir = path.join(__dirname, '..', 'uploads', 'storyboard-videos');
+const imagesDir = path.join(__dirname, '..', 'uploads', 'storyboard-images');
+[videosDir, imagesDir].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+
 const videoUpload = multer({
   storage: multer.diskStorage({
-    destination: uploadsDir,
+    destination: videosDir,
     filename: (req, file, cb) => {
       const uid = req.user?.uid || 'u';
       cb(null, `${uid}_${Date.now()}_${file.originalname}`);
@@ -157,6 +159,39 @@ const videoUpload = multer({
   }),
   limits: { fileSize: 500 * 1024 * 1024 },
 }).single('video');
+
+const imageUpload = multer({
+  storage: multer.diskStorage({
+    destination: imagesDir,
+    filename: (req, file, cb) => {
+      const uid = req.user?.uid || 'u';
+      cb(null, `${uid}_${Date.now()}_${file.originalname}`);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+}).single('image');
+
+router.post('/:id/shots/:shotNumber/upload-image', (req, res, next) => {
+  imageUpload(req, res, async (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: '图片大小不能超过50MB' });
+      return res.status(400).json({ message: err.message });
+    }
+    try {
+      if (!req.file) return res.status(400).json({ message: '未选择图片文件' });
+      const storyboard = await Storyboard.findById(req.params.id);
+      if (!storyboard) return res.status(404).json({ message: '分镜表不存在' });
+      const shot = storyboard.shots.find(s => s.shotNumber === parseInt(req.params.shotNumber));
+      if (!shot) return res.status(404).json({ message: '镜头不存在' });
+
+      const url = `/uploads/storyboard-images/${req.file.filename}`;
+      shot.renderedImage = url;
+      shot.status = 'completed';
+      await storyboard.save();
+      res.json({ message: '图片上传成功', data: { url } });
+    } catch (e) { next(e); }
+  });
+});
 
 router.post('/:id/shots/:shotNumber/upload-video', (req, res, next) => {
   videoUpload(req, res, async (err) => {

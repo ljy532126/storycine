@@ -1238,15 +1238,23 @@ function applyMaterialToShot(s) {
 
 // ===== 分镜卡片按钮功能 =====
 
-function uploadShotImage(shot, e) {
+async function uploadShotImage(shot, e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    shot.renderedImage = ev.target.result;
+  if (!currentStoryboard.value?._id) { ElMessage.error('请先保存分镜表'); e.target.value = ''; return; }
+
+  const formData = new FormData();
+  formData.append('image', file);
+  try {
+    const res = await storyboardAPI.uploadShotImage(
+      currentStoryboard.value._id, shot.shotNumber, formData
+    );
+    shot.renderedImage = res.data.url;
+    shot.status = 'completed';
     ElMessage.success(`分镜 #${shot.shotNumber} 图片已上传`);
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    ElMessage.error(`上传失败: ${err.response?.data?.message || err.message}`);
+  }
   e.target.value = '';
 }
 

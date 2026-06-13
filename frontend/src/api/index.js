@@ -112,6 +112,7 @@ export const storyboardAPI = {
   batchUpdateShots: (id, data) => api.put(`/storyboards/${id}/shots/batch`, data),
   updateShot: (id, shotNumber, data) => api.put(`/storyboards/${id}/shots/${shotNumber}`, data),
   uploadShotVideo: (id, shotNumber, formData) => api.post(`/storyboards/${id}/shots/${shotNumber}/upload-video`, formData),
+  uploadShotImage: (id, shotNumber, formData) => api.post(`/storyboards/${id}/shots/${shotNumber}/upload-image`, formData),
   optimizeRhythm: (shots) => api.post('/storyboards/optimize-rhythm', { shots }),
   importData: (id, data, format) => api.post(`/storyboards/${id}/import`, { data, format }),
 };
