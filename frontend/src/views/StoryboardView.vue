@@ -82,11 +82,12 @@
                 <span class="pp-label">待生成</span>
                 <span class="pp-hint">点击下方镜头卡片生成后在此预览</span>
               </div>
-            </div>
-            <div class="preview-info">
-              <span class="pi-tag">{{ currentShot.shotType }}</span>
-              <span class="pi-tag">{{ currentShot.cameraMovement }}</span>
-              <span>{{ currentShot.duration }}s</span>
+              <!-- 景别/运镜/时长浮层 -->
+              <div class="preview-info" v-if="currentShot.renderedImage || currentShot.renderedVideo">
+                <span class="pi-tag">{{ currentShot.shotType }}</span>
+                <span class="pi-tag">{{ currentShot.cameraMovement }}</span>
+                <span class="pi-dur">{{ currentShot.duration }}s</span>
+              </div>
             </div>
             <div class="preview-dialogue" v-if="(currentShot._dialogues || []).length > 0">
               <div v-for="(d, di) in currentShot._dialogues" :key="di" class="preview-dialogue-line">
@@ -2215,8 +2216,12 @@ async function handleImport() {
 }
 .preview-clear:hover { background: #e74c3c; }
 .preview-info {
-  display: flex; gap: 10px; justify-content: center; padding: 10px;
-  font-size: 12px; flex-shrink: 0;
+  position: absolute; bottom: 8px; left: 8px;
+  display: flex; gap: 6px; align-items: center; z-index: 3;
+}
+.pi-dur {
+  font-size: 11px; color: #fff; background: rgba(0,0,0,0.5);
+  padding: 2px 6px; border-radius: 3px; font-weight: 600;
 }
 .pi-tag {
   background: linear-gradient(135deg, var(--gold) 0%, #b8943a 100%);
