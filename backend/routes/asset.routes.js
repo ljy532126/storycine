@@ -742,8 +742,16 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
     const { projectId, assetId, assetType, prompt, model, referenceImages, inputImage } = req.body;
     if (!prompt) return res.status(400).json({ message: '缺少提示词' });
 
-    // 将相对路径（如 /uploads/xxx.png）解析为公网可访问的完整 URL
-    const resolvedRefs = storageService.resolvePublicUrls(referenceImages || []);
+    // 防御清洗：referenceImages 可能为对象数组 [{name,url}] 或字符串数组
+    const rawRefs = Array.isArray(referenceImages) ? referenceImages : [];
+    const cleanRefs = rawRefs.map(r => {
+      if (typeof r === 'string') return r;
+      if (r && typeof r === 'object' && r.url) return r.url;
+      return '';
+    }).filter(Boolean);
+
+    // 将相对路径解析为公网可访问的完整 URL
+    const resolvedRefs = storageService.resolvePublicUrls(cleanRefs);
     const resolvedInput = storageService.resolvePublicUrl(inputImage || '');
 
     const { callImageGen, callVideoGen } = require('../utils/llm-client');
