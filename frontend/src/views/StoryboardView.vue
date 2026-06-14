@@ -1133,6 +1133,7 @@ function toRefUrls(arr) {
     return '';
   }).filter(Boolean);
 }
+function getRefUrl(asset) {
   if (!asset) return '';
   const morph = asset.morphs?.[0];
   const candidates = [
