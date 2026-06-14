@@ -78,12 +78,22 @@ export const assetAPI = {
   updateScene: (id, data) => api.put(`/assets/scenes/${id}`, data),
   deleteScene: (id) => api.delete(`/assets/scenes/${id}`),
   batchDeleteScenes: (ids) => api.post('/assets/scenes/batch-delete', { ids }),
+  uploadSceneImage: (id, file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return api.post(`/assets/scenes/${id}/upload-image`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   // 道具
   listProps: (projectId) => api.get('/assets/props', { params: { projectId } }),
   createProp: (data) => api.post('/assets/props', data),
   updateProp: (id, data) => api.put(`/assets/props/${id}`, data),
   deleteProp: (id) => api.delete(`/assets/props/${id}`),
   batchDeleteProps: (ids) => api.post('/assets/props/batch-delete', { ids }),
+  uploadPropImage: (id, file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return api.post(`/assets/props/${id}/upload-image`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   // 批量提取
   extractAll: (scriptId, projectId) => api.post('/assets/extract-all', { scriptId, projectId }),
   // 提示词生成

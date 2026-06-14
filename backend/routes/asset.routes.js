@@ -374,6 +374,38 @@ router.post('/characters/:id/upload-image', upload.single('image'), async (req, 
   } catch (error) { next(error); }
 });
 
+// ===== 场景图片上传 =====
+router.post('/scenes/:id/upload-image', upload.single('image'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: '未选择文件' });
+    const scene = await SceneAsset.findById(req.params.id);
+    if (!scene) return res.status(404).json({ message: '场景不存在' });
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+    scene.referenceImage = imageUrl;
+    scene.generatedImage = imageUrl;
+    await scene.save();
+
+    res.json({ message: '上传成功', data: { imageUrl } });
+  } catch (error) { next(error); }
+});
+
+// ===== 道具图片上传 =====
+router.post('/props/:id/upload-image', upload.single('image'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: '未选择文件' });
+    const prop = await Prop.findById(req.params.id);
+    if (!prop) return res.status(404).json({ message: '道具不存在' });
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+    prop.referenceImage = imageUrl;
+    prop.generatedImage = imageUrl;
+    await prop.save();
+
+    res.json({ message: '上传成功', data: { imageUrl } });
+  } catch (error) { next(error); }
+});
+
 // ===== 批量主体提取（角色 + 场景 + 道具） =====
 router.post('/extract-all', aiExtractLimiter, async (req, res, next) => {
   try {

@@ -472,25 +472,29 @@ function openPropViewer(p) { viewerChar.value = { name: p.propName }; viewerSrc.
 async function onSceneImageUpload(s, e) {
   const file = e.target.files?.[0];
   if (!file || !s) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    s.referenceImage = ev.target.result;
-    s.generatedImage = ev.target.result;
-    try { await assetAPI.updateScene(s._id, { referenceImage: ev.target.result, generatedImage: ev.target.result }); } catch {}
-  };
-  reader.readAsDataURL(file);
+  try {
+    const res = await assetAPI.uploadSceneImage(s._id, file);
+    const imageUrl = res.data?.data?.imageUrl || res.data?.imageUrl;
+    if (imageUrl) {
+      s.referenceImage = imageUrl;
+      s.generatedImage = imageUrl;
+      ElMessage.success('场景图片上传成功');
+    }
+  } catch { ElMessage.error('上传失败'); }
   e.target.value = '';
 }
 async function onPropImageUpload(p, e) {
   const file = e.target.files?.[0];
   if (!file || !p) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    p.referenceImage = ev.target.result;
-    p.generatedImage = ev.target.result;
-    try { await assetAPI.updateProp(p._id, { referenceImage: ev.target.result, generatedImage: ev.target.result }); } catch {}
-  };
-  reader.readAsDataURL(file);
+  try {
+    const res = await assetAPI.uploadPropImage(p._id, file);
+    const imageUrl = res.data?.data?.imageUrl || res.data?.imageUrl;
+    if (imageUrl) {
+      p.referenceImage = imageUrl;
+      p.generatedImage = imageUrl;
+      ElMessage.success('道具图片上传成功');
+    }
+  } catch { ElMessage.error('上传失败'); }
   e.target.value = '';
 }
 
