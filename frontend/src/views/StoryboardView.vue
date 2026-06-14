@@ -1125,9 +1125,16 @@ function updatePrompt() {
 function getCharThumb(c) { return c.morphs?.[0]?.referenceImage || c.morphs?.[0]?.generatedImages?.front || c.referenceImage || c.generatedImage || ''; }
 function getSceneThumb(s) { return s.generatedImage || s.referenceImage || s.styleImage || ''; }
 // 优先取公网可访问的 URL（云存储），fallback 到本地路径
-function getRefUrl(asset) {
+function toRefUrls(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(r => {
+    if (typeof r === 'string') return r;
+    if (r && typeof r === 'object') return r.url || r.imageUrl || '';
+    return '';
+  }).filter(Boolean);
+}
+  if (!asset) return '';
   const morph = asset.morphs?.[0];
-  // 候选 URL 列表：公网 URL 优先，本地 /uploads/ 兜底
   const candidates = [
     morph?.generatedImages?.front,
     morph?.generatedImages?.side,
@@ -1136,12 +1143,15 @@ function getRefUrl(asset) {
     asset.generatedImage,
     asset.referenceImage,
   ].filter(Boolean);
-  // 优先返回 https:// 公网 URL（对象存储/云存储）
-  const cloud = candidates.find(u => u.startsWith('https://') || u.startsWith('http://'));
+  // 优先返回公网 URL
+  const cloud = candidates.find(u => typeof u === 'string' && (u.startsWith('https://') || u.startsWith('http://')));
   if (cloud) return cloud;
   // fallback 到 /uploads/ 本地路径
-  const local = candidates.find(u => u.startsWith('/uploads/'));
-  return local || candidates[0] || '';
+  const local = candidates.find(u => typeof u === 'string' && u.startsWith('/uploads/'));
+  if (local) return local;
+  // 最后一个兜底：确保返回字符串
+  const first = candidates.find(u => typeof u === 'string');
+  return first || '';
 }
 
 const selectedSceneRefs = ref([]);
@@ -1464,7 +1474,7 @@ async function batchGenerateImages() {
       const prompt = s._imagePrompt || s.imageDescription;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt, model: selectedModel.value, referenceImages: s._refImages || [] })
+        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt, model: selectedModel.value, referenceImages: toRefUrls(s._refImages) })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(s.shotNumber); continue; }
@@ -1505,7 +1515,7 @@ async function batchGenerateVideos() {
       if (charDescsBatch) batchPrompt = charDescsBatch + '。' + batchPrompt;
       const res = await fetch('/api/v1/assets/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: refUrls, duration: s.duration || 5, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
+        body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: batchPrompt, model: selectedVideoModel.value, inputImage: s.renderedImage || '', referenceImages: toRefUrls(refUrls), duration: s.duration || 5, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
       });
       const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(s.shotNumber); continue; }
@@ -1651,7 +1661,7 @@ async function generateImageForShot() {
     console.log('[生图] 参考图数量:', refUrls.length, '角色外貌描述:', charAppearances.length, '场景描述:', sceneDescs.length, 'URLs:', refUrls);
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt: enrichedPrompt, model: selectedModel.value, referenceImages: refUrls })
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'character', prompt: enrichedPrompt, model: selectedModel.value, referenceImages: toRefUrls(refUrls) })
     });
     const data = await res.json();
 if (!res.ok) { ElMessage.error(data.message || '生成失败'); genningShotSet.delete(shotNum); return; }
@@ -1747,7 +1757,7 @@ async function generateVideoForShot() {
 
     const res = await fetch('/api/v1/assets/generate-image', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: refUrls, duration: videoDuration.value, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
+      body: JSON.stringify({ projectId: currentProjectId.value, assetId: '', assetType: 'video', prompt: finalPrompt, model: selectedVideoModel.value, inputImage, referenceImages: toRefUrls(refUrls), duration: videoDuration.value, ratio: videoRatio.value, resolution: videoResolution.value, watermark: !videoNoWatermark.value, generateAudio: videoGenAudio.value })
     });
     const data = await res.json();
     if (!res.ok) { ElMessage.error(data.message || '视频生成失败'); return; }
