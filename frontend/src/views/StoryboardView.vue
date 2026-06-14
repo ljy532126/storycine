@@ -910,9 +910,10 @@ onActivated(() => {
     currentProjectId.value = storeProject._id;
     onProjectChange(storeProject._id);
   } else if (currentProjectId.value && !pageReady.value) {
-    // keep-alive 恢复，数据已存在
     nextTick(() => { pageReady.value = true; });
   }
+  // 恢复未完成的视频任务（切换 Tab 回来也能接着轮询）
+  setTimeout(() => resumeVideoTasks(), 500);
   syncWsSbActions();
 });
 onDeactivated(() => { if (wsSbActions) wsSbActions.visible = false; });
@@ -1131,7 +1132,12 @@ function toRefUrls(arr) {
     if (typeof r === 'string') return r;
     if (r && typeof r === 'object') return r.url || r.imageUrl || '';
     return '';
-  }).filter(Boolean);
+  }).filter(url => {
+    if (!url) return false;
+    // 过滤 data: URI（base64），Seedance 无法下载
+    if (url.startsWith('data:')) return false;
+    return true;
+  });
 }
 function getRefUrl(asset) {
   if (!asset) return '';
@@ -1150,9 +1156,8 @@ function getRefUrl(asset) {
   // fallback 到 /uploads/ 本地路径
   const local = candidates.find(u => typeof u === 'string' && u.startsWith('/uploads/'));
   if (local) return local;
-  // 最后一个兜底：确保返回字符串
-  const first = candidates.find(u => typeof u === 'string');
-  return first || '';
+  // 跳过 data: base64 URI（Seedance 无法下载），不兜底返回
+  return '';
 }
 
 const selectedSceneRefs = ref([]);

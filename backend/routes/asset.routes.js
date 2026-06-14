@@ -748,7 +748,11 @@ router.post('/generate-image', aiGenerateImageLimiter, async (req, res, next) =>
       if (typeof r === 'string') return r;
       if (r && typeof r === 'object' && r.url) return r.url;
       return '';
-    }).filter(Boolean);
+    }).filter(url => {
+      // 过滤空字符串 / data: base64 URI（Seedance 无法下载 base64）
+      if (!url || url.startsWith('data:')) return false;
+      return true;
+    });
 
     // 将相对路径解析为公网可访问的完整 URL
     const resolvedRefs = storageService.resolvePublicUrls(cleanRefs);
