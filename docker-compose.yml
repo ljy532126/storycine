@@ -48,7 +48,6 @@ services:
     environment:
       - SERVER_PORT=3012
       - RESET_ADMIN_PWD=false
-      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:3012}
       - JWT_SECRET=${JWT_SECRET:-change-me-to-a-random-string-at-least-32-chars}
       - MONGO_URI=mongodb://storycine_user:storycine_pass@mongodb:27017/storycine?authSource=storycine
       - REDIS_HOST=redis
