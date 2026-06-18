@@ -111,6 +111,9 @@ const apiStats = initStats();
 // 异步恢复，不阻塞启动
 loadStatsFromDB();
 
+// ===== 全局安全中间件（爬虫拦截 + 限流 + 401滥用封禁） =====
+app.use(require('./middleware/security.middleware'));
+
 app.use('/api/v1', (req, res, next) => {
   const startTime = Date.now();
   const key = req.method + ' ' + req.path;
