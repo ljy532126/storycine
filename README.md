@@ -159,12 +159,22 @@ cd storycine
 
 # 2. 配置环境变量（重要！）
 cp backend/.env.example backend/.env
-# 编辑 backend/.env，必须设置 JWT_SECRET 和至少一个 LLM API Key
+# 编辑 backend/.env，以下为必填项：
+#   JWT_SECRET          — 随机32位字符串
+#   ENCRYPTION_KEY      — 随机32位字符串（加密存储 API Key 用）
+#   MONGO_ROOT_PASS     — MongoDB root 密码
+#   REDIS_PASSWORD      — Redis 密码
+#   MINIO_ROOT_USER     — MinIO 用户名
+#   MINIO_ROOT_PASSWORD — MinIO 密码
+# 生成随机密钥: openssl rand -hex 32
 
-# 3. 一键构建 + 启动
+# 3. 创建备份冷备目录（可选但推荐）
+mkdir -p backups-cold
+
+# 4. 一键构建 + 启动
 docker compose up -d --build
 
-# 4. 打开浏览器 http://你的服务器IP:3012
+# 5. 打开浏览器 http://你的服务器IP:3012
 ```
 
 ### 方式三：服务器无法访问 GitHub（国内常见）
@@ -188,7 +198,8 @@ tar -xzf ../storycine.tar.gz
 
 # 3. 配置环境变量
 cp backend/.env.example backend/.env
-# 编辑 backend/.env：必须设置 JWT_SECRET！
+# 编辑 backend/.env，填写所有必填项（参考方式二第2步）
+mkdir -p backups-cold
 
 # 4. 构建 + 启动
 sh deploy.sh
@@ -196,14 +207,13 @@ sh deploy.sh
 
 ### ⚠️ 首次部署必读
 
-1. **JWT_SECRET**：在 `backend/.env` 中设置 `JWT_SECRET=你的随机字符串`（至少 32 位），不设置则服务无法启动
+1. **环境变量**：在 `backend/.env` 中配置所有必填项（见上面部署步骤第2步），少一个都会导致服务启动失败
 2. **管理员密码**：首次启动时系统自动创建 `admin` 账号
-   - **推荐**：在 `backend/.env` 中设置 `ADMIN_PASSWORD=你的密码`，首次启动即用此密码
-   - **没设置**：系统自动生成随机 6 位数字密码，启动日志会打印 `Password: XXXXXX`
+   - **推荐**：在 `backend/.env` 中设置 `ADMIN_PASSWORD=你的密码`
+   - **没设置**：系统自动生成随机 6 位数字密码，启动日志可见
    - 查看密码：`docker logs storycine-app 2>&1 | grep -A3 "Password:"`
-   - 如果命令无输出：说明 admin 已存在（不是首次启动），用下面「忘记密码」方法重置
    - 登录后**请立即修改密码**
-3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包 等 API Key，每个用户独立配置
+3. **LLM API Key**：登录后在「系统设置」页面配置 DeepSeek / 豆包等，每个用户独立配置
 
 ### 🔑 忘记管理员密码怎么办
 
@@ -220,11 +230,11 @@ docker logs storycine-app 2>&1 | grep -A3 "Password:"
 
 **方法二：进入 MongoDB 直接修改**
 ```bash
-docker exec -it storycine-mongodb mongosh -u admin -p admin123 --authenticationDatabase admin
+docker exec -it storycine-mongodb mongosh -u admin -p "${MONGO_ROOT_PASS}" --authenticationDatabase admin
 use storycine
-db.users.updateOne({ username: "admin" }, { $set: { password: ... } })
+# 此处需要用 bcrypt 生成密码哈希后替换 ... 部分，推荐用方法一
+db.users.updateOne({ username: "admin" }, { $set: { password: "bcrypt_hash" } })
 ```
-注意：密码需用 bcrypt 加密，推荐用方法一。
 
 ```bash
 # 后续更新

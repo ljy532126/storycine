@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { encryptSettings, decryptSettings } = require('../utils/crypto');
 
 const settingsSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
@@ -64,6 +65,25 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
+// ===== 加密钩子 =====
+
+settingsSchema.pre('save', function (next) {
+  encryptSettings(this);
+  next();
+});
+
+// findOne 返回完整文档
+settingsSchema.post('findOne', function (doc) {
+  if (doc) decryptSettings(doc);
+});
+
+// find 返回数组
+settingsSchema.post('find', function (docs) {
+  docs.forEach(doc => { if (doc) decryptSettings(doc); });
+});
+
+// ===== 静态方法 =====
+
 settingsSchema.statics.getSettings = async function (userId) {
   let doc = await this.findOne({ userId });
   if (!doc) {
@@ -72,7 +92,12 @@ settingsSchema.statics.getSettings = async function (userId) {
   return doc;
 };
 
+/**
+ * updateOne 不走 mongoose 中间件，这里手动加密后再写库。
+ * TTS apiKey 由 config.routes.js 用 tts.service.encrypt 单独处理，此处跳过。
+ */
 settingsSchema.statics.updateSettings = async function (userId, updates) {
+  encryptSettings(updates);
   await this.updateOne({ userId }, { $set: updates });
 };
 

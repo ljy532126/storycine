@@ -310,6 +310,46 @@ io.on('connection', (socket) => {
 const PORT = process.env.SERVER_PORT || 3012;
 
 connectDB().then(async () => {
+  // ===== 加密密钥校验 =====
+  if (!process.env.ENCRYPTION_KEY) {
+    console.error('[init] ❌ ENCRYPTION_KEY 环境变量未设置！API Key 无法加密存储。');
+    console.error('[init]    请在 .env 中添加 ENCRYPTION_KEY=<随机32位字符串>');
+    process.exit(1);
+  }
+
+  // ===== 迁移存量明文 API Key → 加密 =====
+  try {
+    const Settings = require('./models/settings.model');
+    const { encrypt, isEncrypted } = require('./utils/crypto');
+    const allSettings = await Settings.find({});
+    let migrated = 0;
+    for (const doc of allSettings) {
+      let dirty = false;
+      const llm = doc.llmProviders;
+      if (llm) {
+        ['deepseek', 'doubao', 'tongyi', 'openai'].forEach(p => {
+          if (llm[p]?.apiKey && !isEncrypted(llm[p].apiKey) && llm[p].apiKey.length > 0) {
+            llm[p].apiKey = encrypt(llm[p].apiKey);
+            dirty = true;
+          }
+        });
+      }
+      if (doc.smsConfig?.accessKeySecret && !isEncrypted(doc.smsConfig.accessKeySecret)) {
+        doc.smsConfig.accessKeySecret = encrypt(doc.smsConfig.accessKeySecret);
+        dirty = true;
+      }
+      if (doc.storageConfig?.accessKeySecret && !isEncrypted(doc.storageConfig.accessKeySecret)) {
+        doc.storageConfig.accessKeySecret = encrypt(doc.storageConfig.accessKeySecret);
+        dirty = true;
+      }
+      if (dirty) {
+        await doc.save();  // pre-save hook will encryptSettings, but we already encrypted above — safe: isEncrypted check prevents double
+        migrated++;
+      }
+    }
+    if (migrated > 0) console.log(`[init] 🔐 已将 ${migrated} 条 settings 的明文 API Key 加密存储`);
+  } catch (e) { console.warn('[init] API Key 加密迁移失败:', e.message); }
+
   // LLM 配置已改为按用户隔离，在用户访问时按需加载（见 auth middleware + loadUserConfig）
 
   // 给没有 UID 的老用户补上
@@ -323,6 +363,9 @@ connectDB().then(async () => {
     await User.updateOne({ _id: u._id }, { $set: { uid } });
   }
   if (usersWithoutUid.length > 0) console.log(`[init] 已为 ${usersWithoutUid.length} 个老用户生成 UID`);
+
+  // 初始化管理员 + 从 .env 种子 API Key（迁移之后，确保种子数据也被加密）
+  await initAdmin();
 
   server.listen(PORT, () => {
     console.log('');

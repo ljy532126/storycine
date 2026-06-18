@@ -1,11 +1,11 @@
 /**
  * 数据库备份/恢复路由（仅管理员）
  *
- * 备份格式：单个 JSON 文件，包含所有集合的完整数据
- * 适用场景：Docker 部署和传统部署通用，通过 API 导出/导入
- *
- * Docker 部署注意：确保 backend/backups/ 目录挂载为卷，否则容器销毁后备份丢失
- *   docker run -v /host/backups:/app/backups ...
+ * 安全机制：
+ *   1. 自动备份同时写入冷备目录（API 删不掉）
+ *   2. 删除操作移到 .trash/，7天后才真正删除
+ *   3. 所有操作记录审计日志
+ *   4. 批量消失检测 + 告警
  */
 const express = require('express');
 const fs = require('fs');
@@ -17,18 +17,38 @@ const { authRequired } = require('../middleware/auth.middleware');
 
 router.use(authRequired);
 
+const AuditLog = require('../models/audit-log.model');
+
 /** 管理员校验 */
 function requireAdmin(req, res, next) {
   if (req.user.role !== 'admin') return res.status(403).json({ code: 403, message: '仅管理员可操作' });
   next();
 }
 
+/** 记录审计日志 */
+async function audit(action, detail, req, meta = {}) {
+  try {
+    await AuditLog.create({
+      action, detail,
+      operator: req.user?.username || 'system',
+      operatorId: req.user?._id,
+      ip: req.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '',
+      metadata: meta,
+    });
+  } catch (e) { console.warn('[audit] 记录失败:', e.message); }
+}
+
 const BACKUP_DIR = path.join(__dirname, '..', 'backups');
+const TRASH_DIR = path.join(BACKUP_DIR, '.trash');
+const COLD_DIR = process.env.COLD_BACKUP_DIR || path.join(BACKUP_DIR, '.cold');
 const AUTO_CFG_FILE = path.join(BACKUP_DIR, '.auto-config.json');
 const BACKUP_VERSION = 2;
+const TRASH_TTL_MS = 7 * 24 * 3600000; // 7 天
 
 // 初始化目录
-if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+for (const d of [BACKUP_DIR, TRASH_DIR]) {
+  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+}
 
 // ===== 需要备份的集合列表 =====
 const COLLECTIONS = [
@@ -37,11 +57,53 @@ const COLLECTIONS = [
   'settings', 'analytics', 'loginlogs', 'errorlogs', 'announcements',
 ];
 
-// 生成本地时间戳字符串（中国时区）
 function localTimestamp() {
   const d = new Date();
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}-${pad(d.getMilliseconds())}`;
+}
+
+// ===== 冷备同步 =====
+function syncToCold(filename) {
+  if (!COLD_DIR) return;
+  try {
+    if (!fs.existsSync(COLD_DIR)) fs.mkdirSync(COLD_DIR, { recursive: true });
+    const src = path.join(BACKUP_DIR, filename);
+    const dst = path.join(COLD_DIR, filename);
+    if (fs.existsSync(src)) fs.copyFileSync(src, dst);
+  } catch (e) { console.warn('[cold-backup] 同步失败:', e.message); }
+}
+
+// ===== 回收站清理 =====
+function cleanTrash() {
+  try {
+    const now = Date.now();
+    const files = fs.readdirSync(TRASH_DIR).filter(f => f.endsWith('.json.gz'));
+    let cleaned = 0;
+    for (const f of files) {
+      const fp = path.join(TRASH_DIR, f);
+      if (now - fs.statSync(fp).mtimeMs > TRASH_TTL_MS) {
+        fs.unlinkSync(fp);
+        cleaned++;
+      }
+    }
+    if (cleaned > 0) console.log(`[trash] 清理 ${cleaned} 个过期备份`);
+  } catch (e) { /* ignore */ }
+}
+
+// ===== 批量删除检测（5分钟内消失超过3个 → 告警） =====
+const deletionTracker = [];
+function trackDeletion(filename) {
+  const now = Date.now();
+  deletionTracker.push({ filename, time: now });
+  // 只保留最近5分钟
+  while (deletionTracker.length > 0 && now - deletionTracker[0].time > 300000) {
+    deletionTracker.shift();
+  }
+  if (deletionTracker.length >= 4) {
+    console.error(`[SECURITY] ⚠️ 5分钟内已删除 ${deletionTracker.length} 个备份！疑似批量删除攻击！`);
+    console.error(`[SECURITY] 文件: ${deletionTracker.map(d => d.filename).join(', ')}`);
+  }
 }
 
 // ===== 自动备份 =====
@@ -63,24 +125,40 @@ async function runAutoBackup() {
 
     const data = {};
     for (const col of COLLECTIONS) {
-      try {
-        const docs = await mongoose.connection.db.collection(col).find({}).toArray();
-        data[col] = docs;
-      } catch { data[col] = []; }
+      try { data[col] = await mongoose.connection.db.collection(col).find({}).toArray(); }
+      catch { data[col] = []; }
     }
 
     const payload = JSON.stringify({ version: BACKUP_VERSION, createdAt: new Date().toISOString(), collections: data });
     const compressed = zlib.gzipSync(payload);
     const filename = `backup-${localTimestamp()}.json.gz`;
-    fs.writeFileSync(path.join(BACKUP_DIR, filename), compressed);
+    const filePath = path.join(BACKUP_DIR, filename);
+    fs.writeFileSync(filePath, compressed);
 
-    // 清理旧备份
+    // 同步到冷备目录
+    syncToCold(filename);
+
+    // 清理旧备份（移到回收站而不是直接删除）
     const files = fs.readdirSync(BACKUP_DIR).filter(f => f.endsWith('.json.gz')).sort();
     while (files.length > cfg.maxBackups) {
-      fs.unlinkSync(path.join(BACKUP_DIR, files.shift()));
+      const oldFile = files.shift();
+      const oldPath = path.join(BACKUP_DIR, oldFile);
+      const trashPath = path.join(TRASH_DIR, oldFile);
+      fs.renameSync(oldPath, trashPath);
     }
 
-    console.log(`[auto-backup] 完成: ${filename} (${files.length} 个保留)`);
+    // 清理过期回收站
+    cleanTrash();
+
+    // 冷备目录也限制数量
+    try {
+      const coldFiles = fs.readdirSync(COLD_DIR).filter(f => f.endsWith('.json.gz')).sort();
+      while (coldFiles.length > cfg.maxBackups) {
+        fs.unlinkSync(path.join(COLD_DIR, coldFiles.shift()));
+      }
+    } catch {}
+
+    console.log(`[auto-backup] 完成: ${filename} (${files.length} 个保留, 冷备已同步)`);
   } catch (e) { console.error('[auto-backup] 失败:', e.message); }
 }
 
@@ -90,8 +168,7 @@ function startAutoBackup() {
   if (cfg.enabled) {
     const ms = Math.max(1, cfg.intervalHours || 24) * 3600000;
     autoBackupTimer = setInterval(runAutoBackup, ms);
-    console.log(`[auto-backup] 已启动 (每 ${cfg.intervalHours}h, 保留 ${cfg.maxBackups} 个)`);
-    // 启动后延迟 30 秒执行首次
+    console.log(`[auto-backup] 已启动 (每 ${cfg.intervalHours}h, 保留 ${cfg.maxBackups} 个, 冷备: ${COLD_DIR || '禁用'})`);
     setTimeout(runAutoBackup, 30000);
   }
 }
@@ -100,7 +177,6 @@ function stopAutoBackup() {
   if (autoBackupTimer) { clearInterval(autoBackupTimer); autoBackupTimer = null; }
 }
 
-// 服务启动时自动开启
 startAutoBackup();
 
 // ===== 导出备份 =====
@@ -108,10 +184,8 @@ router.post('/export', requireAdmin, async (req, res) => {
   try {
     const data = {};
     for (const col of COLLECTIONS) {
-      try {
-        const docs = await mongoose.connection.db.collection(col).find({}).toArray();
-        data[col] = docs;
-      } catch { data[col] = []; }
+      try { data[col] = await mongoose.connection.db.collection(col).find({}).toArray(); }
+      catch { data[col] = []; }
     }
 
     const totalDocs = Object.values(data).reduce((s, arr) => s + arr.length, 0);
@@ -119,6 +193,12 @@ router.post('/export', requireAdmin, async (req, res) => {
     const compressed = zlib.gzipSync(payload);
 
     const filename = `backup-${localTimestamp()}.json.gz`;
+    const filePath = path.join(BACKUP_DIR, filename);
+    fs.writeFileSync(filePath, compressed);
+    syncToCold(filename);
+
+    await audit('backup.export', `手动导出: ${filename} (${totalDocs} 条)`, req, { filename, totalDocs, size: compressed.length });
+
     res.setHeader('Content-Type', 'application/gzip');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(compressed);
@@ -214,6 +294,7 @@ router.post('/import', requireAdmin, async (req, res) => {
           message: `数据恢复完成`,
           data: { cleared: stats.cleared, inserted: totalInserted, errors: totalErrors, skipped: stats.skipped, rollbackFile: rollbackName },
         });
+        await audit('backup.import', `从备份恢复: 清 ${stats.cleared} + 导 ${totalInserted} (回滚: ${rollbackName})`, req, { cleared: stats.cleared, inserted: totalInserted, errors: totalErrors });
         console.log(`[backup] 导入: ${stats.cleared}清 + ${totalInserted}导 (回滚: ${rollbackName})`);
       } catch (e) {
         res.status(400).json({ code: 400, message: '解析失败: ' + e.message });
@@ -224,53 +305,84 @@ router.post('/import', requireAdmin, async (req, res) => {
   }
 });
 
-// ===== 列出备份 =====
+// ===== 列出备份（含回收站） =====
 router.get('/list', requireAdmin, async (req, res) => {
   try {
-    const files = fs.readdirSync(BACKUP_DIR)
-      .filter(f => f.endsWith('.json.gz'))
-      .sort()
-      .reverse()
-      .map(f => {
-        const stat = fs.statSync(path.join(BACKUP_DIR, f));
-        const match = f.match(/^backup-(.+)\.json\.gz$/);
-        let displayTime = '未知';
-        if (match) {
-          // 文件名已用本地时间：backup-2026-06-08T22-39-03-456.json.gz
-          const raw = match[1];
-          const parts = raw.split('T');
-          const date = parts[0];
-          const time = parts[1] ? parts[1].replace(/-/g, ':').split(':').slice(0, 3).join(':') : '';
-          displayTime = date + ' ' + time;
-        }
-        return {
-          filename: f,
-          createdAt: displayTime,
-          size: stat.size,
-          sizeFormatted: stat.size > 1048576 ? (stat.size / 1048576).toFixed(1) + ' MB'
-            : stat.size > 1024 ? (stat.size / 1024).toFixed(1) + ' KB'
-            : stat.size + ' B',
-        };
-      });
+    cleanTrash(); // 顺便清理过期回收站
 
+    const mapFiles = (dir, tag) => {
+      if (!fs.existsSync(dir)) return [];
+      return fs.readdirSync(dir)
+        .filter(f => f.endsWith('.json.gz'))
+        .sort()
+        .reverse()
+        .map(f => {
+          const stat = fs.statSync(path.join(dir, f));
+          const match = f.match(/^backup-(.+)\.json\.gz$/);
+          let displayTime = '未知';
+          if (match) {
+            const raw = match[1];
+            const parts = raw.split('T');
+            displayTime = parts[0] + ' ' + (parts[1] ? parts[1].replace(/-/g, ':').split(':').slice(0, 3).join(':') : '');
+          }
+          return {
+            filename: f,
+            createdAt: displayTime,
+            size: stat.size,
+            sizeFormatted: stat.size > 1048576 ? (stat.size / 1048576).toFixed(1) + ' MB'
+              : stat.size > 1024 ? (stat.size / 1024).toFixed(1) + ' KB'
+              : stat.size + ' B',
+            trashed: tag === 'trash',
+          };
+        });
+    };
+
+    const activeFiles = mapFiles(BACKUP_DIR, 'active');
+    const trashFiles = mapFiles(TRASH_DIR, 'trash');
     const cfg = loadAutoCfg();
-    res.json({ code: 0, data: { files, autoBackup: cfg } });
+
+    res.json({ code: 0, data: { files: activeFiles, trash: trashFiles, coldEnabled: !!COLD_DIR, autoBackup: cfg } });
   } catch (e) {
     res.status(500).json({ code: 500, message: '查询失败' });
   }
 });
 
-// ===== 删除备份 =====
+// ===== 删除备份（移入回收站，7天后自动清除） =====
 router.delete('/:filename', requireAdmin, async (req, res) => {
   try {
     const name = path.basename(req.params.filename);
     if (!name.endsWith('.json.gz')) return res.status(400).json({ code: 400, message: '无效文件名' });
     const filePath = path.join(BACKUP_DIR, name);
     if (!fs.existsSync(filePath)) return res.status(404).json({ code: 404, message: '文件不存在' });
-    fs.unlinkSync(filePath);
-    res.json({ code: 0, message: '已删除' });
+
+    // 移到回收站，而非直接删除
+    const trashPath = path.join(TRASH_DIR, name);
+    fs.renameSync(filePath, trashPath);
+
+    trackDeletion(name);
+    await audit('backup.delete', `备份移入回收站: ${name}`, req, { filename: name });
+
+    res.json({ code: 0, message: '已移入回收站，7天后自动清除' });
   } catch (e) {
     res.status(500).json({ code: 500, message: '删除失败' });
+  }
+});
+
+// ===== 从回收站恢复 =====
+router.post('/restore/:filename', requireAdmin, async (req, res) => {
+  try {
+    const name = path.basename(req.params.filename);
+    if (!name.endsWith('.json.gz')) return res.status(400).json({ code: 400, message: '无效文件名' });
+    const trashPath = path.join(TRASH_DIR, name);
+    if (!fs.existsSync(trashPath)) return res.status(404).json({ code: 404, message: '回收站中不存在此文件' });
+
+    const destPath = path.join(BACKUP_DIR, name);
+    fs.renameSync(trashPath, destPath);
+    await audit('backup.import', `从回收站恢复: ${name}`, req, { filename: name });
+
+    res.json({ code: 0, message: '已恢复' });
+  } catch (e) {
+    res.status(500).json({ code: 500, message: '恢复失败' });
   }
 });
 
@@ -281,6 +393,7 @@ router.get('/download/:filename', requireAdmin, async (req, res) => {
     if (!name.endsWith('.json.gz')) return res.status(400).json({ code: 400, message: '无效文件名' });
     const filePath = path.join(BACKUP_DIR, name);
     if (!fs.existsSync(filePath)) return res.status(404).json({ code: 404, message: '文件不存在' });
+    await audit('backup.download', `下载备份: ${name}`, req, { filename: name });
     res.setHeader('Content-Type', 'application/gzip');
     res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
     res.sendFile(filePath);
@@ -333,15 +446,35 @@ router.get('/check-mount', requireAdmin, async (req, res) => {
 router.put('/auto/config', requireAdmin, async (req, res) => {
   try {
     const { enabled, intervalHours, maxBackups } = req.body;
-    const cfg = loadAutoCfg();
+    const oldCfg = loadAutoCfg();
+    const cfg = { ...oldCfg };
     if (typeof enabled === 'boolean') cfg.enabled = enabled;
     if (intervalHours > 0) cfg.intervalHours = Math.max(1, Math.min(168, parseInt(intervalHours) || 24));
     if (maxBackups > 0) cfg.maxBackups = Math.max(1, Math.min(100, parseInt(maxBackups) || 7));
     saveAutoCfg(cfg);
     startAutoBackup();
+    await audit('backup.config', `自动备份配置: ${JSON.stringify(oldCfg)} → ${JSON.stringify(cfg)}`, req, { old: oldCfg, new: cfg });
     res.json({ code: 0, message: '配置已保存', data: cfg });
   } catch (e) {
     res.status(500).json({ code: 500, message: '保存失败' });
+  }
+});
+
+// ===== 审计日志查询 =====
+router.get('/audit', requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, action } = req.query;
+    const filter = {};
+    if (action) filter.action = action;
+    const total = await AuditLog.countDocuments(filter);
+    const logs = await AuditLog.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .lean();
+    res.json({ code: 0, data: { logs, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) } });
+  } catch (e) {
+    res.status(500).json({ code: 500, message: '查询失败' });
   }
 });
 

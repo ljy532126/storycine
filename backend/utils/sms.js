@@ -32,7 +32,7 @@ async function loadConfig() {
     const User = require('../models/user.model');
     const admin = await User.findOne({ role: 'admin' }).lean();
     if (admin) {
-      const s = await Settings.findOne({ userId: admin._id }).lean();
+      const s = await Settings.findOne({ userId: admin._id });
       _cachedConfig = { ...(s?.smsConfig || {}) };
       _lastLoad = Date.now();
       return _cachedConfig;

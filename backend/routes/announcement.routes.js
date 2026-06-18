@@ -1,7 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Announcement = require('../models/announcement.model');
 const { authRequired, adminRequired } = require('../middleware/auth.middleware');
+
+/** 校验 :id 参数是否为合法 ObjectId，非法则直接 400 */
+function validateId(req, res, next) {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: '无效的ID格式' });
+  }
+  next();
+}
+
 router.use(authRequired);
 
 // ===== 公共接口：获取生效中的公告（所有已登录用户） =====
@@ -63,7 +73,7 @@ router.post('/', adminRequired, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.put('/:id', adminRequired, async (req, res, next) => {
+router.put('/:id', adminRequired, validateId, async (req, res, next) => {
   try {
     const allowed = ['title', 'content', 'type', 'target', 'isPinned', 'isActive', 'enableMarkdown'];
     const update = {};
@@ -74,7 +84,7 @@ router.put('/:id', adminRequired, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.delete('/:id', adminRequired, async (req, res, next) => {
+router.delete('/:id', adminRequired, validateId, async (req, res, next) => {
   try {
     const ann = await Announcement.findByIdAndDelete(req.params.id);
     if (!ann) return res.status(404).json({ message: '公告不存在' });
@@ -83,7 +93,7 @@ router.delete('/:id', adminRequired, async (req, res, next) => {
 });
 
 // ===== 标记已读 =====
-router.post('/:id/read', authRequired, async (req, res, next) => {
+router.post('/:id/read', authRequired, validateId, async (req, res, next) => {
   try {
     const ann = await Announcement.findById(req.params.id);
     if (!ann) return res.status(404).json({ message: '公告不存在' });
@@ -98,7 +108,7 @@ router.post('/:id/read', authRequired, async (req, res, next) => {
 });
 
 // ===== 阅读统计（仅管理员） =====
-router.get('/:id/stats', adminRequired, async (req, res, next) => {
+router.get('/:id/stats', adminRequired, validateId, async (req, res, next) => {
   try {
     const ann = await Announcement.findById(req.params.id, 'readBy title createdAt').lean();
     if (!ann) return res.status(404).json({ message: '公告不存在' });

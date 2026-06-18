@@ -5,22 +5,23 @@ services:
     container_name: storycine-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS:-admin123}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS:?MONGO_ROOT_PASS 未设置，请在 .env 中配置}
       MONGO_INITDB_DATABASE: storycine
     volumes:
       - mongo_data:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
-      - "27021:27017"
+      - "127.0.0.1:27021:27017"
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: storycine-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD 未设置，请在 .env 中配置}
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     restart: unless-stopped
 
   minio:
@@ -28,13 +29,13 @@ services:
     container_name: storycine-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER 未设置，请在 .env 中配置}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 未设置，请在 .env 中配置}
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     restart: unless-stopped
 
   app:
@@ -42,15 +43,19 @@ services:
     container_name: storycine-app
     volumes:
       - ./backups:/app/backups
+      - ./backups-cold:/app/backups-cold
       - uploads_data:/app/uploads
     env_file:
       - ./backend/.env
     environment:
       - SERVER_PORT=3012
       - RESET_ADMIN_PWD=false
-      - JWT_SECRET=${JWT_SECRET:-change-me-to-a-random-string-at-least-32-chars}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET 未设置，请在 .env 中配置}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY 未设置，请在 .env 中配置}
+      - COLD_BACKUP_DIR=/app/backups-cold
       - MONGO_URI=mongodb://storycine_user:storycine_pass@mongodb:27017/storycine?authSource=storycine
       - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD 未设置，请在 .env 中配置}
       - MINIO_ENDPOINT=minio:9000
     ports:
       - "3012:3012"

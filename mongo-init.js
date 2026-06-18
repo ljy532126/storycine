@@ -1,3 +1,5 @@
+// 应用数据库用户（仅对 storycine 库有 readWrite 权限，非 root）
+// 生产环境请修改此密码，并同步更新 docker-compose.yml 中的 MONGO_URI
 db.createUser({
   user: 'storycine_user',
   pwd: 'storycine_pass',

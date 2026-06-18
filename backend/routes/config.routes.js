@@ -120,7 +120,7 @@ router.put('/llm', async (req, res, next) => {
     const llmProviders = settings.llmProviders || {};
     if (!llmProviders[provider]) llmProviders[provider] = {};
     const p = llmProviders[provider];
-    if (apiKey !== undefined) p.apiKey = apiKey;
+    if (apiKey !== undefined && apiKey.indexOf('****') === -1) p.apiKey = apiKey;
     if (baseUrl !== undefined) p.baseUrl = baseUrl;
     if (model !== undefined) p.model = model;
     if (imageModel !== undefined) p.imageModel = imageModel;
