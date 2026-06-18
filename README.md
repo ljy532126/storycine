@@ -133,7 +133,8 @@ cd ../frontend && npm install
 
 # 3. 配置环境变量
 cp backend/.env.example backend/.env
-# 编辑 backend/.env，至少填入一个 LLM 的 API Key
+# 编辑 backend/.env，至少设置 JWT_SECRET、ENCRYPTION_KEY
+# Docker 部署请用 bash setup.sh 一键配置
 
 # 4. 启动数据库（选一种）
 # 选项A: Docker 只启动数据库
@@ -150,32 +151,16 @@ cd frontend && npm run dev
 
 ### 方式二：Docker 一键部署
 
-> 前提：服务器需安装 **git**、**docker**、**docker-compose**
-
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/ljy532126/storycine.git
 cd storycine
 
-# 2. 配置环境变量（重要！）
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，以下为必填项：
-#   JWT_SECRET          — 随机32位字符串
-#   ENCRYPTION_KEY      — 随机32位字符串（加密存储 API Key 用）
-#   MONGO_ROOT_PASS     — MongoDB root 密码
-#   REDIS_PASSWORD      — Redis 密码
-#   MINIO_ROOT_USER     — MinIO 用户名
-#   MINIO_ROOT_PASSWORD — MinIO 密码
-# 生成随机密钥: openssl rand -hex 32
-
-# 3. 创建备份冷备目录（可选但推荐）
-mkdir -p backups-cold
-
-# 4. 一键构建 + 启动
-docker compose up -d --build
-
-# 5. 打开浏览器 http://你的服务器IP:3012
+# 2. 运行配置向导（自动生成密钥、配置 .env、构建并启动）
+bash setup.sh
 ```
+
+脚本会提示你输入公网地址，其他密钥全自动生成。启动后打开浏览器访问你的服务器地址即可。
 
 ### 方式三：服务器无法访问 GitHub（国内常见）
 
@@ -196,10 +181,11 @@ cd /www/wwwroot
 mkdir -p storycine && cd storycine
 tar -xzf ../storycine.tar.gz
 
-# 3. 配置环境变量
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，填写所有必填项（参考方式二第2步）
-mkdir -p backups-cold
+# 3. 配置环境（二选一）
+# 选项A: 用配置向导（推荐）
+bash setup.sh
+# 选项B: 手动配置
+cp backend/.env.example backend/.env && vim backend/.env
 
 # 4. 构建 + 启动
 sh deploy.sh
