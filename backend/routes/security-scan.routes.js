@@ -35,13 +35,15 @@ router.get('/run', requireAdmin, async (req, res) => {
   res.write(`data: ${JSON.stringify({ type: 'start', target, severity })}\n\n`);
 
   const args = [
+    'run', '--rm', '--network', 'host',
+    'projectdiscovery/nuclei',
     '-u', target,
     '-severity', severity,
     '-silent',
     '-no-interactsh',
   ];
 
-  const proc = spawn('nuclei', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const proc = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
   let buffer = '';
 
   proc.stdout.on('data', (d) => {
