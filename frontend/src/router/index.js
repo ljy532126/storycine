@@ -14,7 +14,6 @@ const WorkspaceView = () => import('../views/WorkspaceView.vue');
 const UserManagement = () => import('../views/UserManagement.vue');
 const ErrorLog = () => import('../views/ErrorLog.vue');
 const Announcements = () => import('../views/Announcements.vue');
-const SecurityScan = () => import('../views/SecurityScan.vue');
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -36,7 +35,6 @@ const routes = [
   { path: '/users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/error-logs', name: 'ErrorLog', component: ErrorLog, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/announcements', name: 'Announcements', component: Announcements, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/security-scan', name: 'SecurityScan', component: SecurityScan, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/profile', redirect: '/settings' },
 ];
 

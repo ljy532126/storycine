@@ -210,7 +210,6 @@ app.use('/api/v1/auth', require('./routes/auth.routes'));
 app.use('/api/v1/error-logs', require('./routes/error-log.routes'));
 app.use('/api/v1/announcements', require('./routes/announcement.routes'));
 app.use('/api/v1/backup', require('./routes/backup.routes'));
-app.use('/api/v1/security-scan', require('./routes/security-scan.routes'));
 app.use('/api/geojson', require('./routes/geojson-proxy'));
 
 app.get('/api/health', (req, res) => {
