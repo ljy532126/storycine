@@ -161,6 +161,14 @@ const videoUpload = multer({
     },
   }),
   limits: { fileSize: 500 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+    if (allowed.includes(file.mimetype) || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('仅允许上传视频文件（mp4/webm/mov/avi）'));
+    }
+  },
 }).single('video');
 
 const imageUpload = multer({

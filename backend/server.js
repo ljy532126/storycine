@@ -48,7 +48,17 @@ app.set('io', io);
 require('./utils/socket-registry').setIO(io);
 
 app.use(helmet({
-  contentSecurityPolicy: false,  // SPA 需要内联脚本
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      mediaSrc: ["'self'", "https:"],
+    },
+  },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors({

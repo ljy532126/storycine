@@ -213,7 +213,17 @@ router.post('/export', requireAdmin, async (req, res) => {
 router.post('/import', requireAdmin, async (req, res) => {
   try {
     const multer = require('multer');
-    const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } }).single('file');
+    const upload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 500 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (file.originalname.endsWith('.gz') || file.mimetype === 'application/gzip' || file.mimetype === 'application/x-gzip') {
+          cb(null, true);
+        } else {
+          cb(new Error('仅允许上传 .gz 格式的数据库备份文件'));
+        }
+      },
+    }).single('file');
 
     upload(req, res, async (err) => {
       if (err) return res.status(400).json({ code: 400, message: '文件上传失败: ' + err.message });
