@@ -119,7 +119,7 @@ class CompositionEngine {
 
   /** 实际合成时长（含转场裁剪），秒 */
   _calcTotalDuration(segments) {
-    return segments.reduce((s, seg) => s + (seg.duration || 0), 0);
+    return segments.reduce((s, seg) => s + (Number(seg.duration) || 0), 0);
   }
 
   // ------------------------------------------------------------------
@@ -132,7 +132,7 @@ class CompositionEngine {
    */
   async _prepareSegment(shot, index) {
     const segFile = path.join(this.workDir, `seg_${index}.mp4`);
-    const duration = shot.duration || 3;
+    const duration = Number(shot.duration) || 3;
 
     const visualUrl = shot.renderedVideo || shot.renderedImage;
     if (!visualUrl) throw new Error('缺少 renderedImage / renderedVideo');
