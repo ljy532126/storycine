@@ -34,8 +34,11 @@ router.get('/run', requireAdmin, async (req, res) => {
 
   res.write(`data: ${JSON.stringify({ type: 'start', target, severity })}\n\n`);
 
+  // 先在宿主机上确保模板已下载（首次会自动 -ut，后续复用）
+  // docker run 挂载宿主机模板目录，避免每次都重新下载
   const args = [
     'run', '--rm', '--network', 'host',
+    '-v', '/root/.nuclei-templates:/root/.local/share/nuclei-templates',
     'projectdiscovery/nuclei',
     '-u', target,
     '-severity', severity,
