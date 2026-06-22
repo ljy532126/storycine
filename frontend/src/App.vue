@@ -63,6 +63,10 @@
             <el-icon><Bell /></el-icon>
             <template #title>公告管理</template>
           </el-menu-item>
+          <el-menu-item index="/security-scan" v-if="isAdmin">
+            <el-icon><WarningFilled /></el-icon>
+            <template #title>安全扫描</template>
+          </el-menu-item>
           <el-menu-item index="/settings">
             <el-icon><Setting /></el-icon>
             <template #title>系统设置</template>
@@ -321,7 +325,7 @@ const PAGE_TITLES = {
   Dashboard: '导演台', Statistics: '数据看板', ProjectList: '片场管理',
   WorkspaceView: '工作台', MediaLibrary: '素材库', TTSLibrary: '配音素材库',
   UserManagement: '用户管理', ErrorLog: '错误日志', Announcements: '公告管理',
-  Settings: '系统设置', AIStorageConfig: '存储设置',
+  SecurityScan: '安全扫描', Settings: '系统设置', AIStorageConfig: '存储设置',
 };
 const pageTitle = computed(() => {
   const ws = route.query?.ws;
