@@ -15,6 +15,13 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 # 安装 ffmpeg + ffprobe（视频合成必需）
 RUN apk add --no-cache ffmpeg
 
+# 安装 nuclei 安全扫描引擎 + 预下载模板库
+RUN apk add --no-cache wget ca-certificates \
+    && wget -qO /usr/local/bin/nuclei https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei-linux-amd64 \
+    && chmod +x /usr/local/bin/nuclei \
+    && nuclei -version \
+    && nuclei -ut -silent
+
 # 使用国内镜像加速
 RUN npm config set registry https://registry.npmmirror.com
 

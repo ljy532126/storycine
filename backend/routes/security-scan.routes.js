@@ -35,15 +35,13 @@ router.get('/run', requireAdmin, async (req, res) => {
   res.write(`data: ${JSON.stringify({ type: 'start', target, severity })}\n\n`);
 
   const args = [
-    'run', '--rm',
-    'projectdiscovery/nuclei',
     '-u', target,
     '-severity', severity,
     '-silent',
     '-no-interactsh',
   ];
 
-  const proc = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const proc = spawn('nuclei', args, { stdio: ['ignore', 'pipe', 'pipe'] });
   let buffer = '';
 
   proc.stdout.on('data', (d) => {
@@ -78,7 +76,7 @@ router.get('/run', requireAdmin, async (req, res) => {
   });
 
   proc.on('error', (err) => {
-    res.write(`data: ${JSON.stringify({ type: 'error', message: `无法启动 Docker: ${err.message}。请确认服务器已安装 Docker 且已拉取 nuclei 镜像（docker pull projectdiscovery/nuclei）` })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: `无法启动 nuclei: ${err.message}` })}\n\n`);
     res.end();
   });
 
