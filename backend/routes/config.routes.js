@@ -241,6 +241,14 @@ router.put('/storage', async (req, res, next) => {
     const cfg = { ...(settings.storageConfig || {}) };
     const { enabled, provider, endpoint, accessKeyId, accessKeySecret, bucket, prefix } = req.body;
     if (typeof enabled === 'boolean') cfg.enabled = enabled;
+
+    // 自动启用：所有必填项都填了就 auto-enable，用户不需要额外点开关
+    const hasAllRequired = provider && endpoint && accessKeyId && accessKeySecret && bucket;
+    if (hasAllRequired && !cfg.enabled) {
+      cfg.enabled = true;
+      console.log('[config:storage] 检测到完整对象存储配置，自动启用');
+    }
+
     if (provider) cfg.provider = provider;
     if (endpoint !== undefined) cfg.endpoint = endpoint;
     if (accessKeyId !== undefined && accessKeyId !== maskKey(cfg.accessKeyId) && accessKeyId !== '****') cfg.accessKeyId = accessKeyId;

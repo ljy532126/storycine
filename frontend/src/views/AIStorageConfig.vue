@@ -165,6 +165,10 @@ async function load() {
 
 async function saveStorage() {
   try {
+    // 自动启用：所有必填项都填了就 auto-enable
+    const hasAllRequired = stor.provider && stor.endpoint && stor.accessKeyId && stor.accessKeySecret && stor.bucket;
+    if (hasAllRequired && !stor.enabled) stor.enabled = true;
+
     const body = { ...stor }; delete body._hasSecret;
     const res = await fetch('/api/v1/config/storage', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
