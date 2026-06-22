@@ -138,7 +138,7 @@ async function uploadLocal(input, filename, category) {
 }
 
 async function uploadToCloud(config, input, filename, category) {
-  const fullKey = path.posix.join(config.prefix || '/autodrama/uploads/', filename).replace(/\\/g, '/').replace(/^\/+/, '');
+  const fullKey = path.posix.join(config.prefix || '/autodrama/uploads/', category || '', filename).replace(/\\/g, '/').replace(/^\/+/, '');
   const buffer = Buffer.isBuffer(input) ? input : fs.readFileSync(input);
 
   switch (config.provider) {

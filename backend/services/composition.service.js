@@ -159,23 +159,36 @@ async function processComposition(compositionId) {
     // ---- Upload to storage (cloud or local) ----
     const filename = path.basename(outputPath);
     let publicUrl;
+    let isCloudUrl = false;
     try {
       publicUrl = await storage.upload(outputPath, filename, 'compositions');
+      // 云端上传成功返回的是 https:// 开头的完整 URL
+      isCloudUrl = publicUrl.startsWith('https://') || publicUrl.startsWith('http://');
     } catch (upErr) {
       console.error('[composition] storage upload failed, using local URL:', upErr.message);
       publicUrl = result.publicUrl || `/uploads/compositions/${filename}`;
     }
-    // 开发环境直接用本地路径，不走 PUBLIC_URL 重写
-    const resolvedUrl = storage.resolvePublicUrl(publicUrl);
-    const localUrl = publicUrl.startsWith('http') ? `http://localhost:${process.env.SERVER_PORT || 3012}${new URL(publicUrl).pathname}` : publicUrl;
-    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+
+    let outputUrl;
+    if (isCloudUrl) {
+      // 云存储 URL 始终使用 resolvePublicUrl（生产=原样，dev=若有 PUBLIC_URL 则替换域名）
+      outputUrl = storage.resolvePublicUrl(publicUrl);
+    } else {
+      // 本地路径：dev 用 localhost，生产用 PUBLIC_URL 重写
+      const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+      if (isDev) {
+        outputUrl = publicUrl.startsWith('http') ? publicUrl : `http://localhost:${process.env.SERVER_PORT || 3012}${publicUrl}`;
+      } else {
+        outputUrl = storage.resolvePublicUrl(publicUrl);
+      }
+    }
 
     // ---- Success (重取最新文档避免 onProgress 并发 save 冲突) ----
     const fresh = await Composition.findById(compositionId);
     if (fresh) {
       fresh.status = 'completed';
       fresh.progress = 100;
-      fresh.outputUrl = isDev ? localUrl : resolvedUrl;
+      fresh.outputUrl = outputUrl;
       fresh.totalDuration = result.duration || fresh.totalDuration;
       fresh.warnings = result.warnings || [];
       await fresh.save();
@@ -184,7 +197,7 @@ async function processComposition(compositionId) {
     emit('composition-complete', {
       status: 'completed',
       progress: 100,
-      outputUrl: isDev ? localUrl : resolvedUrl,
+      outputUrl,
       duration: result.duration,
       warnings: result.warnings,
     });
