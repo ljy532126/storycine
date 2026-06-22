@@ -10,6 +10,8 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
+# 阿里云 Alpine 镜像加速（国内服务器必备）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 # 安装 ffmpeg + ffprobe（视频合成必需）
 RUN apk add --no-cache ffmpeg
 
