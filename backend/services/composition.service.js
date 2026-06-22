@@ -171,16 +171,12 @@ async function processComposition(compositionId) {
 
     let outputUrl;
     if (isCloudUrl) {
-      // 云存储 URL 始终使用 resolvePublicUrl（生产=原样，dev=若有 PUBLIC_URL 则替换域名）
-      outputUrl = storage.resolvePublicUrl(publicUrl);
+      // 云存储 URL 直接返回（外网可访问）
+      outputUrl = publicUrl;
     } else {
-      // 本地路径：dev 用 localhost，生产用 PUBLIC_URL 重写
-      const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
-      if (isDev) {
-        outputUrl = publicUrl.startsWith('http') ? publicUrl : `http://localhost:${process.env.SERVER_PORT || 3012}${publicUrl}`;
-      } else {
-        outputUrl = storage.resolvePublicUrl(publicUrl);
-      }
+      // 本地路径：用 PUBLIC_URL 重写为外网可访问的完整 URL
+      // 如果 PUBLIC_URL 没配，退回 localhost（仅限本地开发调试）
+      outputUrl = storage.resolvePublicUrl(publicUrl);
     }
 
     // ---- Success (重取最新文档避免 onProgress 并发 save 冲突) ----
