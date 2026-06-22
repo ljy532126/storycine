@@ -109,6 +109,18 @@ mkdir -p backups-cold
 echo "✅ 配置文件已生成: backend/.env"
 echo ""
 
+# 同时写入项目根目录 .env（docker compose 默认读取，用于 ${VAR:?} 插值）
+cat > .env << ROOTENV
+MONGO_ROOT_PASS=${MONGO_ROOT_PASS}
+REDIS_PASSWORD=${REDIS_PASSWORD}
+JWT_SECRET=${JWT_SECRET}
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+MINIO_ROOT_USER=${MINIO_ROOT_USER}
+MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+ROOTENV
+echo "✅ 已生成项目根目录 .env（docker compose 插值用）"
+echo ""
+
 # 展示凭据
 echo "========================================"
 echo "  📋 请保存以下信息（仅此一次！）"
