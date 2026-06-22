@@ -1,12 +1,34 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const { spawn } = require('child_process');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { connectDB } = require('./config/database');
 const errorHandler = require('./middleware/error-handler');
+
+// 启动时检查 ffmpeg 是否可用
+function checkFfmpeg() {
+  return new Promise((resolve) => {
+    const proc = spawn('ffmpeg', ['-version'], { stdio: 'pipe' });
+    let stdout = '';
+    proc.stdout.on('data', d => { stdout += d.toString(); });
+    proc.on('close', code => {
+      if (code === 0) {
+        console.log('[startup] ffmpeg 已就绪 — ' + stdout.split('\n')[0].trim());
+      } else {
+        console.error('[startup] ⚠️  ffmpeg 未安装或不可用，视频合成将失败！请在 Dockerfile 中添加: RUN apk add --no-cache ffmpeg');
+      }
+      resolve();
+    });
+    proc.on('error', () => {
+      console.error('[startup] ⚠️  ffmpeg 未安装或不可用，视频合成将失败！请在 Dockerfile 中添加: RUN apk add --no-cache ffmpeg');
+      resolve();
+    });
+  });
+}
 
 const projectRoutes = require('./routes/project.routes');
 const scriptRoutes = require('./routes/script.routes');
@@ -369,6 +391,9 @@ connectDB().then(async () => {
 
   // 初始化管理员 + 从 .env 种子 API Key（迁移之后，确保种子数据也被加密）
   await initAdmin();
+
+  // 检查 ffmpeg 可用性（非阻塞，仅日志警告）
+  checkFfmpeg();
 
   server.listen(PORT, () => {
     console.log('');

@@ -227,8 +227,13 @@ class PromoEngine {
     return new Promise((resolve, reject) => {
       if (this.aborted) return reject(Object.assign(new Error('aborted'), { code: 'ABORTED' }));
       const proc = spawn('ffmpeg', args, { windowsHide: true });
-      proc.stderr.resume();
-      proc.on('close', code => code===0 ? resolve() : reject(new Error(`ffmpeg ${label} exit ${code}`)));
+      let stderr = '';
+      proc.stderr.on('data', d => { stderr += d.toString(); });
+      proc.on('close', code => {
+        if (code === 0) return resolve();
+        console.error(`[ffmpeg] ${label} FAILED (exit ${code})\n${stderr.slice(-600)}`);
+        reject(new Error(`ffmpeg ${label} exit ${code} — ${stderr.slice(-200).replace(/\n/g, ' ')}`));
+      });
       proc.on('error', reject);
     });
   }

@@ -10,6 +10,9 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
+# 安装 ffmpeg + ffprobe（视频合成必需）
+RUN apk add --no-cache ffmpeg
+
 # 使用国内镜像加速
 RUN npm config set registry https://registry.npmmirror.com
 

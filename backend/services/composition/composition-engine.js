@@ -415,9 +415,8 @@ ${events.join('\n')}`;
         if (code === 0) {
           resolve();
         } else {
-          const tail = stderr.slice(-600);
-          console.error(`[ffmpeg] ${label} FAILED (exit ${code})\n${tail}`);
-          reject(new Error(`FFmpeg 失败 (${label}): exit ${code}`));
+          console.error(`[ffmpeg] ${label} FAILED (exit ${code})\n${stderr.slice(-600)}`);
+          reject(new Error(`FFmpeg 失败 (${label}): exit ${code} — ${stderr.slice(-200).replace(/\n/g, ' ')}`));
         }
       });
 
