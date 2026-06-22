@@ -12,7 +12,7 @@ const compositionSchema = new mongoose.Schema({
   thumbnailUrl: { type: String, default: '' },
   backgroundMusic: { type: String, default: '' },
   subtitlesEnabled: { type: Boolean, default: true },
-  transitions: { type: String, default: 'fade' },
+  transitions: { type: String, enum: ['none', 'fade', 'cut', 'slide', 'dissolve'], default: 'fade' },
   status: { type: String, enum: ['pending', 'rendering', 'completed', 'failed'], default: 'pending' },
   progress: { type: Number, default: 0 },
   errorMessage: { type: String, default: '' },

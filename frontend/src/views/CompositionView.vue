@@ -32,6 +32,7 @@
             </el-form-item>
             <el-form-item label="转场效果">
               <el-select v-model="composeOptions.transitions">
+                <el-option label="无转场" value="none" />
                 <el-option label="淡入淡出" value="fade" />
                 <el-option label="剪切" value="cut" />
                 <el-option label="滑动" value="slide" />
@@ -224,7 +225,7 @@ async function copyOutputUrl(url) {
     ElMessage.error('复制失败，请手动复制：' + fullUrl);
   }
 }
-function compTransitionLabel(t) { return { fade: '淡入淡出', cut: '剪切', slide: '滑动', dissolve: '叠加' }[t] || t; }
+function compTransitionLabel(t) { return { none: '无转场', fade: '淡入淡出', cut: '剪切', slide: '滑动', dissolve: '叠加' }[t] || t; }
 async function deleteTask(c) {
   try { await ElMessageBox.confirm('确认删除该合成任务？', '提示', { type: 'warning', confirmButtonText: '删除' }); } catch { return; }
   try {
