@@ -56,11 +56,14 @@ const storyboardSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 storyboardSchema.pre('save', function(next) {
+  if (!this.isModified('shots') && !this.isNew) return next();
   this.totalShots = this.shots.length;
   this.totalDuration = this.shots.reduce((sum, s) => sum + s.duration, 0);
   this.progress.renderedShots = this.shots.filter(s => s.status === 'completed').length;
   this.progress.percentage = this.totalShots > 0 ? Math.round(this.progress.renderedShots / this.totalShots * 100) : 0;
   next();
 });
+
+storyboardSchema.index({ scriptId: 1 });
 
 module.exports = mongoose.model('Storyboard', storyboardSchema);

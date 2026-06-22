@@ -66,29 +66,41 @@ router.get('/daily-overview', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ===== 2. 近7天趋势 =====
+// ===== 2. 近7天趋势（单次聚合，替代14次countDocuments） =====
 router.get('/weekly-trend', async (req, res, next) => {
   try {
-    const days = [];
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    const [scriptAgg, compAgg] = await Promise.all([
+      Script.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo, $lt: dayEnd } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Composition.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo, $lt: dayEnd } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const labels = [];
     const scriptsData = [];
     const compsData = [];
-    const labels = [];
+
+    const scriptMap = {}; scriptAgg.forEach(s => { scriptMap[s._id] = s.count; });
+    const compMap = {}; compAgg.forEach(c => { compMap[c._id] = c.count; });
 
     for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const dayEnd = new Date(dayStart.getTime() + 86400000);
-
-      const [sc, cc] = await Promise.all([
-        Script.countDocuments({ createdAt: { $gte: dayStart, $lt: dayEnd } }),
-        Composition.countDocuments({ createdAt: { $gte: dayStart, $lt: dayEnd } }),
-      ]);
-
-      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      const d = new Date(sevenDaysAgo);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().substring(0, 10);
       labels.push(weekdays[d.getDay()]);
-      scriptsData.push(sc);
-      compsData.push(cc);
+      scriptsData.push(scriptMap[key] || 0);
+      compsData.push(compMap[key] || 0);
     }
 
     res.json({ data: { labels, scripts: scriptsData, compositions: compsData } });
@@ -234,29 +246,27 @@ router.get('/user-activity', async (req, res, next) => {
 // ===== 6. 用户分布 =====
 router.get('/user-distribution', async (req, res, next) => {
   try {
-    // 从 Analytics 最近30天数据聚合
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
-    const events = await Analytics.find(
-      { createdAt: { $gte: thirtyDaysAgo }, 'metadata.platform': { $ne: '' } },
-      'metadata.platform metadata.browser metadata.region'
-    ).lean();
+    const match = { createdAt: { $gte: thirtyDaysAgo }, 'metadata.platform': { $ne: '' } };
 
-    function aggregate(field) {
-      const map = {};
-      events.forEach(e => {
-        const val = e.metadata?.[field] || '未知';
-        map[val] = (map[val] || 0) + 1;
-      });
-      const total = Object.values(map).reduce((s, v) => s + v, 0) || 1;
-      return Object.entries(map)
-        .map(([name, count]) => ({ name, pct: Math.round(count / total * 100) }))
-        .sort((a, b) => b.pct - a.pct);
+    async function aggDist(field) {
+      const result = await Analytics.aggregate([
+        { $match: match },
+        { $group: { _id: { $ifNull: ['$metadata.' + field, '未知'] }, count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]);
+      const total = result.reduce((s, r) => s + r.count, 0) || 1;
+      return result.map(r => ({ name: r._id, pct: Math.round(r.count / total * 100) }));
     }
 
+    const [regionsRaw, platforms, browsers] = await Promise.all([
+      aggDist('region'),
+      aggDist('platform'),
+      aggDist('browser'),
+    ]);
+
     const regionColors = ['#C9A84C', '#1A1A2E', '#8B7355', '#D4C5C0', '#E8D5C4', '#8B6914', '#A89070'];
-    const regions = aggregate('region').slice(0, 7).map((r, i) => ({ ...r, color: regionColors[i] || '#A89070' }));
-    const platforms = aggregate('platform').map((p, i) => ({ ...p, color: regionColors[i] || '#A89070' }));
-    const browsers = aggregate('browser').map((b, i) => ({ ...b, color: regionColors[i] || '#A89070' }));
+    const regions = regionsRaw.slice(0, 7).map((r, i) => ({ ...r, color: regionColors[i] || '#A89070' }));
 
     res.json({ data: { regions, platforms, browsers } });
   } catch (e) { next(e); }

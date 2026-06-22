@@ -23,4 +23,7 @@ const projectSchema = new mongoose.Schema({
   isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 
+projectSchema.index({ userId: 1, isDeleted: 1 });
+projectSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Project', projectSchema);

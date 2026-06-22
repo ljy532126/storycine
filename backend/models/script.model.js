@@ -41,6 +41,7 @@ const scriptSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 scriptSchema.pre('save', function(next) {
+  if (!this.isModified('scenes') && !this.isNew) return next();
   let total = 0;
   this.scenes.forEach(s => {
     total += (s.sceneDescription || '').length;

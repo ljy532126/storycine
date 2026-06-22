@@ -19,4 +19,7 @@ const compositionSchema = new mongoose.Schema({
   warnings: { type: [String], default: [] },
 }, { timestamps: true });
 
+compositionSchema.index({ storyboardId: 1 });
+compositionSchema.index({ status: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Composition', compositionSchema);

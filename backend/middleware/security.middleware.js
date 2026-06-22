@@ -143,18 +143,8 @@ function securityMiddleware(req, res, next) {
     return res.status(429).json({ message: '请求过于频繁，请稍后再试' });
   }
 
-  // 劫持 res.end / res.json 以检测 4xx
-  const origEnd = res.end;
-  const origJson = res.json.bind(res);
-  res.json = function (body) {
-    recordAbuse(req, res);
-    return origJson(body);
-  };
-  const origSend = res.send.bind(res);
-  res.send = function (body) {
-    recordAbuse(req, res);
-    return origSend(body);
-  };
+  // 用 finish 事件检测 4xx 响应（零闭包分配，不覆写 res 方法）
+  res.on('finish', () => { recordAbuse(req, res); });
 
   next();
 }
