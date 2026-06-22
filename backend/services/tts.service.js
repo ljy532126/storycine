@@ -214,7 +214,7 @@ async function synthesizeSpeech(userId, params) {
     ttsParams: { speaker: body.req_params.speaker, format },
   });
 
-  if (params.storyboardId && params.shotNumber != null) {
+  if (params.storyboardId && params.shotNumber != null && !params.skipSbUpdate) {
     try {
       const sb = await Storyboard.findById(params.storyboardId);
       if (sb) {
@@ -232,17 +232,52 @@ async function synthesizeSpeech(userId, params) {
 }
 
 async function batchSynthesize(userId, shots) {
+  const CONCURRENCY = 3;
   const results = [];
-  for (let i = 0; i < shots.length; i++) {
-    const s = shots[i];
+  // 按 storyboardId 分组，同 storyboard 的 shot 更新一次性 save
+  const sbUpdates = new Map();
+
+  async function processOne(shot) {
     try {
-      const r = await synthesizeSpeech(userId, { ...s, userId });
-      results.push({ shotNumber: s.shotNumber, success: true, ...r });
+      const r = await synthesizeSpeech(userId, { ...shot, userId, skipSbUpdate: true });
+      results.push({ shotNumber: shot.shotNumber, success: true, ...r });
+      // 收集 storyboard 更新，延迟批量保存
+      if (shot.storyboardId && shot.shotNumber != null && r.audioUrl) {
+        if (!sbUpdates.has(shot.storyboardId)) sbUpdates.set(shot.storyboardId, new Map());
+        sbUpdates.get(shot.storyboardId).set(shot.shotNumber, r.audioUrl);
+      }
     } catch (e) {
-      results.push({ shotNumber: s.shotNumber, success: false, error: e.message });
+      results.push({ shotNumber: shot.shotNumber, success: false, error: e.message });
     }
-    if (i < shots.length - 1) await new Promise(r => setTimeout(r, 500));
   }
+
+  // 并发池
+  let i = 0;
+  async function worker() {
+    while (i < shots.length) {
+      const idx = i++;
+      await processOne(shots[idx]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, shots.length) }, () => worker()));
+
+  // 批量更新分镜 audioUrl（每个 storyboard 只 save 一次）
+  for (const [sbId, shotMap] of sbUpdates) {
+    try {
+      const sb = await Storyboard.findById(sbId);
+      if (sb) {
+        sb.shots.forEach(s => {
+          const url = shotMap.get(s.shotNumber);
+          if (url) {
+            if (!s.dialogue) s.dialogue = {};
+            s.dialogue.audioUrl = url;
+          }
+        });
+        await sb.save();
+      }
+    } catch (e) { /* 非致命 */ }
+  }
+
   return results;
 }
 

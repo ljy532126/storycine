@@ -67,11 +67,16 @@ async function logLogin(username, ip, ua, success, message, userId) {
 }
 
 // ===== 获取图形验证码 =====
+// 定期清理过期验证码（避免每次请求 O(n) 遍历）
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of captchaStore) { if (v.expires < now) captchaStore.delete(k); }
+}, 300000); // 每5分钟清理一次
+
 router.get('/captcha', captchaLimiter, (req, res) => {
   const captcha = svgCaptcha.create({ size: 4, noise: 3, ignoreChars: '0o1il', color: true, background: '#FBF7F0' });
   const captchaId = require('crypto').randomBytes(12).toString('hex');
   captchaStore.set(captchaId, { text: captcha.text.toLowerCase(), expires: Date.now() + 300000 });
-  for (const [k, v] of captchaStore) { if (v.expires < Date.now()) captchaStore.delete(k); }
   res.json({ data: { captchaId, svg: captcha.data } });
 });
 

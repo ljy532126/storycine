@@ -45,33 +45,56 @@ function buildShotPrompt(prompt, characterMap) {
  * @returns {Promise<Array>}
  */
 async function batchCreateCharacters(projectId, characters) {
+  if (!characters || characters.length === 0) return [];
+  // 一次查询所有已存在的角色，避免 N+1
+  const names = characters.map(c => c.name).filter(Boolean);
+  const existingDocs = await Character.find({ projectId, name: { $in: names } }).lean();
+  const existingMap = new Map(existingDocs.map(doc => [doc.name, doc]));
   const results = [];
+  const toCreate = [];
+
   for (const char of characters) {
-    try {
-      const existing = await Character.findOne({ projectId, name: char.name });
-      if (!existing) {
-        const created = await Character.create({
-          projectId,
-          name: char.name,
-          age: char.age || 0,
-          gender: char.gender || '其他',
-          appearance: char.appearance || '',
-          personality: char.personality || '',
-          background: char.background || '',
-          relationships: char.relationships || '',
-          weakness: char.weakness || '',
-          goal: char.goal || '',
-          tags: char.tags || [],
-          roleType: char.role_type || '配角',
-        });
-        results.push(created);
-      } else {
-        results.push(existing);
-      }
-    } catch (err) {
-      console.error(`Failed to create character ${char.name}:`, err.message);
+    if (!char.name) continue;
+    const existing = existingMap.get(char.name);
+    if (existing) {
+      results.push(existing);
+    } else {
+      toCreate.push({
+        projectId,
+        name: char.name,
+        age: char.age || 0,
+        gender: char.gender || '其他',
+        appearance: char.appearance || '',
+        personality: char.personality || '',
+        background: char.background || '',
+        relationships: char.relationships || '',
+        weakness: char.weakness || '',
+        goal: char.goal || '',
+        tags: char.tags || [],
+        roleType: char.role_type || '配角',
+      });
     }
   }
+
+  if (toCreate.length > 0) {
+    try {
+      const created = await Character.insertMany(toCreate, { ordered: false });
+      results.push(...created);
+    } catch (err) {
+      // insertMany ordered:false 时部分写入仍成功，报错只影响重复项
+      console.error('[asset] batchCreateCharacters insertMany error:', err.message);
+      // 回退：逐条创建不重复的
+      for (const doc of toCreate) {
+        try {
+          const c = await Character.create(doc);
+          results.push(c);
+        } catch (e) {
+          if (e.code !== 11000) console.error(`[asset] Failed to create character ${doc.name}:`, e.message);
+        }
+      }
+    }
+  }
+
   return results;
 }
 

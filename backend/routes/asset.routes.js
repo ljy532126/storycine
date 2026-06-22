@@ -434,10 +434,13 @@ router.post('/extract-all', aiExtractLimiter, async (req, res, next) => {
       });
     });
 
-    // 筛选出新角色
+    // 一次查询所有已存在角色（避免 N+1）
+    const existingChars = await Character.find({ projectId, name: { $in: [...charNames] } }).lean();
+    const existingMap = new Map(existingChars.map(c => [c.name, c]));
+
     const newChars = [];
     for (const name of charNames) {
-      const exists = await Character.findOne({ projectId, name });
+      const exists = existingMap.get(name);
       if (!exists) {
         newChars.push({ name, context: (charContext[name] || []).slice(0, 5).join('; ') });
       } else {
@@ -533,8 +536,12 @@ ${charListText}
       if (s.location && s.location.trim()) locSet.add(s.location.trim());
     });
 
+    // 一次查询所有已存在场景（避免 N+1）
+    const existingScenes = await SceneAsset.find({ projectId, sceneName: { $in: [...locSet] } }).lean();
+    const existingSceneMap = new Map(existingScenes.map(s => [s.sceneName, s]));
+
     for (const loc of locSet) {
-      const exists = await SceneAsset.findOne({ projectId, sceneName: loc });
+      const exists = existingSceneMap.get(loc);
       if (!exists) {
         const { callLLM } = require('../utils/llm-client');
         const scenesWithLoc = script.scenes.filter(s => s.location?.trim() === loc);
@@ -608,8 +615,11 @@ ${charListText}
       });
     });
 
+    const existingProps = await Prop.find({ projectId, propName: { $in: [...foundProps] } }).lean();
+    const existingPropMap = new Map(existingProps.map(p => [p.propName, p]));
+
     for (const propName of foundProps) {
-      const exists = await Prop.findOne({ projectId, propName });
+      const exists = existingPropMap.get(propName);
       if (!exists) {
         const { callLLM } = require('../utils/llm-client');
         let propDesc = '';
