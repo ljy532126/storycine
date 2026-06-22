@@ -132,7 +132,7 @@ class CompositionEngine {
    */
   async _prepareSegment(shot, index) {
     const segFile = path.join(this.workDir, `seg_${index}.mp4`);
-    const duration = Number(shot.duration) || 3;
+    const storedDuration = Number(shot.duration) || 3;
 
     const visualUrl = shot.renderedVideo || shot.renderedImage;
     if (!visualUrl) throw new Error('缺少 renderedImage / renderedVideo');
@@ -140,25 +140,32 @@ class CompositionEngine {
 
     const scaleFilter = `scale=${this.width}:${this.height}:force_original_aspect_ratio=decrease,pad=${this.width}:${this.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p`;
 
+    // 视频镜头的真实时长（探测原视频，不信任存储的 duration）
+    let actualDuration = storedDuration;
+
     // Normalise video KEEPING original audio (no -an)
     const vidOnly = path.join(this.workDir, `_v_${index}.mp4`);
     if (shot.renderedVideo) {
+      // 先探原视频真实时长
+      const probed = await this._probeDuration(visualFile);
+      if (probed && probed > 0) actualDuration = probed;
+
       await this._ffmpeg([
         '-i', visualFile,
-        '-t', String(duration),
         '-vf', `${scaleFilter},fps=${this.frameRate},setpts=PTS-STARTPTS`,
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
         '-c:a', 'aac', '-b:a', '128k',
         '-y', vidOnly,
       ], `normalise-video #${shot.shotNumber}`);
     } else {
-      // Image → video + silence
+      // Image → video + silence（用存储的 duration，因为没有真实视频）
+      actualDuration = storedDuration;
       await this._ffmpeg([
         '-loop', '1', '-i', visualFile,
-        '-t', String(duration),
+        '-t', String(storedDuration),
         '-vf', `${scaleFilter},fps=${this.frameRate},setpts=PTS-STARTPTS`,
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
-        '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
+        '-f', 'lavfi', '-t', String(storedDuration), '-i', 'anullsrc=r=44100:cl=stereo',
         '-c:a', 'aac',
         '-shortest',
         '-y', vidOnly,
@@ -189,7 +196,7 @@ class CompositionEngine {
         await this._ffmpeg([
           '-i', vidOnly,
           '-i', dialogueFile,
-          '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
+          '-f', 'lavfi', '-t', String(actualDuration), '-i', 'anullsrc=r=44100:cl=stereo',
           '-filter_complex',
           `[1:a]volume=1.5[dial];` +
           `[2:a][dial]amix=inputs=2:duration=first:normalize=0[outa]`,
@@ -199,23 +206,23 @@ class CompositionEngine {
         ], `mix-dialogue+silence #${shot.shotNumber}`);
       }
       await fsp.unlink(vidOnly).catch(() => {});
-      return { file: segFile, duration };
+      return { file: segFile, duration: actualDuration };
     }
 
     // No TTS — ensure audio track exists
     if (!hasAudio) {
       await this._ffmpeg([
         '-i', vidOnly,
-        '-f', 'lavfi', '-t', String(duration), '-i', 'anullsrc=r=44100:cl=stereo',
+        '-f', 'lavfi', '-t', String(actualDuration), '-i', 'anullsrc=r=44100:cl=stereo',
         '-map', '0:v', '-map', '1:a',
         '-c:v', 'copy', '-c:a', 'aac',
         '-y', segFile,
       ], `add-silence #${shot.shotNumber}`);
       await fsp.unlink(vidOnly).catch(() => {});
-      return { file: segFile, duration };
+      return { file: segFile, duration: actualDuration };
     }
 
-    return { file: vidOnly, duration };
+    return { file: vidOnly, duration: actualDuration };
   }
 
   /** Concat via filter (re-encode) — handles any encoding variance between segments */
@@ -450,6 +457,25 @@ ${events.join('\n')}`;
       proc.stdout.on('data', d => { stdout += d.toString(); });
       proc.on('close', () => resolve(stdout.trim() === 'audio'));
       proc.on('error', () => resolve(false));
+    });
+  }
+
+  /** 探测视频真实时长（秒），失败返回 null */
+  _probeDuration(file) {
+    return new Promise((resolve) => {
+      const proc = spawn('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'csv=p=0',
+        file,
+      ]);
+      let stdout = '';
+      proc.stdout.on('data', d => { stdout += d.toString(); });
+      proc.on('close', () => {
+        const d = parseFloat(stdout.trim());
+        resolve(d > 0 ? d : null);
+      });
+      proc.on('error', () => resolve(null));
     });
   }
 
