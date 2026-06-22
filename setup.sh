@@ -103,22 +103,21 @@ WAN27_API_KEY=
 WAN27_BASE_URL=
 ENVEOF
 
+# 写入 docker compose 插值用 .env（放在项目根目录，docker compose 自动读取）
+cat > .env << ROOTENV
+JWT_SECRET=${JWT_SECRET}
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+MONGO_ROOT_PASS=${MONGO_ROOT_PASS}
+REDIS_PASSWORD=${REDIS_PASSWORD}
+MINIO_ROOT_USER=${MINIO_ROOT_USER}
+MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+ROOTENV
+
 # 准备目录
 mkdir -p backups-cold
 
 echo "✅ 配置文件已生成: backend/.env"
-echo ""
-
-# 同时写入项目根目录 .env（docker compose 默认读取，用于 ${VAR:?} 插值）
-cat > .env << ROOTENV
-MONGO_ROOT_PASS=${MONGO_ROOT_PASS}
-REDIS_PASSWORD=${REDIS_PASSWORD}
-JWT_SECRET=${JWT_SECRET}
-ENCRYPTION_KEY=${ENCRYPTION_KEY}
-MINIO_ROOT_USER=${MINIO_ROOT_USER}
-MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-ROOTENV
-echo "✅ 已生成项目根目录 .env（docker compose 插值用）"
+echo "✅ 已生成根目录 .env（之后直接 docker compose up 即可）"
 echo ""
 
 # 展示凭据
