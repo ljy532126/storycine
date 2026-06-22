@@ -12,8 +12,8 @@ WORKDIR /app
 
 # 阿里云 Alpine 镜像加速（国内服务器必备）
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-# 安装 ffmpeg + docker-cli（安全扫描通过宿主机 Docker 执行 nuclei 镜像）
-RUN apk add --no-cache ffmpeg docker-cli
+# 安装 ffmpeg + ffprobe（视频合成必需）
+RUN apk add --no-cache ffmpeg
 
 # 使用国内镜像加速
 RUN npm config set registry https://registry.npmmirror.com

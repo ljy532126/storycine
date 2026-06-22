@@ -5,18 +5,17 @@ const { authRequired } = require('../middleware/auth.middleware');
 
 router.use(authRequired);
 
-// 仅管理员
 function requireAdmin(req, res, next) {
   if (req.user.role !== 'admin') return res.status(403).json({ message: '需要管理员权限' });
   next();
 }
 
-/** 运行 nuclei 扫描（Docker），SSE 流式返回结果 */
+/** 运行 nuclei 扫描（宿主机二进制），SSE 流式返回结果 */
 router.get('/run', requireAdmin, async (req, res) => {
   const target = req.query.target;
   if (!target) return res.status(400).json({ message: '缺少扫描目标 URL' });
 
-  // 仅允许扫自己的域名
+  // 仅允许扫自己的服务
   const publicUrl = process.env.PUBLIC_URL || '';
   const allowedHosts = ['localhost', '127.0.0.1', '0.0.0.0'];
   try { allowedHosts.push(new URL(publicUrl).hostname); } catch {}
@@ -34,19 +33,22 @@ router.get('/run', requireAdmin, async (req, res) => {
 
   res.write(`data: ${JSON.stringify({ type: 'start', target, severity })}\n\n`);
 
-  // 先在宿主机上确保模板已下载（首次会自动 -ut，后续复用）
-  // docker run 挂载宿主机模板目录，避免每次都重新下载
-  const args = [
-    'run', '--rm', '--network', 'host',
-    '-v', '/root/.nuclei-templates:/root/.local/share/nuclei-templates',
-    'projectdiscovery/nuclei',
-    '-u', target,
-    '-severity', severity,
-    '-silent',
-    '-no-interactsh',
-  ];
+  // 优先用宿主机 nuclei（挂载 /usr/local/bin/nuclei），降级用 docker
+  const useDocker = !nucleiAvailable();
+  let proc;
 
-  const proc = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  if (useDocker) {
+    proc = spawn('docker', [
+      'run', '--rm', '--network', 'host',
+      'projectdiscovery/nuclei',
+      '-u', target, '-severity', severity, '-silent', '-no-interactsh',
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  } else {
+    proc = spawn('/usr/local/bin/nuclei', [
+      '-u', target, '-severity', severity, '-silent', '-no-interactsh',
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  }
+
   let buffer = '';
 
   proc.stdout.on('data', (d) => {
@@ -69,23 +71,31 @@ router.get('/run', requireAdmin, async (req, res) => {
   proc.stderr.on('data', (d) => { stderr += d.toString(); });
 
   proc.on('close', (code) => {
-    if (buffer.trim()) {
-      res.write(`data: ${JSON.stringify({ type: 'raw', text: buffer.trim() })}\n\n`);
-    }
-    if (code === 0) {
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-    } else {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: stderr.slice(-500) || `nuclei 退出码 ${code}` })}\n\n`);
-    }
+    if (buffer.trim()) res.write(`data: ${JSON.stringify({ type: 'raw', text: buffer.trim() })}\n\n`);
+    if (code === 0) res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    else res.write(`data: ${JSON.stringify({ type: 'error', message: stderr.slice(-500) || `退出码 ${code}` })}\n\n`);
     res.end();
   });
 
   proc.on('error', (err) => {
-    res.write(`data: ${JSON.stringify({ type: 'error', message: `无法启动 nuclei: ${err.message}` })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: `nuclei 不可用: ${err.message}。服务器需执行: wget -qO /usr/local/bin/nuclei https://ghproxy.com/https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei-linux-amd64 && chmod +x /usr/local/bin/nuclei && nuclei -ut` })}\n\n`);
     res.end();
   });
 
   req.on('close', () => { proc.kill('SIGKILL'); });
 });
+
+let _nucleiChecked = false;
+let _nucleiOk = false;
+function nucleiAvailable() {
+  if (_nucleiChecked) return _nucleiOk;
+  try {
+    const { execSync } = require('child_process');
+    execSync('/usr/local/bin/nuclei -version', { stdio: 'ignore', timeout: 5000 });
+    _nucleiOk = true;
+  } catch { _nucleiOk = false; }
+  _nucleiChecked = true;
+  return _nucleiOk;
+}
 
 module.exports = router;

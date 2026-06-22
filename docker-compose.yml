@@ -45,7 +45,8 @@ services:
       - ./backups:/app/backups
       - ./backups-cold:/app/backups-cold
       - uploads_data:/app/uploads
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/local/bin/nuclei:/usr/local/bin/nuclei:ro
+      - /root/nuclei-templates:/root/nuclei-templates:ro
     env_file: ./backend/.env
     environment:
       - SERVER_PORT=3012
