@@ -143,6 +143,9 @@ export COLD_BACKUP_DIR=/app/backups-cold
 echo "🚀 开始构建 & 启动..."
 docker compose up -d --build
 
+# 预拉取安全扫描镜像（仅首次，后续自动复用缓存）
+echo "🛡️  拉取安全扫描引擎..."
+docker pull projectdiscovery/nuclei &
 echo ""
 echo "========================================"
 echo "  🎉 部署完成！"
