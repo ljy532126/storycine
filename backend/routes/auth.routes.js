@@ -99,6 +99,11 @@ router.post('/register', registerLimiter, async (req, res) => {
     const exists = await User.findOne({ username });
     if (exists) return res.status(400).json({ message: '该账号已被注册' });
 
+    // 手机号格式校验
+    if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ message: '请输入正确的11位手机号' });
+    }
+
     // 手机号唯一性检查
     if (phone) {
       const phoneExists = await User.findOne({ phone });
@@ -178,6 +183,7 @@ router.post('/login-sms', loginLimiter, async (req, res) => {
 
     const { phone, code } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
+    if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ message: '请输入正确的11位手机号' });
     if (!code) return res.status(400).json({ message: '请输入短信验证码' });
 
     // 必须验证短信码
@@ -357,6 +363,7 @@ router.post('/sms/send', async (req, res) => {
   try {
     const { phone, scene } = req.body;
     if (!phone) return res.status(400).json({ message: '请输入手机号' });
+    if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ message: '请输入正确的11位手机号' });
 
     // 找回密码：手机号必须已注册
     if (scene === 'resetPwd') {
@@ -406,6 +413,7 @@ router.post('/forgot-password', loginLimiter, async (req, res) => {
   try {
     const { phone, code, newPassword } = req.body;
     if (!phone || !code || !newPassword) return res.status(400).json({ message: '手机号、验证码和新密码不能为空' });
+    if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ message: '请输入正确的11位手机号' });
     if (newPassword.length < 8) return res.status(400).json({ message: '新密码至少8位' });
 
     // 验证短信验证码
@@ -431,6 +439,7 @@ router.put('/phone', authRequired, async (req, res) => {
   try {
     const { phone, code } = req.body;
     if (!phone || !code) return res.status(400).json({ message: '手机号和验证码不能为空' });
+    if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ message: '请输入正确的11位手机号' });
 
     // 检查手机号是否已被其他人绑定
     const existing = await User.findOne({ phone, _id: { $ne: req.user._id } });
