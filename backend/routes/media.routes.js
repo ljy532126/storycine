@@ -6,15 +6,23 @@ const Prop = require('../models/prop.model');
 const Storyboard = require('../models/storyboard.model');
 const Project = require('../models/project.model');
 const { authRequired } = require('../middleware/auth.middleware');
+const { assertOwnership } = require('../middleware/ownership.middleware');
 router.use(authRequired);
 
-// 聚合项目中所有图片资源
+// 聚合项目中所有媒体资源
 router.get('/', async (req, res, next) => {
   try {
     const { projectId } = req.query;
     if (!projectId) return res.status(400).json({ message: '缺少 projectId 参数' });
 
-    const [characters, scenes, props, storyboards, project] = await Promise.all([
+    // 校验资源归属
+    const project = await Project.findById(projectId).select('userId').lean();
+    if (!project) return res.status(404).json({ message: '项目不存在' });
+    if (project.userId !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: '无权访问此资源' });
+    }
+
+    const [characters, scenes, props, storyboards, proj] = await Promise.all([
       Character.find({ projectId }).lean(),
       SceneAsset.find({ projectId }).lean(),
       Prop.find({ projectId }).lean(),
@@ -57,8 +65,8 @@ router.get('/', async (req, res, next) => {
     });
 
     // 项目封面
-    if (project?.coverImage) {
-      items.push({ url: project.coverImage, name: project.name, type: '封面', subType: '海报', assetId: project._id, createdAt: project.updatedAt });
+    if (proj?.coverImage) {
+      items.push({ url: proj.coverImage, name: proj.name, type: '封面', subType: '海报', assetId: proj._id, createdAt: proj.updatedAt });
     }
 
     // 只扫描当前用户 UID 目录下的 .mp4 文件（不同用户只能看到自己的视频）
@@ -167,7 +175,21 @@ router.post('/batch-download', async (req, res) => {
 
     for (let i = 0; i < urls.length; i++) {
       try {
-        const resp = await axios({ url: urls[i], method: 'GET', responseType: 'arraybuffer', timeout: 30000 });
+        const urlStr = urls[i];
+        // SSRF防护：仅允许下载本站资源
+        const baseUrl = process.env.PUBLIC_URL || '';
+        const allowed = urlStr.startsWith('/uploads/') || urlStr.startsWith('/api/');
+        const isSelfUrl = baseUrl && urlStr.startsWith(baseUrl);
+        if (!allowed && !isSelfUrl) {
+          zip.addFile((names[i] || 'file_' + i).replace(/[\\/:*?"<>|]/g, '_') + '.skip.txt', Buffer.from('Skip: URL not allowed'));
+          continue;
+        }
+        // 相对路径补全为本地URL
+        let fetchUrl = urlStr;
+        if (fetchUrl.startsWith('/')) {
+          fetchUrl = `http://127.0.0.1:${process.env.SERVER_PORT || 3012}${fetchUrl}`;
+        }
+        const resp = await axios({ url: fetchUrl, method: 'GET', responseType: 'arraybuffer', timeout: 30000 });
         const safeName = (names[i] || ('file_' + i)).replace(/[\\/:*?"<>|]/g, '_');
         zip.addFile(safeName, Buffer.from(resp.data));
       } catch (e) {

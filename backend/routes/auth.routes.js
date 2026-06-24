@@ -422,7 +422,7 @@ router.post('/forgot-password', loginLimiter, async (req, res) => {
 
     // 查找绑定该手机号的用户
     const user = await User.findOne({ phone });
-    if (!user) return res.status(404).json({ message: '该手机号未绑定任何账号' });
+    if (!user) return res.status(400).json({ message: '验证码不正确或手机号未注册' });
 
     user.password = await bcrypt.hash(newPassword, 12);
     user.tokenVersion = (user.tokenVersion || 0) + 1;
@@ -430,7 +430,7 @@ router.post('/forgot-password', loginLimiter, async (req, res) => {
     user.lockedUntil = null;
     await user.save();
 
-    res.json({ message: '密码已重置，请重新登录' });
+    res.json({ message: '密码已重置' });
   } catch (e) { res.status(500).json({ message: '重置失败' }); }
 });
 

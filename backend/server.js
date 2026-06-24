@@ -62,7 +62,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3012',
+  origin: process.env.CORS_ORIGIN || process.env.PUBLIC_URL || 'http://localhost:3012',
   credentials: true,
 }));
 app.use(express.json({ limit: '5mb' }));
@@ -92,9 +92,10 @@ if (DEV_LOG) {
 
   // morgan 只输出到控制台（console.log 会自动写文件）
   app.use(morgan('dev'));
-} else {
-  app.use(morgan('dev'));
 }
+
+// 移除 Express 指纹头
+app.disable('x-powered-by');
 
 // 生产环境：单端口部署，后端直接托管前端静态文件
 const path = require('path');

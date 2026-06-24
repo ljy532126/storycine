@@ -17,8 +17,8 @@ const axios = require('axios');
 
 module.exports = async function geojsonProxy(req, res) {
   const code = req.query.code;
-  if (!code) {
-    return res.status(400).json({ error: '缺少 code 参数' });
+  if (!code || !/^\d{1,12}$/.test(code)) {
+    return res.status(400).json({ error: '缺少 code 参数或格式不正确' });
   }
   try {
     const url = `https://geo.datav.aliyun.com/areas_v3/bound/${code}_full.json`;

@@ -388,6 +388,19 @@ ${events.join('\n')}`;
   }
 
   async _download(url, label) {
+    // SSRF 防护：拒绝下载内网地址
+    try {
+      const parsed = new URL(url);
+      const ip = parsed.hostname;
+      if (ip === '127.0.0.1' || ip === 'localhost' || ip === '0.0.0.0' || ip === '[::1]' ||
+          ip.startsWith('10.') || ip.startsWith('172.16.') || ip.startsWith('192.168.') ||
+          ip === 'metadata' || ip.endsWith('.internal') || ip.endsWith('.local')) {
+        throw new Error(`拒绝下载内网地址: ${ip}`);
+      }
+    } catch (e) {
+      if (e.message.startsWith('拒绝')) throw e;
+      // URL 解析失败，跳过 IP 检查（非 http URL 已在前置步骤被过滤）
+    }
     const ext = path.extname(new URL(url).pathname) || '.bin';
     const dest = path.join(this.workDir, `${label}${ext}`);
 
